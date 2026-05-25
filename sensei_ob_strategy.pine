@@ -1,0 +1,442 @@
+//@version=6
+// ══════════════════════════════════════════════════════════════
+// SENSEI PRO · ESTRATEGIA OB  v2.0
+// Usa la misma lógica del indicador. Abre long/short en OBs.
+// Compatible con backtesting en Pine Editor de TradingView.
+// ══════════════════════════════════════════════════════════════
+strategy("Sensei Pro · Estrategia OB",
+     shorttitle        = "Sensei Pro Strat",
+     overlay           = true,
+     pyramiding        = 0,
+     default_qty_type  = strategy.percent_of_equity,
+     default_qty_value = 10,
+     commission_type   = strategy.commission.percent,
+     commission_value  = 0.05,
+     slippage          = 2,
+     max_bars_back     = 1500,
+     max_boxes_count   = 500,
+     max_lines_count   = 200,
+     max_labels_count  = 100)
+
+// ══════════════════════════════════════════════════════════════
+// §1  INPUTS
+// ══════════════════════════════════════════════════════════════
+grp_struct  = "⚙ Estructura"
+grp_ob      = "📦 Order Blocks"
+grp_entry   = "🎯 Entradas"
+grp_risk    = "🛡 Gestión de riesgo"
+grp_filter  = "🔍 Filtros"
+grp_panel   = "📊 Panel"
+
+// — Estructura
+swing_len     = input.int   (10,  "Longitud swing",                 minval=3,   maxval=50,  group=grp_struct)
+atr_len       = input.int   (14,  "ATR período",                    minval=5,   maxval=50,  group=grp_struct)
+consol_thresh = input.float (0.4, "Umbral consolidación (× ATR)",   minval=0.1, maxval=2.0, step=0.1, group=grp_struct)
+consol_bars   = input.int   (5,   "Ventana consolidación",          minval=2,   maxval=20,  group=grp_struct)
+
+// — OBs
+max_obs       = input.int   (5,   "Máx. OBs visibles",              minval=1, maxval=10, group=grp_ob)
+ob_extend     = input.int   (40,  "Extensión OB (velas)",           minval=5, maxval=200, group=grp_ob)
+ob_mitigation = input.string("Close","Mitigación al:",              options=["Close","Wick"], group=grp_ob)
+col_ob_bull   = input.color (color.new(#00BCD4, 80), "Color OB demanda",  group=grp_ob)
+col_ob_bear   = input.color (color.new(#FF5252, 80), "Color OB oferta",   group=grp_ob)
+col_ob_mit    = input.color (color.new(#9E9E9E, 85), "Color OB mitigado", group=grp_ob)
+
+// — Entradas
+entry_mode    = input.string("OB Touch", "Tipo de entrada",         options=["OB Touch","OB Close","Market BOS"], group=grp_entry)
+tasa_min      = input.int   (60,  "Tasa mínima para entrar (%)",    minval=30, maxval=90, group=grp_entry)
+require_choch = input.bool  (false,"Solo entrar tras CHoCH",         group=grp_entry)
+
+// — Riesgo
+sl_mode       = input.string("OB Edge", "Stop Loss en:",            options=["OB Edge","ATR","Swing"], group=grp_risk)
+sl_atr_mult   = input.float (1.5,  "SL multiplicador ATR",          minval=0.5, maxval=5.0, step=0.5, group=grp_risk)
+tp_rr         = input.float (2.0,  "Take Profit R:R",               minval=0.5, maxval=10.0, step=0.5, group=grp_risk)
+use_trail     = input.bool  (false,"Usar trailing stop",             group=grp_risk)
+trail_atr     = input.float (2.0,  "Trailing stop (× ATR)",         minval=0.5, maxval=5.0, step=0.5, group=grp_risk)
+
+// — Filtros
+retest_lb     = input.int   (300,  "Lookback retests (barras)",     minval=50, maxval=1000, group=grp_filter)
+bounce_atr    = input.float (1.0,  "Bounce mínimo (× ATR)",        minval=0.3, maxval=5.0, step=0.1, group=grp_filter)
+touch_atr     = input.float (0.5,  "Tolerancia OB (× ATR)",        minval=0.1, maxval=2.0, step=0.1, group=grp_filter)
+vol_filter    = input.bool  (true, "Filtro volumen (>0.8× media)",  group=grp_filter)
+min_vol_ratio = input.float (0.8,  "Vol. mínimo (× media)",         minval=0.3, maxval=3.0, step=0.1, group=grp_filter)
+
+// — Panel
+show_panel    = input.bool  (true, "Mostrar panel de estadísticas", group=grp_panel)
+
+// ══════════════════════════════════════════════════════════════
+// §2  BASE
+// ══════════════════════════════════════════════════════════════
+atr_val = ta.atr(atr_len)
+vol_ma  = ta.sma(volume, 20)
+vol_rel = volume / vol_ma
+
+ph = ta.pivothigh(high, swing_len, swing_len)
+pl = ta.pivotlow (low,  swing_len, swing_len)
+
+// ══════════════════════════════════════════════════════════════
+// §3  ESTRUCTURA
+// ══════════════════════════════════════════════════════════════
+var float last_ph  = na
+var float prev_ph  = na
+var float last_pl  = na
+var float prev_pl  = na
+var float hh_val   = na
+var float hl_val   = na
+var float ll_val   = na
+var float lh_val   = na
+var int   trend    = 0
+var int   bos_dir  = 0
+var bool  was_choch = false
+var bool  choch_seen = false   // persiste hasta próxima entrada
+
+if not na(ph)
+    prev_ph := last_ph
+    last_ph := ph
+if not na(pl)
+    prev_pl := last_pl
+    last_pl := pl
+
+bool new_hh = not na(ph) and not na(prev_ph) and last_ph > prev_ph
+bool new_lh = not na(ph) and not na(prev_ph) and last_ph < prev_ph
+bool new_hl = not na(pl) and not na(prev_pl) and last_pl > prev_pl
+bool new_ll = not na(pl) and not na(prev_pl) and last_pl < prev_pl
+
+if (new_hh or new_hl) and not (new_ll or new_lh)
+    was_choch := trend == -1
+    if was_choch
+        choch_seen := true
+    bos_dir := 1
+    trend   := 1
+    hh_val  := last_ph
+    hl_val  := last_pl
+
+if (new_ll or new_lh) and not (new_hh or new_hl)
+    was_choch := trend == 1
+    if was_choch
+        choch_seen := true
+    bos_dir := -1
+    trend   := -1
+    ll_val  := last_pl
+    lh_val  := last_ph
+
+// ══════════════════════════════════════════════════════════════
+// §4  ORDER BLOCKS — ARRAY
+// ══════════════════════════════════════════════════════════════
+var array<float> ob_top   = array.new<float>()
+var array<float> ob_bot   = array.new<float>()
+var array<int>   ob_left  = array.new<int>()
+var array<int>   ob_dir   = array.new<int>()
+var array<float> ob_vol   = array.new<float>()
+var array<bool>  ob_mit   = array.new<bool>()
+var array<box>   ob_boxes = array.new<box>()
+
+f_add_ob(float top, float bot, int left, int dir, float vrel) =>
+    while array.size(ob_top) >= max_obs
+        old_box = array.get(ob_boxes, 0)
+        if not na(old_box)
+            box.delete(old_box)
+        array.remove(ob_top,  0)
+        array.remove(ob_bot,  0)
+        array.remove(ob_left, 0)
+        array.remove(ob_dir,  0)
+        array.remove(ob_vol,  0)
+        array.remove(ob_mit,  0)
+        array.remove(ob_boxes,0)
+    array.push(ob_top,  top)
+    array.push(ob_bot,  bot)
+    array.push(ob_left, left)
+    array.push(ob_dir,  dir)
+    array.push(ob_vol,  vrel)
+    array.push(ob_mit,  false)
+    new_box = box.new(left=left, top=top, right=bar_index+ob_extend, bottom=bot,
+         bgcolor=dir==1 ? col_ob_bull : col_ob_bear,
+         border_color=dir==1 ? color.new(#00BCD4,50) : color.new(#FF5252,50),
+         border_width=1, extend=extend.none)
+    array.push(ob_boxes, new_box)
+
+if new_hh
+    for i = swing_len to swing_len + 15
+        if close[i] < open[i]
+            f_add_ob(math.max(open[i],close[i]), math.min(open[i],close[i]),
+                     bar_index-i, 1, nz(vol_rel[i],1.0))
+            break
+
+if new_ll
+    for i = swing_len to swing_len + 15
+        if close[i] > open[i]
+            f_add_ob(math.max(open[i],close[i]), math.min(open[i],close[i]),
+                     bar_index-i, -1, nz(vol_rel[i],1.0))
+            break
+
+// Extender y mitigar
+var float ob_bull_top = na
+var float ob_bull_bot = na
+var float ob_bear_top = na
+var float ob_bear_bot = na
+
+if barstate.isconfirmed
+    ob_bull_top := na
+    ob_bull_bot := na
+    ob_bear_top := na
+    ob_bear_bot := na
+    for i = 0 to array.size(ob_boxes)-1
+        b = array.get(ob_boxes, i)
+        if not na(b)
+            box.set_right(b, bar_index + ob_extend)
+        if not array.get(ob_mit, i)
+            top_i = array.get(ob_top, i)
+            bot_i = array.get(ob_bot, i)
+            dir_i = array.get(ob_dir, i)
+            bool mit = ob_mitigation == "Close" ?
+                 (dir_i == 1 ? close < bot_i : close > top_i) :
+                 (dir_i == 1 ? low  < bot_i  : high  > top_i)
+            if mit
+                array.set(ob_mit, i, true)
+                if not na(b)
+                    box.set_bgcolor(b, col_ob_mit)
+                    box.set_border_color(b, color.new(color.gray, 60))
+    for i = array.size(ob_dir)-1 to 0
+        d = array.get(ob_dir, i)
+        m = array.get(ob_mit, i)
+        if not m
+            if d == 1 and na(ob_bull_top)
+                ob_bull_top := array.get(ob_top, i)
+                ob_bull_bot := array.get(ob_bot, i)
+            if d == -1 and na(ob_bear_top)
+                ob_bear_top := array.get(ob_top, i)
+                ob_bear_bot := array.get(ob_bot, i)
+
+// ══════════════════════════════════════════════════════════════
+// §5  FACTORES + TASA
+// ══════════════════════════════════════════════════════════════
+float f1 = 0.5
+if trend == 1  and not na(hh_val) and not na(hl_val) and not na(atr_val) and atr_val > 0
+    f1 := math.min((hh_val - hl_val) / (atr_val * 10.0), 1.0)
+if trend == -1 and not na(lh_val) and not na(ll_val) and not na(atr_val) and atr_val > 0
+    f1 := math.min((lh_val - ll_val) / (atr_val * 10.0), 1.0)
+
+float f2 = 0.5
+if trend == 1  and not na(hh_val) and not na(hl_val)
+    float rng = hh_val - hl_val
+    if rng > 0
+        f2 := 1.0 - math.max(math.min((close - hl_val) / rng, 1.0), 0.0)
+if trend == -1 and not na(lh_val) and not na(ll_val)
+    float rng = lh_val - ll_val
+    if rng > 0
+        f2 := math.max(math.min((close - ll_val) / rng, 1.0), 0.0)
+
+float f3 = 0.5
+if bos_dir != 0
+    if was_choch    then f3 := 0.65
+    else if bos_dir == trend then f3 := 1.0
+    else f3 := 0.0
+
+int consol_count = 0
+if not na(atr_val) and atr_val > 0
+    for i = 0 to consol_bars - 1
+        if (high[i] - low[i]) < (atr_val * consol_thresh)
+            consol_count += 1
+float f4 = not na(atr_val) and atr_val > 0 ? 1.0 - float(consol_count)/float(consol_bars) : 0.5
+float f5 = math.min(nz(vol_rel,1.0) / 2.0, 1.0)
+
+float tasa = math.round((f1*0.30 + f2*0.20 + f3*0.25 + f4*0.15 + f5*0.10) * 100)
+
+// ══════════════════════════════════════════════════════════════
+// §6  CONDICIONES DE ENTRADA
+// ══════════════════════════════════════════════════════════════
+bool vol_ok = not vol_filter or vol_rel >= min_vol_ratio
+bool choch_ok_long  = not require_choch or choch_seen
+bool choch_ok_short = not require_choch or choch_seen
+
+// Precio toca OB
+float tol = nz(atr_val) * touch_atr
+bool in_bull_ob = not na(ob_bull_top) and not na(ob_bull_bot) and
+     low <= ob_bull_top + tol and high >= ob_bull_bot - tol
+bool in_bear_ob = not na(ob_bear_top) and not na(ob_bear_bot) and
+     high >= ob_bear_bot - tol and low  <= ob_bear_top + tol
+
+// Confirmación de entrada según modo
+bool confirm_long  = false
+bool confirm_short = false
+
+if entry_mode == "OB Touch"
+    confirm_long  := in_bull_ob
+    confirm_short := in_bear_ob
+else if entry_mode == "OB Close"
+    confirm_long  := in_bull_ob and close >= ob_bull_bot and close <= ob_bull_top
+    confirm_short := in_bear_ob and close >= ob_bear_bot and close <= ob_bear_top
+else // Market BOS
+    confirm_long  := new_hh
+    confirm_short := new_ll
+
+bool long_entry  = trend == 1  and tasa >= tasa_min and confirm_long  and vol_ok and choch_ok_long  and strategy.position_size == 0
+bool short_entry = trend == -1 and tasa >= tasa_min and confirm_short and vol_ok and choch_ok_short and strategy.position_size == 0
+
+// ══════════════════════════════════════════════════════════════
+// §7  CÁLCULO SL / TP
+// ══════════════════════════════════════════════════════════════
+f_sl_long() =>
+    if sl_mode == "OB Edge"
+        not na(ob_bull_bot) ? ob_bull_bot - atr_val * 0.2 : close - atr_val * sl_atr_mult
+    else if sl_mode == "ATR"
+        close - atr_val * sl_atr_mult
+    else // Swing
+        not na(hl_val) ? hl_val - atr_val * 0.1 : close - atr_val * sl_atr_mult
+
+f_sl_short() =>
+    if sl_mode == "OB Edge"
+        not na(ob_bear_top) ? ob_bear_top + atr_val * 0.2 : close + atr_val * sl_atr_mult
+    else if sl_mode == "ATR"
+        close + atr_val * sl_atr_mult
+    else
+        not na(lh_val) ? lh_val + atr_val * 0.1 : close + atr_val * sl_atr_mult
+
+// ══════════════════════════════════════════════════════════════
+// §8  EJECUCIÓN DE ÓRDENES
+// ══════════════════════════════════════════════════════════════
+var float entry_sl = na
+var float entry_tp = na
+
+if long_entry
+    sl = f_sl_long()
+    risk = close - sl
+    tp   = close + risk * tp_rr
+    entry_sl := sl
+    entry_tp := tp
+    choch_seen := false
+    strategy.entry("Long", strategy.long, comment="OB Demanda")
+    strategy.exit("Exit Long", "Long",
+         stop   = sl,
+         limit  = tp,
+         trail_points  = use_trail ? atr_val * trail_atr / syminfo.mintick : na,
+         trail_offset  = use_trail ? atr_val * trail_atr / syminfo.mintick : na)
+
+if short_entry
+    sl = f_sl_short()
+    risk = sl - close
+    tp   = close - risk * tp_rr
+    entry_sl := sl
+    entry_tp := tp
+    choch_seen := false
+    strategy.entry("Short", strategy.short, comment="OB Oferta")
+    strategy.exit("Exit Short", "Short",
+         stop   = sl,
+         limit  = tp,
+         trail_points  = use_trail ? atr_val * trail_atr / syminfo.mintick : na,
+         trail_offset  = use_trail ? atr_val * trail_atr / syminfo.mintick : na)
+
+// ══════════════════════════════════════════════════════════════
+// §9  PLOTS Y SEÑALES VISUALES
+// ══════════════════════════════════════════════════════════════
+// Estructura
+plot(trend == 1  and not na(hh_val) ? hh_val : na, "HH", color=color.new(#26A69A,40), linewidth=1, style=plot.style_stepline)
+plot(trend == 1  and not na(hl_val) ? hl_val : na, "HL", color=color.new(#26A69A,60), linewidth=1, style=plot.style_stepline)
+plot(trend == -1 and not na(ll_val) ? ll_val : na, "LL", color=color.new(#EF5350,40), linewidth=1, style=plot.style_stepline)
+plot(trend == -1 and not na(lh_val) ? lh_val : na, "LH", color=color.new(#EF5350,60), linewidth=1, style=plot.style_stepline)
+
+plotshape(new_hh and not was_choch, "BOS↑", shape.triangleup,   location.belowbar, color.new(#26A69A,20), size=size.tiny, text="BOS", textcolor=color.new(#26A69A,20))
+plotshape(new_ll and not was_choch, "BOS↓", shape.triangledown, location.abovebar, color.new(#EF5350,20), size=size.tiny, text="BOS", textcolor=color.new(#EF5350,20))
+plotshape(was_choch and new_hh, "CHoCH↑", shape.diamond, location.belowbar, color.new(color.teal,10),   size=size.small, text="CHoCH", textcolor=color.new(color.teal,10))
+plotshape(was_choch and new_ll, "CHoCH↓", shape.diamond, location.abovebar, color.new(color.purple,10), size=size.small, text="CHoCH", textcolor=color.new(color.purple,10))
+
+plotshape(long_entry,  "LONG",  shape.arrowup,   location.belowbar, color.new(#00E5FF,0), size=size.normal)
+plotshape(short_entry, "SHORT", shape.arrowdown, location.abovebar, color.new(#FF1744,0), size=size.normal)
+
+// SL / TP lines activas
+plot(strategy.position_size > 0 ? entry_sl : na, "SL Long",  color=color.new(color.red,   20), linewidth=1, style=plot.style_linebr)
+plot(strategy.position_size > 0 ? entry_tp : na, "TP Long",  color=color.new(color.green, 20), linewidth=1, style=plot.style_linebr)
+plot(strategy.position_size < 0 ? entry_sl : na, "SL Short", color=color.new(color.red,   20), linewidth=1, style=plot.style_linebr)
+plot(strategy.position_size < 0 ? entry_tp : na, "TP Short", color=color.new(color.green, 20), linewidth=1, style=plot.style_linebr)
+
+// ══════════════════════════════════════════════════════════════
+// §10  PANEL DE ESTADÍSTICAS
+// ══════════════════════════════════════════════════════════════
+var table stats_tbl = na
+
+if show_panel and barstate.islast
+    if not na(stats_tbl)
+        table.delete(stats_tbl)
+
+    stats_tbl := table.new(position.bottom_right, 2, 13,
+         bgcolor     = color.new(#0D1117, 5),
+         border_color= color.new(#30363D, 60),
+         border_width= 1,
+         frame_color = color.new(#58A6FF, 40),
+         frame_width = 2)
+
+    HDR_BG  = color.new(#161B22, 10)
+    CELL_BG = color.new(#0D1117, 20)
+    TXT_DIM = color.new(#8B949E, 0)
+    TXT_WHT = color.white
+
+    total_trades = strategy.closedtrades
+    wins  = strategy.wintrades
+    loss  = strategy.losstrades
+    wr    = total_trades > 0 ? math.round(float(wins) / float(total_trades) * 100) : 0
+    pf    = strategy.grossloss != 0 ? math.abs(math.round(strategy.grossprofit / strategy.grossloss * 100) / 100.0) : 0.0
+    net   = math.round(strategy.netprofit * 100) / 100.0
+    dd    = math.round(strategy.max_drawdown / strategy.initial_capital * 10000) / 100.0
+
+    wr_col = wr > 55 ? color.new(color.green,30) : wr > 45 ? color.new(color.orange,30) : color.new(color.red,40)
+
+    table.cell(stats_tbl, 0, 0, "SENSEI PRO · BACKTEST", text_color=color.new(#58A6FF,0), text_size=size.small, bgcolor=HDR_BG, text_halign=text.align_center)
+    table.merge_cells(stats_tbl, 0, 0, 1, 0)
+
+    table.cell(stats_tbl, 0, 1, "TENDENCIA",  text_color=TXT_DIM, text_size=size.tiny, bgcolor=CELL_BG, text_halign=text.align_left)
+    trend_str2 = trend == 1 ? "▲ ALCISTA" : trend == -1 ? "▼ BAJISTA" : "◆ NEUTRAL"
+    trend_col2 = trend == 1 ? color.new(#26A69A,30) : trend == -1 ? color.new(#EF5350,30) : color.new(color.gray,40)
+    table.cell(stats_tbl, 1, 1, trend_str2, text_color=TXT_WHT, text_size=size.small, bgcolor=trend_col2, text_halign=text.align_center)
+
+    table.cell(stats_tbl, 0, 2, "TASA CONT.", text_color=TXT_DIM, text_size=size.tiny, bgcolor=CELL_BG, text_halign=text.align_left)
+    tc_col = tasa > 65 ? color.new(#26A69A,20) : tasa >= 50 ? color.new(color.orange,20) : color.new(color.red,30)
+    table.cell(stats_tbl, 1, 2, str.tostring(int(tasa)) + "%", text_color=TXT_WHT, text_size=size.small, bgcolor=tc_col, text_halign=text.align_center)
+
+    table.cell(stats_tbl, 0, 3, "──── RESULTADOS ────", text_color=TXT_DIM, text_size=size.tiny, bgcolor=color.new(#21262D,50), text_halign=text.align_center)
+    table.merge_cells(stats_tbl, 0, 3, 1, 3)
+
+    table.cell(stats_tbl, 0, 4, "OPERACIONES",  text_color=TXT_DIM, text_size=size.tiny, bgcolor=CELL_BG, text_halign=text.align_left)
+    table.cell(stats_tbl, 1, 4, str.tostring(total_trades), text_color=TXT_WHT, text_size=size.small, bgcolor=CELL_BG, text_halign=text.align_center)
+
+    table.cell(stats_tbl, 0, 5, "WIN RATE",     text_color=TXT_DIM, text_size=size.tiny, bgcolor=CELL_BG, text_halign=text.align_left)
+    table.cell(stats_tbl, 1, 5, str.tostring(wr) + "%  (" + str.tostring(wins) + "W / " + str.tostring(loss) + "L)",
+         text_color=TXT_WHT, text_size=size.tiny, bgcolor=wr_col, text_halign=text.align_center)
+
+    table.cell(stats_tbl, 0, 6, "PROFIT FACTOR", text_color=TXT_DIM, text_size=size.tiny, bgcolor=CELL_BG, text_halign=text.align_left)
+    pf_col = pf > 1.5 ? color.new(color.green,30) : pf > 1.0 ? color.new(color.orange,30) : color.new(color.red,40)
+    table.cell(stats_tbl, 1, 6, str.tostring(pf), text_color=TXT_WHT, text_size=size.small, bgcolor=pf_col, text_halign=text.align_center)
+
+    table.cell(stats_tbl, 0, 7, "NET PROFIT",   text_color=TXT_DIM, text_size=size.tiny, bgcolor=CELL_BG, text_halign=text.align_left)
+    net_col = net > 0 ? color.new(color.green,30) : color.new(color.red,40)
+    table.cell(stats_tbl, 1, 7, str.tostring(net) + " " + syminfo.currency, text_color=TXT_WHT, text_size=size.tiny, bgcolor=net_col, text_halign=text.align_center)
+
+    table.cell(stats_tbl, 0, 8, "MAX DRAWDOWN", text_color=TXT_DIM, text_size=size.tiny, bgcolor=CELL_BG, text_halign=text.align_left)
+    dd_col = dd < 10 ? color.new(color.green,30) : dd < 20 ? color.new(color.orange,30) : color.new(color.red,40)
+    table.cell(stats_tbl, 1, 8, str.tostring(dd) + "%", text_color=TXT_WHT, text_size=size.small, bgcolor=dd_col, text_halign=text.align_center)
+
+    table.cell(stats_tbl, 0, 9, "──── POSICIÓN ACTUAL ────", text_color=TXT_DIM, text_size=size.tiny, bgcolor=color.new(#21262D,50), text_halign=text.align_center)
+    table.merge_cells(stats_tbl, 0, 9, 1, 9)
+
+    pos_str = strategy.position_size > 0 ? "🟢 LONG activo" : strategy.position_size < 0 ? "🔴 SHORT activo" : "⬜ Sin posición"
+    pos_col = strategy.position_size > 0 ? color.new(#26A69A,30) : strategy.position_size < 0 ? color.new(#EF5350,30) : color.new(#455A64,40)
+    table.cell(stats_tbl, 0, 10, "POSICIÓN", text_color=TXT_DIM, text_size=size.tiny, bgcolor=CELL_BG, text_halign=text.align_left)
+    table.cell(stats_tbl, 1, 10, pos_str,    text_color=TXT_WHT, text_size=size.small, bgcolor=pos_col, text_halign=text.align_center)
+
+    sl_str = not na(entry_sl) and strategy.position_size != 0 ? str.tostring(math.round(entry_sl * 100)/100.0) : "—"
+    tp_str = not na(entry_tp) and strategy.position_size != 0 ? str.tostring(math.round(entry_tp * 100)/100.0) : "—"
+    table.cell(stats_tbl, 0, 11, "SL / TP", text_color=TXT_DIM, text_size=size.tiny, bgcolor=CELL_BG, text_halign=text.align_left)
+    table.cell(stats_tbl, 1, 11, sl_str + "  /  " + tp_str, text_color=TXT_WHT, text_size=size.tiny, bgcolor=CELL_BG, text_halign=text.align_center)
+
+    table.cell(stats_tbl, 0, 12, "CONFIG: " + entry_mode + " | RR " + str.tostring(tp_rr) + " | SL " + sl_mode,
+         text_color=TXT_DIM, text_size=size.tiny, bgcolor=color.new(#161B22,20), text_halign=text.align_center)
+    table.merge_cells(stats_tbl, 0, 12, 1, 12)
+
+else if not show_panel and barstate.islast and not na(stats_tbl)
+    table.delete(stats_tbl)
+    stats_tbl := na
+
+// ══════════════════════════════════════════════════════════════
+// §11  ALERTAS ESTRATEGIA
+// ══════════════════════════════════════════════════════════════
+alertcondition(long_entry,  "ESTRATEGIA LONG",  "Sensei Pro Strat: ENTRADA LONG — OB Demanda activo | Tasa: " + str.tostring(int(tasa)) + "%")
+alertcondition(short_entry, "ESTRATEGIA SHORT", "Sensei Pro Strat: ENTRADA SHORT — OB Oferta activo | Tasa: " + str.tostring(int(tasa)) + "%")
