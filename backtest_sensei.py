@@ -2,11 +2,27 @@
 """
 Sensei Pro OB — Backtest Python
 Misma lógica que sensei_ob_strategy.pine
+Par: EURUSD  |  Timeframe: 1h  |  Período: 6 meses
+
+CÓMO OBTENER LOS DATOS:
+  A) Correr en local con internet:
+       pip install yfinance
+       → el script descarga automáticamente
+
+  B) Exportar CSV desde TradingView:
+       Abrir EURUSD 1h → botón "⋮" arriba derecha
+       → "Exportar datos del gráfico..."
+       → Guardar como eurusd_1h.csv en la misma carpeta
+       → Poner CSV_FILE = "eurusd_1h.csv"
+
+  C) Exportar desde MT4/MT5:
+       Herramientas → Historial → EURUSD 1h → Exportar
+       Columnas: Date, Time, Open, High, Low, Close, Volume
 """
 
+import os, sys
 import pandas as pd
 import numpy as np
-import yfinance as yf
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -15,40 +31,87 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # ═══════════════════════════════════════════════════════════
-# PARÁMETROS (mismos que la estrategia Pine)
+# PARÁMETROS
 # ═══════════════════════════════════════════════════════════
-SYMBOL       = "BTC-USD (sintético)"
-INTERVAL     = "4h"
-PERIOD       = "2y"
+SYMBOL       = "EURUSD"
+INTERVAL     = "1h"
+PERIOD       = "6mo"
+
+# Si tienes CSV local ponlo aquí, si no deja en None y usa yfinance
+CSV_FILE     = "eurusd_1h.csv"   # None para descargar automáticamente
 
 SWING_LEN    = 10
 ATR_LEN      = 14
 CONSOL_BARS  = 5
 CONSOL_MULT  = 0.4
 
-TASA_MIN     = 60       # % mínimo para entrar
+TASA_MIN     = 55       # % mínimo para entrar (forex menos volátil → bajamos un poco)
 TP_RR        = 2.0      # risk:reward
-SL_BUFFER    = 0.2      # multiplicador ATR sobre el borde del OB
-TOUCH_ATR    = 0.5      # tolerancia para tocar el OB (en ATR)
-VOL_FILTER   = True
-MIN_VOL_RATIO= 0.8
+SL_BUFFER    = 0.3      # multiplicador ATR sobre borde del OB
+TOUCH_ATR    = 0.6      # tolerancia para tocar el OB (en ATR)
+VOL_FILTER   = False    # forex tick volume no es fiable, desactivado
 
 INITIAL_CAP  = 10_000   # USD
-RISK_PCT     = 0.02     # 2% riesgo por operación
-COMMISSION   = 0.001    # 0.1% por lado
+RISK_PCT     = 0.01     # 1% riesgo por operación (forex estándar)
+COMMISSION   = 0.00007  # ~0.7 pip spread EURUSD
 
 # ═══════════════════════════════════════════════════════════
-# DATOS
+# CARGA DE DATOS
 # ═══════════════════════════════════════════════════════════
-print(f"Descargando {SYMBOL} {INTERVAL} ({PERIOD})...")
-raw = yf.download(SYMBOL, period=PERIOD, interval=INTERVAL,
-                  auto_adjust=True, progress=False)
-raw.columns = [c[0] if isinstance(c, tuple) else c for c in raw.columns]
-raw = raw.dropna().reset_index()
-raw.columns = [c.lower() if isinstance(c, str) else c for c in raw.columns]
-if 'datetime' in raw.columns:
-    raw = raw.rename(columns={'datetime': 'date'})
-print(f"  {len(raw)} velas cargadas  ({raw['date'].iloc[0]} → {raw['date'].iloc[-1]})")
+def load_csv(path):
+    """Carga CSV de TradingView o MT4/MT5."""
+    df = pd.read_csv(path)
+    df.columns = [c.strip().lower() for c in df.columns]
+
+    # TradingView: 'time','open','high','low','close','volume'
+    # MT4: 'date','time','open','high','low','close','volume'
+    # Unificar columna de fecha
+    if 'time' in df.columns and 'date' not in df.columns:
+        df = df.rename(columns={'time': 'date'})
+    elif 'date' in df.columns and 'time' in df.columns:
+        df['date'] = df['date'].astype(str) + ' ' + df['time'].astype(str)
+        df = df.drop(columns=['time'])
+
+    df['date'] = pd.to_datetime(df['date'], infer_datetime_format=True, utc=False)
+    df = df.sort_values('date').reset_index(drop=True)
+
+    # Asegurar columnas OHLCV
+    for col in ['open','high','low','close']:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+    if 'volume' not in df.columns:
+        df['volume'] = 1.0
+    df = df.dropna(subset=['open','high','low','close'])
+    return df[['date','open','high','low','close','volume']]
+
+def load_yfinance():
+    import yfinance as yf
+    print(f"  Descargando {SYMBOL}=X desde Yahoo Finance...")
+    raw = yf.download(f"{SYMBOL}=X", period=PERIOD, interval=INTERVAL,
+                      auto_adjust=True, progress=False)
+    raw.columns = [c[0] if isinstance(c, tuple) else c for c in raw.columns]
+    raw = raw.dropna().reset_index()
+    raw.columns = [c.lower() if isinstance(c, str) else c for c in raw.columns]
+    if 'datetime' in raw.columns:
+        raw = raw.rename(columns={'datetime': 'date'})
+    return raw[['date','open','high','low','close','volume']]
+
+print(f"\n{'═'*52}")
+print(f"  SENSEI PRO OB — BACKTEST  {SYMBOL}  {INTERVAL}")
+print(f"{'═'*52}")
+
+if CSV_FILE and os.path.exists(CSV_FILE):
+    print(f"  Cargando CSV: {CSV_FILE}")
+    raw = load_csv(CSV_FILE)
+else:
+    try:
+        raw = load_yfinance()
+    except Exception as e:
+        print(f"\n  ERROR: No se pudo descargar datos ({e})")
+        print("  → Exporta EURUSD 1h desde TradingView como CSV")
+        print(f"  → Guárdalo como '{CSV_FILE}' en la misma carpeta")
+        sys.exit(1)
+
+print(f"  {len(raw)} velas  ({raw['date'].iloc[0]} → {raw['date'].iloc[-1]})")
 
 o = raw['open'].values
 h = raw['high'].values
