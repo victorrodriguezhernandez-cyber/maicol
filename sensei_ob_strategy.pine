@@ -5,7 +5,7 @@
 // Compatible con backtesting en Pine Editor de TradingView.
 // ══════════════════════════════════════════════════════════════
 strategy("Sensei Pro · Estrategia OB",
-     shorttitle        = "Sensei Pro Strat",
+     shorttitle        = "SenseiOBStr",
      overlay           = true,
      pyramiding        = 0,
      default_qty_type  = strategy.percent_of_equity,
@@ -228,9 +228,12 @@ if trend == -1 and not na(lh_val) and not na(ll_val)
 
 float f3 = 0.5
 if bos_dir != 0
-    if was_choch    then f3 := 0.65
-    else if bos_dir == trend then f3 := 1.0
-    else f3 := 0.0
+    if was_choch
+        f3 := 0.65
+    else if bos_dir == trend
+        f3 := 1.0
+    else
+        f3 := 0.0
 
 int consol_count = 0
 if not na(atr_val) and atr_val > 0
