@@ -180,32 +180,34 @@ if barstate.isconfirmed
     ob_bull_bot := na
     ob_bear_top := na
     ob_bear_bot := na
-    for i = 0 to array.size(ob_boxes)-1
-        b = array.get(ob_boxes, i)
-        if not na(b)
-            box.set_right(b, bar_index + ob_extend)
-        if not array.get(ob_mit, i)
-            top_i = array.get(ob_top, i)
-            bot_i = array.get(ob_bot, i)
-            dir_i = array.get(ob_dir, i)
-            bool mit = ob_mitigation == "Close" ?
-                 (dir_i == 1 ? close < bot_i : close > top_i) :
-                 (dir_i == 1 ? low  < bot_i  : high  > top_i)
-            if mit
-                array.set(ob_mit, i, true)
-                if not na(b)
-                    box.set_bgcolor(b, col_ob_mit)
-                    box.set_border_color(b, color.new(color.gray, 60))
-    for i = array.size(ob_dir)-1 to 0
-        d = array.get(ob_dir, i)
-        m = array.get(ob_mit, i)
-        if not m
-            if d == 1 and na(ob_bull_top)
-                ob_bull_top := array.get(ob_top, i)
-                ob_bull_bot := array.get(ob_bot, i)
-            if d == -1 and na(ob_bear_top)
-                ob_bear_top := array.get(ob_top, i)
-                ob_bear_bot := array.get(ob_bot, i)
+    int ob_sz = array.size(ob_boxes)
+    if ob_sz > 0
+        for i = 0 to ob_sz - 1
+            b = array.get(ob_boxes, i)
+            if not na(b)
+                box.set_right(b, bar_index + ob_extend)
+            if not array.get(ob_mit, i)
+                top_i = array.get(ob_top, i)
+                bot_i = array.get(ob_bot, i)
+                dir_i = array.get(ob_dir, i)
+                bool mit = ob_mitigation == "Close" ?
+                     (dir_i == 1 ? close < bot_i : close > top_i) :
+                     (dir_i == 1 ? low  < bot_i  : high  > top_i)
+                if mit
+                    array.set(ob_mit, i, true)
+                    if not na(b)
+                        box.set_bgcolor(b, col_ob_mit)
+                        box.set_border_color(b, color.new(color.gray, 60))
+        for i = ob_sz - 1 to 0
+            d = array.get(ob_dir, i)
+            m = array.get(ob_mit, i)
+            if not m
+                if d == 1 and na(ob_bull_top)
+                    ob_bull_top := array.get(ob_top, i)
+                    ob_bull_bot := array.get(ob_bot, i)
+                if d == -1 and na(ob_bear_top)
+                    ob_bear_top := array.get(ob_top, i)
+                    ob_bear_bot := array.get(ob_bot, i)
 
 // ══════════════════════════════════════════════════════════════
 // §5  FACTORES + TASA
