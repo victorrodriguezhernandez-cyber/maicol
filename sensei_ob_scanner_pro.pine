@@ -1,0 +1,732 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0
+// © El Sensei Pro — Indicador de Estructura, Order Blocks y Probabilidades
+//@version=5
+indicator("El Sensei Pro", shorttitle="SenseiPro", overlay=true, max_boxes_count=500, max_labels_count=500, max_lines_count=500)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS — ESTRUCTURA
+// ═══════════════════════════════════════════════════════════════
+grpEst = "ESTRUCTURA"
+leftBars   = input.int(10, "Barras izquierda (pivot)", minval=1, maxval=50, group=grpEst)
+rightBars  = input.int(10, "Barras derecha (pivot)",  minval=1, maxval=50, group=grpEst)
+showBOS    = input.bool(true,  "Mostrar BOS",   group=grpEst)
+showCHoCH  = input.bool(true,  "Mostrar CHoCH", group=grpEst)
+useCustomMS = input.bool(false, "Usar etiqueta personalizada de estructura", group=grpEst)
+customMSLabel = input.string("MS", "Etiqueta de estructura de mercado", group=grpEst)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS — ORDER BLOCKS
+// ═══════════════════════════════════════════════════════════════
+grpOB = "ORDER BLOCKS"
+showOBLabels  = input.bool(true,  "Mostrar etiquetas OB",              group=grpOB)
+showCurrTFOBs = input.bool(true,  "Mostrar zonas del TF actual",       group=grpOB)
+showMTFOBs    = input.bool(true,  "Mostrar zonas MTF",                 group=grpOB)
+mtfTF         = input.timeframe("60", "Marco temporal MTF",            group=grpOB)
+obName        = input.string("OB", "Nombre de OB",                     group=grpOB)
+obBullColor   = input.color(color.new(color.blue, 70),  "Color OB alcista", group=grpOB)
+obBearColor   = input.color(color.new(color.red,  70),  "Color OB bajista", group=grpOB)
+obOnlyInStr   = input.bool(true,  "Mostrar OBs solo dentro de la estructura", group=grpOB)
+showPrevLabels = input.bool(false, "Etiquetas anteriores",             group=grpOB)
+maxOBs        = input.int(5, "Máx. OBs visibles", minval=1, maxval=20, group=grpOB)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS — FVG
+// ═══════════════════════════════════════════════════════════════
+grpFVG = "FVG — FAIR VALUE GAPS"
+showFVG      = input.bool(true,  "Mostrar FVG",                          group=grpFVG)
+showFVGLbl   = input.bool(true,  "Mostrar etiquetas FVG",                group=grpFVG)
+fvgOnlyInStr = input.bool(true,  "Mostrar FVG solo dentro de la estructura", group=grpFVG)
+fvgLabel     = input.string("FVG", "Texto de etiqueta FVG",              group=grpFVG)
+fvgBullColor = input.color(color.new(color.green, 80), "Color de gap alcista", group=grpFVG)
+fvgBearColor = input.color(color.new(color.red,   80), "Color de gap bajista", group=grpFVG)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS — PROBABILIDADES
+// ═══════════════════════════════════════════════════════════════
+grpProb = "PROBABILIDADES"
+lookback  = input.int(90, "Barras de lookback (zonas similares)", minval=30, maxval=200, group=grpProb)
+pipVar    = input.float(5.0, "Variación en pips (similitud de zona)", minval=0.5, step=0.5, group=grpProb)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS — SESIÓN
+// ═══════════════════════════════════════════════════════════════
+grpSes = "CONFIGURACIÓN DE SESIÓN A"
+showSession  = input.bool(true, "Mostrar sesión A", group=grpSes)
+sessionTime  = input.session("0700-1600", "Horario sesión A", group=grpSes)
+sessBgColor  = input.color(color.new(color.yellow, 92), "Color de fondo sesión", group=grpSes)
+sessLineColor = input.color(color.new(color.orange, 20), "Color línea inicio sesión", group=grpSes)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS — PANEL
+// ═══════════════════════════════════════════════════════════════
+grpPanel = "PANEL"
+showPanel   = input.bool(true, "Mostrar panel", group=grpPanel)
+panelPos    = input.string("top_right", "Posición del panel",
+     options=["top_right","top_left","bottom_right","bottom_left"], group=grpPanel)
+
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS & HELPERS
+// ═══════════════════════════════════════════════════════════════
+var float pipSize = syminfo.mintick * 10
+
+// ═══════════════════════════════════════════════════════════════
+// PIVOT DETECTION (no repaint — rightBars lag)
+// ═══════════════════════════════════════════════════════════════
+pivHigh = ta.pivothigh(high, leftBars, rightBars)
+pivLow  = ta.pivotlow(low,  leftBars, rightBars)
+
+// Confirmed pivot values and their bar indices
+var float lastPH    = na
+var float lastPL    = na
+var int   lastPHBar = na
+var int   lastPLBar = na
+
+var float prevPH    = na
+var float prevPL    = na
+
+if not na(pivHigh)
+    prevPH    := lastPH
+    lastPH    := pivHigh
+    lastPHBar := bar_index - rightBars
+
+if not na(pivLow)
+    prevPL    := lastPL
+    lastPL    := pivLow
+    lastPLBar := bar_index - rightBars
+
+// ═══════════════════════════════════════════════════════════════
+// MARKET STRUCTURE — HH / HL / LH / LL
+// ═══════════════════════════════════════════════════════════════
+var int   trendDir     = 0   // 1 = bullish, -1 = bearish, 0 = neutral
+var int   hhCount      = 0
+var int   hlCount      = 0
+var int   lhCount      = 0
+var int   llCount      = 0
+var float curHH        = na
+var float curHL        = na
+var float curLH        = na
+var float curLL        = na
+var int   bosStreak    = 0   // Racha tendencia
+var string estado      = "Neutralización"
+
+// Track new pivot events
+bool newPH = not na(pivHigh)
+bool newPL  = not na(pivLow)
+
+if newPH
+    if not na(prevPH)
+        if lastPH > prevPH
+            hhCount := hhCount + 1
+            curHH   := lastPH
+        else
+            lhCount := lhCount + 1
+            curLH   := lastPH
+
+if newPL
+    if not na(prevPL)
+        if lastPL > prevPL
+            hlCount := hlCount + 1
+            curHL   := lastPL
+        else
+            llCount := llCount + 1
+            curLL   := lastPL
+
+// Trend determination (only update on new pivot events to avoid false streaks)
+bool isBull = hhCount >= 2 and hlCount >= 1 and hhCount > lhCount
+bool isBear = lhCount >= 2 and llCount >= 1 and lhCount > hhCount
+
+if newPH or newPL
+    if isBull
+        if trendDir != 1
+            bosStreak := 1
+        else
+            bosStreak := bosStreak + 1
+        trendDir := 1
+    else if isBear
+        if trendDir != -1
+            bosStreak := 1
+        else
+            bosStreak := bosStreak + 1
+        trendDir := -1
+
+// Estado string
+if trendDir == 1
+    if newPH
+        estado := "Validando máx."
+    else if newPL
+        estado := "Validando mín."
+    else
+        estado := "Confirmado alcista"
+else if trendDir == -1
+    if newPL
+        estado := "Validando mín."
+    else if newPH
+        estado := "Validando máx."
+    else
+        estado := "Confirmado bajista"
+else
+    estado := "Neutralización"
+
+// ═══════════════════════════════════════════════════════════════
+// BOS & CHoCH DETECTION
+// ═══════════════════════════════════════════════════════════════
+var float bosLevelUp   = na
+var float bosLevelDn   = na
+var bool  newBOSUp     = false
+var bool  newBOSDn     = false
+var bool  newCHoCHUp   = false
+var bool  newCHoCHDn   = false
+
+newBOSUp   := false
+newBOSDn   := false
+newCHoCHUp := false
+newCHoCHDn := false
+
+// BOS up: price closes above last confirmed pivot high while in bullish trend
+if not na(lastPH) and close > lastPH and trendDir == 1
+    if na(bosLevelUp) or lastPH != bosLevelUp
+        bosLevelUp  := lastPH
+        newBOSUp    := true
+
+// BOS down: price closes below last confirmed pivot low while in bearish trend
+if not na(lastPL) and close < lastPL and trendDir == -1
+    if na(bosLevelDn) or lastPL != bosLevelDn
+        bosLevelDn  := lastPL
+        newBOSDn    := true
+
+// CHoCH: price breaks opposite structure pivot (trend change signal)
+if not na(lastPL) and close < lastPL and trendDir == 1
+    newCHoCHDn := true
+
+if not na(lastPH) and close > lastPH and trendDir == -1
+    newCHoCHUp := true
+
+// BOS labels
+bosLabelText = useCustomMS ? customMSLabel : "BOS"
+chochLabelText = useCustomMS ? customMSLabel : "CHoCH"
+
+if showBOS and newBOSUp
+    label.new(bar_index, high, bosLabelText + " ↑", style=label.style_label_down,
+     color=color.new(color.teal, 20), textcolor=color.white, size=size.tiny)
+
+if showBOS and newBOSDn
+    label.new(bar_index, low, bosLabelText + " ↓", style=label.style_label_up,
+     color=color.new(color.maroon, 20), textcolor=color.white, size=size.tiny)
+
+if showCHoCH and newCHoCHUp
+    label.new(bar_index, high, chochLabelText + " ↑", style=label.style_label_down,
+     color=color.new(color.purple, 30), textcolor=color.white, size=size.tiny)
+
+if showCHoCH and newCHoCHDn
+    label.new(bar_index, low, chochLabelText + " ↓", style=label.style_label_up,
+     color=color.new(color.purple, 30), textcolor=color.white, size=size.tiny)
+
+// ═══════════════════════════════════════════════════════════════
+// ORDER BLOCKS
+// ═══════════════════════════════════════════════════════════════
+// OB data stored in parallel arrays
+var box[]   obBoxes    = array.new_box()
+var int[]   obDirs     = array.new_int()    // 1=bull, -1=bear
+var bool[]  obFresh    = array.new_bool()
+var bool[]  obBOS      = array.new_bool()   // triggered by BOS
+var float[] obMidpoint = array.new_float()
+
+// Bearish OB = last bullish candle body before a bearish BOS
+// Bullish OB = last bearish candle body before a bullish BOS
+// We detect OBs when a BOS occurs
+
+f_addOB(dir, topVal, botVal, isBosOB) =>
+    if showCurrTFOBs and (not obOnlyInStr or trendDir == dir)
+        obColor = dir == 1 ? obBullColor : obBearColor
+        newBox  = box.new(bar_index - 1, topVal, bar_index + 50, botVal,
+             border_color=color.new(obColor, 40),
+             bgcolor=obColor, extend=extend.right)
+        midVal  = (topVal + botVal) / 2
+        if showOBLabels
+            label.new(bar_index - 1, topVal,
+             obName + (dir == 1 ? " ↑" : " ↓"),
+             style=label.style_label_right,
+             color=color.new(obColor, 30),
+             textcolor=color.white, size=size.tiny)
+        array.push(obBoxes,    newBox)
+        array.push(obDirs,     dir)
+        array.push(obFresh,    true)
+        array.push(obBOS,      isBosOB)
+        array.push(obMidpoint, midVal)
+        // Trim to maxOBs
+        while array.size(obBoxes) > maxOBs
+            oldBox = array.shift(obBoxes)
+            box.delete(oldBox)
+            array.shift(obDirs)
+            array.shift(obFresh)
+            array.shift(obBOS)
+            array.shift(obMidpoint)
+
+// Detect OBs on BOS events
+if newBOSUp
+    // Last bearish candle body before BOS up
+    obTop = open[1] > close[1] ? open[1] : close[1]
+    obBot = open[1] > close[1] ? close[1] : open[1]
+    f_addOB(1, obTop, obBot, true)
+
+if newBOSDn
+    // Last bullish candle body before BOS down
+    obTop = open[1] < close[1] ? close[1] : open[1]
+    obBot = open[1] < close[1] ? open[1]  : close[1]
+    f_addOB(-1, obTop, obBot, true)
+
+// Update OB freshness and invalidation
+if array.size(obBoxes) > 0
+    for i = array.size(obBoxes) - 1 to 0
+        if i < array.size(obBoxes)
+            bx  = array.get(obBoxes, i)
+            dir = array.get(obDirs,  i)
+            top = box.get_top(bx)
+            bot = box.get_bottom(bx)
+            // Mark as used if price enters the zone
+            if close >= bot and close <= top
+                array.set(obFresh, i, false)
+                box.set_bgcolor(bx, color.new(dir == 1 ? color.blue : color.red, 88))
+            // Invalidate (delete) if price closes through
+            if dir == 1 and close < bot
+                box.delete(bx)
+                array.remove(obBoxes,    i)
+                array.remove(obDirs,     i)
+                array.remove(obFresh,    i)
+                array.remove(obBOS,      i)
+                array.remove(obMidpoint, i)
+            else if dir == -1 and close > top
+                box.delete(bx)
+                array.remove(obBoxes,    i)
+                array.remove(obDirs,     i)
+                array.remove(obFresh,    i)
+                array.remove(obBOS,      i)
+                array.remove(obMidpoint, i)
+
+// ═══════════════════════════════════════════════════════════════
+// FVG — FAIR VALUE GAPS
+// ═══════════════════════════════════════════════════════════════
+var box[]  fvgBoxes = array.new_box()
+var int[]  fvgDirs  = array.new_int()
+
+bullFVG = low > high[2]
+bearFVG = high < low[2]
+
+if showFVG
+    if bullFVG and (not fvgOnlyInStr or trendDir == 1)
+        fvgBox = box.new(bar_index - 2, low, bar_index + 30, high[2],
+         border_color=color.new(fvgBullColor, 20),
+         bgcolor=fvgBullColor, extend=extend.right)
+        array.push(fvgBoxes, fvgBox)
+        array.push(fvgDirs,  1)
+        if showFVGLbl
+            label.new(bar_index - 2, low, fvgLabel + " ↑",
+             style=label.style_label_right,
+             color=color.new(color.green, 30),
+             textcolor=color.white, size=size.tiny)
+
+    if bearFVG and (not fvgOnlyInStr or trendDir == -1)
+        fvgBox = box.new(bar_index - 2, low[2], bar_index + 30, high,
+         border_color=color.new(fvgBearColor, 20),
+         bgcolor=fvgBearColor, extend=extend.right)
+        array.push(fvgBoxes, fvgBox)
+        array.push(fvgDirs, -1)
+        if showFVGLbl
+            label.new(bar_index - 2, high, fvgLabel + " ↓",
+             style=label.style_label_right,
+             color=color.new(color.red, 30),
+             textcolor=color.white, size=size.tiny)
+
+// Trim FVG boxes and invalidate filled ones
+if array.size(fvgBoxes) > 0
+    for i = array.size(fvgBoxes) - 1 to 0
+        if i < array.size(fvgBoxes)
+            bx  = array.get(fvgBoxes, i)
+            dir = array.get(fvgDirs,  i)
+            top = box.get_top(bx)
+            bot = box.get_bottom(bx)
+            filled = (dir == 1 and low <= bot) or (dir == -1 and high >= top)
+            if filled
+                box.delete(bx)
+                array.remove(fvgBoxes, i)
+                array.remove(fvgDirs,  i)
+
+// ═══════════════════════════════════════════════════════════════
+// PROBABILITY CALCULATIONS (Sensei's formula approximation)
+// ═══════════════════════════════════════════════════════════════
+// Look at last `lookback` bars for similar OB-like zones
+// "Similar" = same direction, zone size within pipVar pips
+
+f_calcProb(dir) =>
+    totalSimilar   = 0
+    totalRetest    = 0
+    totalCont      = 0
+    totalBOSRetest = 0
+    totalBOSCont   = 0
+    zoneSize       = pipVar * pipSize
+    for j = 1 to lookback
+        if j < bar_index
+            isUp   = close[j] > open[j]
+            isDn   = close[j] < open[j]
+            cBody  = math.abs(close[j] - open[j])
+            matchDir = (dir == 1 and isDn) or (dir == -1 and isUp)
+            if matchDir and cBody <= zoneSize * 5 and cBody >= zoneSize * 0.2
+                totalSimilar := totalSimilar + 1
+                cTop = math.max(close[j], open[j])
+                cBot = math.min(close[j], open[j])
+                // Check if price returned to that zone in subsequent bars
+                retested = false
+                continued = false
+                for k = j - 1 to math.max(j - 15, 0)
+                    if k >= 0 and k < j
+                        if low[k] <= cTop and high[k] >= cBot
+                            retested := true
+                        if retested
+                            if dir == 1 and close[k] > cTop
+                                continued := true
+                            if dir == -1 and close[k] < cBot
+                                continued := true
+                if retested
+                    totalRetest := totalRetest + 1
+                if continued
+                    totalCont := totalCont + 1
+    contRate  = totalSimilar > 0 ? (totalCont  * 100.0 / totalSimilar) : 50.0
+    retestPct = totalSimilar > 0 ? (totalRetest * 100.0 / totalSimilar) : 50.0
+    [contRate, retestPct, totalSimilar]
+
+// Calculate for each direction (computed on every bar for real-time panel)
+[contRateBull, retestBull, simBull] = f_calcProb(1)
+[contRateBear, retestBear, simBear] = f_calcProb(-1)
+
+// Active continuation rate based on current trend
+float contRateActive = trendDir == 1 ? contRateBull : (trendDir == -1 ? contRateBear : 50.0)
+
+// BOS-specific retest rates (simplified: use BOS-triggered OBs from our arrays)
+var int bosBullTotal  = 0
+var int bosBullRetest = 0
+var int bosBearTotal  = 0
+var int bosBearRetest = 0
+
+if newBOSUp
+    bosBullTotal  := bosBullTotal + 1
+if newBOSDn
+    bosBearTotal  := bosBearTotal + 1
+
+// Update retest counters when price enters a BOS OB
+if array.size(obBoxes) > 0
+    for i = 0 to array.size(obBoxes) - 1
+        if i < array.size(obBoxes)
+            isBosOB = array.get(obBOS,  i)
+            dir     = array.get(obDirs, i)
+            fresh   = array.get(obFresh, i)
+            if isBosOB and not fresh
+                if dir == 1
+                    bosBullRetest := bosBullRetest + 1
+                else
+                    bosBearRetest := bosBearRetest + 1
+
+float retestBOSUp = bosBullTotal > 0 ? (bosBullRetest * 100.0 / bosBullTotal) : 50.0
+float retestBOSDn = bosBearTotal > 0 ? (bosBearRetest * 100.0 / bosBearTotal) : 50.0
+
+// ═══════════════════════════════════════════════════════════════
+// MTF CALCULATIONS
+// ═══════════════════════════════════════════════════════════════
+[mtfClose, mtfOpen, mtfHigh, mtfLow] = request.security(syminfo.tickerid, mtfTF,
+     [close, open, high, low], lookahead=barmerge.lookahead_off)
+
+// MTF trend via simple pivot logic (condensed)
+mtfBullish = mtfClose > mtfOpen and mtfHigh > mtfHigh[1]
+mtfBearish = mtfClose < mtfOpen and mtfLow  < mtfLow[1]
+
+int mtfDir = mtfBullish ? 1 : mtfBearish ? -1 : 0
+
+// MTF probability (simplified — uses same lookback on MTF data)
+[mtfContBull, mtfRetBull, mtfSimBull] = request.security(syminfo.tickerid, mtfTF,
+     f_calcProb(1), lookahead=barmerge.lookahead_off)
+[mtfContBear, mtfRetBear, mtfSimBear] = request.security(syminfo.tickerid, mtfTF,
+     f_calcProb(-1), lookahead=barmerge.lookahead_off)
+
+float mtfContRate = mtfDir == 1 ? mtfContBull : mtfDir == -1 ? mtfContBear : 50.0
+
+bool mtfAligned      = (trendDir == 1 and mtfDir == 1) or (trendDir == -1 and mtfDir == -1)
+bool mtfContradicts  = (trendDir == 1 and mtfDir == -1) or (trendDir == -1 and mtfDir == 1)
+bool mtfNeutral      = mtfContRate >= 45.0 and mtfContRate <= 55.0
+
+// ═══════════════════════════════════════════════════════════════
+// CALIFICACIÓN (Rating 1–5)
+// ═══════════════════════════════════════════════════════════════
+int rating = 0
+
+// +2 if cont rate > 65%, +1 if > 50%
+if contRateActive > 65.0
+    rating := rating + 2
+else if contRateActive > 50.0
+    rating := rating + 1
+
+// +1 if MTF aligned
+if mtfAligned
+    rating := rating + 1
+
+// +1 if any fresh OB exists in trend direction
+bool freshZone = false
+if array.size(obBoxes) > 0
+    for i = 0 to array.size(obBoxes) - 1
+        if i < array.size(obBoxes)
+            if array.get(obFresh, i) and array.get(obDirs, i) == trendDir
+                freshZone := true
+
+if freshZone
+    rating := rating + 1
+
+// +1 if in structure (trend is confirmed)
+if trendDir != 0
+    rating := rating + 1
+
+// -2 if MTF contradicts
+if mtfContradicts
+    rating := rating - 2
+
+rating := math.max(0, math.min(5, rating))
+
+// Stars string
+f_stars(r) =>
+    r == 5 ? "★★★★★" : r == 4 ? "★★★★☆" : r == 3 ? "★★★☆☆" : r == 2 ? "★★☆☆☆" : r == 1 ? "★☆☆☆☆" : "☆☆☆☆☆"
+
+starsStr = f_stars(rating)
+
+// ═══════════════════════════════════════════════════════════════
+// SESSION
+// ═══════════════════════════════════════════════════════════════
+inSession = not na(time(timeframe.period, sessionTime))
+bgcolor(showSession and inSession ? sessBgColor : na, title="Fondo sesión A")
+
+// Vertical line at session start
+var bool prevInSess = false
+if showSession and inSession and not prevInSess
+    line.new(bar_index, low * 0.999, bar_index, high * 1.001,
+     color=sessLineColor, width=1, style=line.style_dashed, extend=extend.both)
+prevInSess := inSession
+
+// ═══════════════════════════════════════════════════════════════
+// MTF OB BOXES (drawn from MTF data)
+// ═══════════════════════════════════════════════════════════════
+var box[] mtfOBBoxes = array.new_box()
+var int[] mtfOBDirs  = array.new_int()
+
+mtfBullOB = request.security(syminfo.tickerid, mtfTF, newBOSUp, lookahead=barmerge.lookahead_off)
+mtfBearOB = request.security(syminfo.tickerid, mtfTF, newBOSDn, lookahead=barmerge.lookahead_off)
+
+mtfObH = request.security(syminfo.tickerid, mtfTF, high[1], lookahead=barmerge.lookahead_off)
+mtfObL = request.security(syminfo.tickerid, mtfTF, low[1],  lookahead=barmerge.lookahead_off)
+
+if showMTFOBs
+    if mtfBullOB
+        newMtfBox = box.new(bar_index, mtfObH, bar_index + 80, mtfObL,
+         border_color=color.new(obBullColor, 20),
+         bgcolor=color.new(obBullColor, 60), extend=extend.right)
+        array.push(mtfOBBoxes, newMtfBox)
+        array.push(mtfOBDirs,  1)
+
+    if mtfBearOB
+        newMtfBox = box.new(bar_index, mtfObH, bar_index + 80, mtfObL,
+         border_color=color.new(obBearColor, 20),
+         bgcolor=color.new(obBearColor, 60), extend=extend.right)
+        array.push(mtfOBBoxes, newMtfBox)
+        array.push(mtfOBDirs, -1)
+
+    // Trim MTF OBs
+    while array.size(mtfOBBoxes) > maxOBs
+        oldMtfBox = array.shift(mtfOBBoxes)
+        box.delete(oldMtfBox)
+        array.shift(mtfOBDirs)
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL TABLE
+// ═══════════════════════════════════════════════════════════════
+// Colors
+clrHeader  = color.new(#1a2744, 0)
+clrSection = color.new(#1e3a5f, 0)
+clrBull    = color.new(color.teal, 10)
+clrBear    = color.new(color.maroon, 10)
+clrNeutral = color.new(color.orange, 10)
+clrBg      = color.new(#0d1b2a, 10)
+clrText    = color.white
+clrGreen   = #26a69a
+clrRed     = #ef5350
+clrOrange  = #ff9800
+clrGold    = #ffd700
+
+// Panel position
+tblPos = panelPos == "top_right"    ? position.top_right    :
+         panelPos == "top_left"     ? position.top_left     :
+         panelPos == "bottom_right" ? position.bottom_right :
+         position.bottom_left
+
+var table panel = table.new(tblPos, 2, 22,
+     border_color=color.new(color.gray, 60), border_width=1,
+     frame_color=color.new(color.gray, 40), frame_width=1)
+
+f_cell(tbl, col, row, txt, bgClr, txtClr, sz) =>
+    table.cell(tbl, col, row, txt, bgcolor=bgClr, text_color=txtClr,
+     text_size=sz, text_halign=text.align_left)
+
+f_val(v) =>
+    str.tostring(math.round(v, 1)) + "%"
+
+f_dir(d) =>
+    d == 1 ? "Alcista ▲" : d == -1 ? "Bajista ▼" : "Neutral —"
+
+f_dirColor(d) =>
+    d == 1 ? clrGreen : d == -1 ? clrRed : clrOrange
+
+f_rateColor(v) =>
+    v > 55.0 ? clrGreen : v < 45.0 ? clrRed : clrOrange
+
+if showPanel and barstate.islast
+    // Row 0 — Header
+    table.cell(panel, 0, 0, "El Sensei Pro", bgcolor=clrHeader,
+     text_color=clrGold, text_size=size.small,
+     text_halign=text.align_center, tooltip="Indicador de Estructura y OBs")
+    table.cell(panel, 1, 0, "v1.0", bgcolor=clrHeader,
+     text_color=color.new(color.gray, 30), text_size=size.tiny,
+     text_halign=text.align_right)
+
+    // Row 1 — Section: ESTRUCTURA
+    table.cell(panel, 0, 1, "— ESTRUCTURA —", bgcolor=clrSection,
+     text_color=color.new(color.silver, 0), text_size=size.tiny,
+     text_halign=text.align_center)
+    table.cell(panel, 1, 1, "", bgcolor=clrSection, text_color=clrText, text_size=size.tiny)
+
+    // Row 2 — Tendencia
+    table.cell(panel, 0, 2, "Tendencia", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 2, f_dir(trendDir), bgcolor=clrBg,
+     text_color=f_dirColor(trendDir), text_size=size.tiny)
+
+    // Row 3 — Máximos válidos
+    table.cell(panel, 0, 3, "Máx. válidos", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 3, str.tostring(hhCount), bgcolor=clrBg, text_color=clrGreen, text_size=size.tiny)
+
+    // Row 4 — Mínimos válidos
+    table.cell(panel, 0, 4, "Mín. válidos", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 4, str.tostring(hlCount), bgcolor=clrBg, text_color=clrGreen, text_size=size.tiny)
+
+    // Row 5 — HH actual
+    hhStr = not na(curHH) ? str.tostring(math.round(curHH, 5)) : "—"
+    table.cell(panel, 0, 5, "HH actual", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 5, hhStr, bgcolor=clrBg, text_color=clrGreen, text_size=size.tiny)
+
+    // Row 6 — HL actual
+    hlStr = not na(curHL) ? str.tostring(math.round(curHL, 5)) : "—"
+    table.cell(panel, 0, 6, "HL actual", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 6, hlStr, bgcolor=clrBg, text_color=clrGreen, text_size=size.tiny)
+
+    // Row 7 — LH actual
+    lhStr = not na(curLH) ? str.tostring(math.round(curLH, 5)) : "—"
+    table.cell(panel, 0, 7, "LH actual", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 7, lhStr, bgcolor=clrBg, text_color=clrRed, text_size=size.tiny)
+
+    // Row 8 — LL actual
+    llStr = not na(curLL) ? str.tostring(math.round(curLL, 5)) : "—"
+    table.cell(panel, 0, 8, "LL actual", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 8, llStr, bgcolor=clrBg, text_color=clrRed, text_size=size.tiny)
+
+    // Row 9 — Estado
+    estadoBg = estado == "Confirmado alcista" ? color.new(clrGreen,60) :
+               estado == "Confirmado bajista" ? color.new(clrRed,60)   :
+               color.new(clrOrange, 60)
+    table.cell(panel, 0, 9, "Estado", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 9, estado, bgcolor=estadoBg, text_color=clrText, text_size=size.tiny)
+
+    // Row 10 — Section: PROBABILIDADES
+    table.cell(panel, 0, 10, "— PROBABILIDADES —", bgcolor=clrSection,
+     text_color=color.new(color.silver, 0), text_size=size.tiny,
+     text_halign=text.align_center)
+    table.cell(panel, 1, 10, "", bgcolor=clrSection, text_color=clrText, text_size=size.tiny)
+
+    // Row 11 — Tasa continuación
+    table.cell(panel, 0, 11, "Tasa continuación", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 11, f_val(contRateActive), bgcolor=clrBg,
+     text_color=f_rateColor(contRateActive), text_size=size.tiny)
+
+    // Row 12 — Racha tendencia
+    table.cell(panel, 0, 12, "Racha tendencia", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 12, str.tostring(bosStreak), bgcolor=clrBg,
+     text_color=trendDir == 1 ? clrGreen : clrRed, text_size=size.tiny)
+
+    // Row 13 — Retest BOS ↑
+    table.cell(panel, 0, 13, "Retest BOS ↑", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 13, f_val(retestBOSUp), bgcolor=clrBg,
+     text_color=f_rateColor(retestBOSUp), text_size=size.tiny)
+
+    // Row 14 — Retest ↑
+    table.cell(panel, 0, 14, "Retest ↑", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 14, f_val(retestBull), bgcolor=clrBg,
+     text_color=f_rateColor(retestBull), text_size=size.tiny)
+
+    // Row 15 — Retest BOS ↓
+    table.cell(panel, 0, 15, "Retest BOS ↓", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 15, f_val(retestBOSDn), bgcolor=clrBg,
+     text_color=f_rateColor(retestBOSDn), text_size=size.tiny)
+
+    // Row 16 — Retest ↓
+    table.cell(panel, 0, 16, "Retest ↓", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 16, f_val(retestBear), bgcolor=clrBg,
+     text_color=f_rateColor(retestBear), text_size=size.tiny)
+
+    // Row 17 — Calificación
+    ratingBg = rating >= 4 ? color.new(clrGreen, 50) :
+               rating >= 3 ? color.new(clrOrange, 50) :
+               color.new(clrRed, 50)
+    table.cell(panel, 0, 17, "Calificación", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 17, starsStr, bgcolor=ratingBg, text_color=clrGold, text_size=size.small)
+
+    // Row 18 — Section: MTF
+    mtfHeader = "— MTF [" + mtfTF + "m] —"
+    table.cell(panel, 0, 18, mtfHeader, bgcolor=clrSection,
+     text_color=color.new(color.silver, 0), text_size=size.tiny,
+     text_halign=text.align_center)
+    table.cell(panel, 1, 18, "", bgcolor=clrSection, text_color=clrText, text_size=size.tiny)
+
+    // Row 19 — MTF Tendencia
+    mtfStatus = mtfNeutral ? "Neutralización" : f_dir(mtfDir)
+    mtfTxtClr = mtfNeutral ? clrOrange : f_dirColor(mtfDir)
+    table.cell(panel, 0, 19, "MTF Tendencia", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 19, mtfStatus, bgcolor=clrBg, text_color=mtfTxtClr, text_size=size.tiny)
+
+    // Row 20 — MTF Tasa cont.
+    table.cell(panel, 0, 20, "MTF Tasa cont.", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 20, f_val(mtfContRate), bgcolor=clrBg,
+     text_color=f_rateColor(mtfContRate), text_size=size.tiny)
+
+    // Row 21 — Alineación MTF
+    alinStr = mtfAligned ? "Alineado ✓" : mtfContradicts ? "Contradice ✗" : "Neutral —"
+    alinClr = mtfAligned ? clrGreen : mtfContradicts ? clrRed : clrOrange
+    alinBg  = mtfAligned ? color.new(clrGreen,70) : mtfContradicts ? color.new(clrRed,70) : color.new(clrOrange,70)
+    table.cell(panel, 0, 21, "Alineación", bgcolor=clrBg, text_color=color.new(color.silver,20), text_size=size.tiny)
+    table.cell(panel, 1, 21, alinStr, bgcolor=alinBg, text_color=alinClr, text_size=size.tiny)
+
+// ═══════════════════════════════════════════════════════════════
+// PLOTS — Pivot High/Low dots (optional visual confirmation)
+// ═══════════════════════════════════════════════════════════════
+plotshape(not na(pivHigh), title="Pivot High", style=shape.triangledown,
+ location=location.abovebar, color=color.new(color.red, 30), size=size.tiny)
+plotshape(not na(pivLow), title="Pivot Low", style=shape.triangleup,
+ location=location.belowbar, color=color.new(color.teal, 30), size=size.tiny)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+alertcondition(newBOSUp,   title="BOS Alcista",   message="El Sensei Pro — BOS alcista detectado")
+alertcondition(newBOSDn,   title="BOS Bajista",   message="El Sensei Pro — BOS bajista detectado")
+alertcondition(newCHoCHUp, title="CHoCH Alcista",  message="El Sensei Pro — CHoCH alcista detectado")
+alertcondition(newCHoCHDn, title="CHoCH Bajista",  message="El Sensei Pro — CHoCH bajista detectado")
+alertcondition(bullFVG and showFVG, title="FVG Alcista", message="El Sensei Pro — FVG alcista formado")
+alertcondition(bearFVG and showFVG, title="FVG Bajista", message="El Sensei Pro — FVG bajista formado")
+alertcondition(rating >= 4 and trendDir == 1, title="Setup Alcista Alta Calidad",
+ message="El Sensei Pro — Setup alcista 4-5 estrellas")
+alertcondition(rating >= 4 and trendDir == -1, title="Setup Bajista Alta Calidad",
+ message="El Sensei Pro — Setup bajista 4-5 estrellas")
+alertcondition(contRateActive < 50.0 and trendDir != 0, title="Probabilidad Baja",
+ message="El Sensei Pro — Tasa de continuacion por debajo del 50%")
+alertcondition(mtfNeutral, title="Neutralizacion MTF",
+ message="El Sensei Pro — MTF en neutralizacion, evitar operar")
