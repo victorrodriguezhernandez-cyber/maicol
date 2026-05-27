@@ -108,6 +108,8 @@ var label[] fvg_lbls  = array.new<label>()
 //  ESTRUCTURA DE MERCADO — HH / HL / LH / LL
 // ══════════════════════════════════════════════════════════════════════════════
 
+atr14_val = ta.atr(14)
+
 bos_bull_bar := false
 bos_bear_bar := false
 
@@ -119,7 +121,7 @@ if not na(ph)
         cur_ph     := ph
         cur_ph_idx := phbar
     else if ph >= cur_ph
-        lbl = label.new(phbar, ph + ta.atr(14) * 0.15,
+        lbl = label.new(phbar, ph + atr14_val * 0.15,
              text          = "HH",
              style         = label.style_label_down,
              color         = #1565C0,
@@ -137,7 +139,7 @@ if not na(ph)
         trend       := 1
         estado      := "Máximo confirmado"
     else
-        lbl = label.new(phbar, ph + ta.atr(14) * 0.15,
+        lbl = label.new(phbar, ph + atr14_val * 0.15,
              text          = "LH",
              style         = label.style_label_down,
              color         = #B71C1C,
@@ -159,7 +161,7 @@ if not na(pl)
         cur_pl     := pl
         cur_pl_idx := plbar
     else if pl <= cur_pl
-        lbl = label.new(plbar, pl - ta.atr(14) * 0.15,
+        lbl = label.new(plbar, pl - atr14_val * 0.15,
              text          = "LL",
              style         = label.style_label_up,
              color         = #B71C1C,
@@ -177,7 +179,7 @@ if not na(pl)
         trend      := -1
         estado     := "Mínimo confirmado"
     else
-        lbl = label.new(plbar, pl - ta.atr(14) * 0.15,
+        lbl = label.new(plbar, pl - atr14_val * 0.15,
              text          = "HL",
              style         = label.style_label_up,
              color         = #1565C0,
@@ -194,8 +196,6 @@ if not na(pl)
 // ══════════════════════════════════════════════════════════════════════════════
 //  BOS — BREAK OF STRUCTURE
 // ══════════════════════════════════════════════════════════════════════════════
-
-atr14_val = ta.atr(14)
 
 // Alcista: cierre rompe por encima del swing high activo
 if not na(cur_ph) and close > cur_ph and close[1] <= cur_ph
@@ -396,8 +396,8 @@ atr50_val = ta.atr(50)
 f1 = math.min(racha / 7.0, 1.0)
 
 // F2 — Posición del precio dentro del rango de estructura activo · 25 %
-rng_top = na
-rng_bot = na
+float rng_top = na
+float rng_bot = na
 if trend == 1
     rng_top := not na(hh_val) ? hh_val : high
     rng_bot := not na(hl_val) ? hl_val : low
@@ -464,8 +464,7 @@ dir_txt = r_dn > r_up ?
 dir_clr = r_dn > r_up ? color(#FF1744) : color(#00E676)
 
 // Calificación de estrellas
-stars_n   = tasa_cont > 80 ? 5 : tasa_cont > 65 ? 4 : tasa_cont > 55 ? 3 :
-            tasa_cont > 45 ? 2 : 1
+stars_n   = tasa_cont > 80 ? 5 : tasa_cont > 65 ? 4 : tasa_cont > 55 ? 3 : tasa_cont > 45 ? 2 : 1
 stars_str = stars_n == 5 ? "★★★★★" :
             stars_n == 4 ? "★★★★☆" :
             stars_n == 3 ? "★★★☆☆" :
