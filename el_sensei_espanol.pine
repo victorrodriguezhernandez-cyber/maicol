@@ -8,7 +8,7 @@ indicator("EL SENSEI Español", overlay=true, max_bars_back=5000,
 
 // ── CONFIGURACIÓN DE ORDER BLOCKS ────────────────────────────────────────────
 show_ob_lbl      = input.bool(false,  "Mostrar etiquetas OB",                    group="CONFIGURACIÓN DE ORDER BLOCKS")
-show_ob_current  = input.bool(false,  "Mostrar zonas del TF actual",             group="CONFIGURACIÓN DE ORDER BLOCKS")
+show_ob_current  = input.bool(true,   "Mostrar zonas del TF actual",             group="CONFIGURACIÓN DE ORDER BLOCKS")
 show_ob_mtf      = input.bool(false,  "Mostrar zonas MTF",                       group="CONFIGURACIÓN DE ORDER BLOCKS")
 mtf_tf           = input.timeframe("60", "Marco temporal MTF",                   group="CONFIGURACIÓN DE ORDER BLOCKS")
 ob_name_txt      = input.string("OB", "Nombre de OB",                            group="CONFIGURACIÓN DE ORDER BLOCKS")
@@ -105,6 +105,10 @@ var int    valid_lows  = 0
 var int    racha       = 0
 var string estado      = "Validando extremos..."
 
+// Tracking para tendencia principal correcta
+var bool   last_high_is_hh = false  // último pivot high fue HH (no LH)
+var bool   last_low_is_hl  = false  // último pivot low fue HL (no LL)
+
 var float  last_bos_bull = na
 var float  last_bos_bear = na
 var bool   bos_bull_bar  = false
@@ -171,12 +175,13 @@ if not na(ph)
         else
             label.delete(lbl_hh)
             lbl_hh := label.new(phbar, ph + atr14_val * 0.15, text=lbl_txt, style=label.style_label_down, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
-        cur_ph     := ph
-        cur_ph_idx := phbar
-        hh_val     := ph
-        racha      := trend == 1 ? racha + 1 : 1
-        trend      := 1
-        estado     := "Máximo confirmado"
+        cur_ph          := ph
+        cur_ph_idx      := phbar
+        hh_val          := ph
+        last_high_is_hh := true
+        racha           := trend == 1 ? racha + 1 : 1
+        trend           := 1
+        estado          := "Máximo confirmado"
     else
         lbl_txt = f_struct_name("LH")
         lbl_col = color(#B71C1C)
@@ -188,9 +193,10 @@ if not na(ph)
         else
             label.delete(lbl_lh)
             lbl_lh := label.new(phbar, ph + atr14_val * 0.15, text=lbl_txt, style=label.style_label_down, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
-        lh_val := ph
-        racha  := trend == -1 ? racha + 1 : 1
-        trend  := -1
+        lh_val          := ph
+        last_high_is_hh := false
+        racha           := trend == -1 ? racha + 1 : 1
+        trend           := -1
 
 // ── Procesar pivot LOW ────────────────────────────────────────────────────────
 if not na(pl)
@@ -210,12 +216,13 @@ if not na(pl)
         else
             label.delete(lbl_ll)
             lbl_ll := label.new(plbar, pl - atr14_val * 0.15, text=lbl_txt, style=label.style_label_up, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
-        cur_pl     := pl
-        cur_pl_idx := plbar
-        ll_val     := pl
-        racha      := trend == -1 ? racha + 1 : 1
-        trend      := -1
-        estado     := "Mínimo confirmado"
+        cur_pl         := pl
+        cur_pl_idx     := plbar
+        ll_val         := pl
+        last_low_is_hl := false
+        racha          := trend == -1 ? racha + 1 : 1
+        trend          := -1
+        estado         := "Mínimo confirmado"
     else
         lbl_txt = f_struct_name("HL")
         lbl_col = color(#1565C0)
@@ -227,9 +234,17 @@ if not na(pl)
         else
             label.delete(lbl_hl)
             lbl_hl := label.new(plbar, pl - atr14_val * 0.15, text=lbl_txt, style=label.style_label_up, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
-        hl_val := pl
-        racha  := trend == 1 ? racha + 1 : 1
-        trend  := 1
+        hl_val         := pl
+        last_low_is_hl := true
+        racha          := trend == 1 ? racha + 1 : 1
+        trend          := 1
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  TENDENCIA PRINCIPAL (HH+HL = alcista / LH+LL = bajista / mixto = neutral)
+//  Un solo HL NO hace alcista si el último high fue LH. Evita falsas lecturas.
+// ══════════════════════════════════════════════════════════════════════════════
+
+main_trend = last_high_is_hh and last_low_is_hl ? 1 : not last_high_is_hh and not last_low_is_hl ? -1 : 0
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  RANGO DE ESTRUCTURA (calcular ANTES de OBs y FVGs para filtro "within struct")
@@ -237,10 +252,10 @@ if not na(pl)
 
 float rng_top = na
 float rng_bot = na
-if trend == 1
+if main_trend == 1
     rng_top := not na(hh_val) ? hh_val : high
     rng_bot := not na(hl_val) ? hl_val : low
-else if trend == -1
+else if main_trend == -1
     rng_top := not na(lh_val) ? lh_val : high
     rng_bot := not na(ll_val) ? ll_val : low
 else
@@ -428,16 +443,16 @@ bgcolor(is_sess_c ? sess_c_col : na, title="Sesión C")
 //  CÁLCULO TASA DE CONTINUACIÓN
 // ══════════════════════════════════════════════════════════════════════════════
 
-// F1 — Racha de tendencia · 35 %
-f1 = math.min(racha / 7.0, 1.0)
+// F1 — Racha de tendencia · 35 % (normalizado a 3 pivotes consecutivos = máximo)
+f1 = math.min(racha / 3.0, 1.0)
 
 // F2 — Posición del precio dentro del rango de estructura · 25 %
-// Solo calcular cuando AMBOS extremos son válidos (corrige el bug F2=1%)
+// Usa main_trend (HH+HL / LH+LL) para evitar rangos incorrectos
 float f2 = 0.5
-if trend == 1 and not na(hh_val) and not na(hl_val) and hh_val != hl_val
+if main_trend == 1 and not na(hh_val) and not na(hl_val) and hh_val != hl_val
     f2_raw = (close - hl_val) / (hh_val - hl_val)
     f2 := math.max(math.min(f2_raw, 1.0), 0.0)
-else if trend == -1 and not na(lh_val) and not na(ll_val) and lh_val != ll_val
+else if main_trend == -1 and not na(lh_val) and not na(ll_val) and lh_val != ll_val
     f2_raw = (close - ll_val) / (lh_val - ll_val)
     f2 := math.max(math.min(1.0 - f2_raw, 1.0), 0.0)
 
@@ -521,8 +536,8 @@ if show_panel and barstate.islast
     table.merge_cells(panel, 0, 1, 2, 1)
 
     // ── Fila 2 · TENDENCIA ────────────────────────────────────────────────────
-    tr_txt = trend == 1 ? "▲ ALCISTA" : trend == -1 ? "▼ BAJISTA" : "— NEUTRAL"
-    tr_clr = trend == 1 ? color(#00E676) : trend == -1 ? color(#FF1744) : color(#FFD600)
+    tr_txt = main_trend == 1 ? "▲ ALCISTA" : main_trend == -1 ? "▼ BAJISTA" : "— NEUTRAL"
+    tr_clr = main_trend == 1 ? color(#00E676) : main_trend == -1 ? color(#FF1744) : color(#FFD600)
     table.cell(panel, 0, 2, "TENDENCIA",
               text_color=#888888, bgcolor=#161616,
               text_size=size.small, text_halign=text.align_left,
