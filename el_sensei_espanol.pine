@@ -6,107 +6,145 @@ indicator("EL SENSEI Español", overlay=true, max_bars_back=5000,
 //  INPUTS
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ── Order Blocks ──────────────────────────────────────────────────────────────
-show_ob         = input.bool(true,   "Mostrar Order Blocks",              group="Order Blocks")
-show_ob_labels  = input.bool(true,   "Mostrar Etiquetas OB",              group="Order Blocks")
-show_ob_mtf     = input.bool(true,   "Mostrar Zonas MTF",                 group="Order Blocks")
-_mtf_tf         = input.timeframe("60", "Marco Temporal MTF",             group="Order Blocks")
-ob_bull_col     = input.color(color.new(#2962FF, 70), "Color OB Alcista", group="Order Blocks")
-ob_bear_col     = input.color(color.new(#FF1744, 70), "Color OB Bajista", group="Order Blocks")
+// ── CONFIGURACIÓN DE ORDER BLOCKS ────────────────────────────────────────────
+show_ob_lbl      = input.bool(false,  "Mostrar etiquetas OB",                    group="CONFIGURACIÓN DE ORDER BLOCKS")
+show_ob_current  = input.bool(false,  "Mostrar zonas del TF actual",             group="CONFIGURACIÓN DE ORDER BLOCKS")
+show_ob_mtf      = input.bool(false,  "Mostrar zonas MTF",                       group="CONFIGURACIÓN DE ORDER BLOCKS")
+mtf_tf           = input.timeframe("60", "Marco temporal MTF",                   group="CONFIGURACIÓN DE ORDER BLOCKS")
+ob_name_txt      = input.string("OB", "Nombre de OB",                            group="CONFIGURACIÓN DE ORDER BLOCKS")
+ob_bull_col      = input.color(color.new(#2962FF, 70), "Color OB alcista",       group="CONFIGURACIÓN DE ORDER BLOCKS")
+ob_bear_col      = input.color(color.new(#FF1744, 70), "Color OB bajista",       group="CONFIGURACIÓN DE ORDER BLOCKS")
+ob_within_struct = input.bool(true,   "Mostrar OBs solo dentro de la estructura",group="CONFIGURACIÓN DE ORDER BLOCKS")
 
-// ── Estructura ────────────────────────────────────────────────────────────────
-show_bos        = input.bool(true,  "Mostrar BOS",   group="Estructura de Mercado")
-show_choch      = input.bool(false, "Mostrar CHoCH", group="Estructura de Mercado")
-pvt_len         = input.int(5,      "Longitud Pivote", minval=2, maxval=15,
-                             group="Estructura de Mercado")
+// ── CONFIGURACIÓN DE ESTRUCTURA DE MERCADO ───────────────────────────────────
+show_prev_lbl    = input.bool(false,  "Etiquetas anteriores",                     group="CONFIGURACIÓN DE ESTRUCTURA DE MERCADO")
+use_custom_lbl   = input.bool(false,  "Usar etiqueta personalizada de estructura",group="CONFIGURACIÓN DE ESTRUCTURA DE MERCADO")
+struct_lbl_txt   = input.string("MS", "Etiqueta de estructura de mercado",        group="CONFIGURACIÓN DE ESTRUCTURA DE MERCADO")
+pvt_len          = input.int(5,       "Longitud Pivote", minval=2, maxval=15,     group="CONFIGURACIÓN DE ESTRUCTURA DE MERCADO")
 
-// ── FVG ───────────────────────────────────────────────────────────────────────
-show_fvg        = input.bool(true,  "Mostrar FVG",           group="Fair Value Gap")
-show_fvg_lbl    = input.bool(true,  "Mostrar Etiquetas FVG", group="Fair Value Gap")
-fvg_bull_col    = input.color(color.new(#00BCD4, 80), "Color FVG Alcista", group="Fair Value Gap")
-fvg_bear_col    = input.color(color.new(#FF9800, 80), "Color FVG Bajista", group="Fair Value Gap")
+// ── CONFIGURACIÓN BOS/CHOCH - VISUALIZACIÓN ──────────────────────────────────
+show_bos         = input.bool(true,  "Mostrar BOS",   group="CONFIGURACIÓN BOS/CHOCH - VISUALIZACIÓN")
+show_choch       = input.bool(false, "Mostrar CHoCH", group="CONFIGURACIÓN BOS/CHOCH - VISUALIZACIÓN")
 
-// ── Sesiones ──────────────────────────────────────────────────────────────────
-show_london     = input.bool(true, "Mostrar Sesión Londres",     group="Sesiones")
-show_ny         = input.bool(true, "Mostrar Sesión NY",          group="Sesiones")
-london_col      = input.color(color.new(#FFD700, 93), "Color Londres", group="Sesiones")
-ny_col          = input.color(color.new(#00FF88, 93), "Color NY",      group="Sesiones")
+// ── CONFIGURACIÓN DE FVG ─────────────────────────────────────────────────────
+show_fvg         = input.bool(false, "Mostrar FVG",                        group="CONFIGURACIÓN DE FVG")
+show_fvg_lbl2    = input.bool(true,  "Mostrar etiquetas FVG",              group="CONFIGURACIÓN DE FVG")
+fvg_within_struct= input.bool(true,  "Mostrar FVG solo dentro de la estructura", group="CONFIGURACIÓN DE FVG")
+fvg_lbl_txt      = input.string("FVG","Texto de etiqueta FVG",            group="CONFIGURACIÓN DE FVG")
+fvg_bull_col     = input.color(color.new(#00BCD4, 80), "Color de gap alcista",   group="CONFIGURACIÓN DE FVG")
+fvg_bear_col     = input.color(color.new(#FF9800, 80), "Color de gap bajista",   group="CONFIGURACIÓN DE FVG")
+
+// ── CONFIGURACIÓN DE SESIÓN A ────────────────────────────────────────────────
+show_sess_a_bg   = input.bool(true,  "Mostrar fondo de sesión",           group="CONFIGURACIÓN DE SESIÓN A")
+sess_a           = input.session("0000-0001", "Sesión A",                 group="CONFIGURACIÓN DE SESIÓN A")
+show_sess_a_ttl  = input.bool(true,  "Mostrar título de Sesión A",        group="CONFIGURACIÓN DE SESIÓN A")
+sess_a_name      = input.string("Sesión A", "Nombre del título de Sesión A", group="CONFIGURACIÓN DE SESIÓN A")
+sess_a_col       = input.color(color.new(#000000, 97), "Color de fondo de Sesión A", group="CONFIGURACIÓN DE SESIÓN A")
+
+// ── CONFIGURACIÓN DE SESIÓN B ────────────────────────────────────────────────
+show_sess_b_bg   = input.bool(false, "Mostrar fondo de sesión",           group="CONFIGURACIÓN DE SESIÓN B")
+sess_b           = input.session("0800-1100", "Sesión B",                 group="CONFIGURACIÓN DE SESIÓN B")
+show_sess_b_ttl  = input.bool(true,  "Mostrar título de Sesión B",        group="CONFIGURACIÓN DE SESIÓN B")
+sess_b_name      = input.string("Sesión B", "Nombre del título de Sesión B", group="CONFIGURACIÓN DE SESIÓN B")
+sess_b_col       = input.color(color.new(#00BCD4, 92), "Color de fondo de Sesión B", group="CONFIGURACIÓN DE SESIÓN B")
+
+// ── CONFIGURACIÓN DE SESIÓN C ────────────────────────────────────────────────
+show_sess_c_bg   = input.bool(false, "Mostrar fondo de sesión",           group="CONFIGURACIÓN DE SESIÓN C")
+sess_c           = input.session("1300-1800", "Sesión C",                 group="CONFIGURACIÓN DE SESIÓN C")
+show_sess_c_ttl  = input.bool(true,  "Mostrar título de Sesión C",        group="CONFIGURACIÓN DE SESIÓN C")
+sess_c_name      = input.string("Sesión C", "Nombre del título de Sesión C", group="CONFIGURACIÓN DE SESIÓN C")
+sess_c_col       = input.color(color.new(#FF9800, 92), "Color de fondo de Sesión C", group="CONFIGURACIÓN DE SESIÓN C")
+
+// ── CALCULATION ──────────────────────────────────────────────────────────────
+calc_bars_disp   = input.int(5000, "Calculated bars", minval=1000, maxval=10000, group="CALCULATION")
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
-show_panel      = input.bool(true, "Mostrar Panel Escáner", group="Panel")
-panel_pos_inp   = input.string("top_right", "Posición Panel",
-                  options=["top_right","top_left","bottom_right","bottom_left"],
-                  group="Panel")
+show_panel       = input.bool(true, "Mostrar Panel Escáner", group="Panel")
+panel_pos_inp    = input.string("top_right", "Posición Panel",
+                   options=["top_right","top_left","bottom_right","bottom_left"],
+                   group="Panel")
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  FUNCIONES DE AYUDA
+//  FUNCIONES DE AYUDA (nivel de script, antes de cualquier uso)
 // ══════════════════════════════════════════════════════════════════════════════
 
-f_class(float v) =>
-    v > 65.0 ? "ALTO" : v >= 50.0 ? "MEDIO" : "BAJO"
+f_class(float v) => v > 65.0 ? "ALTO" : v >= 50.0 ? "MEDIO" : "BAJO"
 
-f_col(float v) =>
-    v > 65.0 ? color(#00E676) : v >= 50.0 ? color(#FFD600) : color(#FF1744)
+f_col(float v) => v > 65.0 ? color(#00E676) : v >= 50.0 ? color(#FFD600) : color(#FF1744)
 
-f_pct(float v) =>
-    str.tostring(math.round(v), "#") + "%"
+f_pct(float v) => str.tostring(math.round(v), "#") + "%"
+
+f_struct_name(string base) => use_custom_lbl ? struct_lbl_txt : base
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  PIVOTES
+//  ÁMBITO GLOBAL — PIVOTES Y ATR
 // ══════════════════════════════════════════════════════════════════════════════
 
-ph = ta.pivothigh(high, pvt_len, pvt_len)
-pl = ta.pivotlow (low,  pvt_len, pvt_len)
-
-// FIX: ta.atr debe estar fuera de bloques condicionales
+ph        = ta.pivothigh(high, pvt_len, pvt_len)
+pl        = ta.pivotlow (low,  pvt_len, pvt_len)
 atr14_val = ta.atr(14)
 atr50_val = ta.atr(50)
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  VARIABLES PERSISTENTES DE ESTRUCTURA
+//  VARIABLES PERSISTENTES
 // ══════════════════════════════════════════════════════════════════════════════
 
-var float cur_ph       = na   // swing high activo
-var float cur_pl       = na   // swing low activo
-var int   cur_ph_idx   = na
-var int   cur_pl_idx   = na
+var float  cur_ph      = na
+var float  cur_pl      = na
+var int    cur_ph_idx  = na
+var int    cur_pl_idx  = na
 
-var float hh_val       = na   // último Higher High
-var float hl_val       = na   // último Higher Low
-var float lh_val       = na   // último Lower High
-var float ll_val       = na   // último Lower Low
+var float  hh_val      = na
+var float  hl_val      = na
+var float  lh_val      = na
+var float  ll_val      = na
 
-var int   trend        = 0    //  1=alcista  -1=bajista  0=neutral
-var int   valid_highs  = 0
-var int   valid_lows   = 0
-var int   racha        = 0
+var int    trend       = 0
+var int    valid_highs = 0
+var int    valid_lows  = 0
+var int    racha       = 0
 var string estado      = "Validando extremos..."
 
-var float last_bos_bull_lvl = na
-var float last_bos_bear_lvl = na
+var float  last_bos_bull = na
+var float  last_bos_bear = na
+var bool   bos_bull_bar  = false
+var bool   bos_bear_bar  = false
 
-var bool bos_bull_bar = false
-var bool bos_bear_bar = false
+// OB pendiente
+var bool   ob_bull_pend  = false
+var float  ob_bull_top   = na
+var float  ob_bull_bot   = na
+var int    ob_bull_idx   = na
+var bool   ob_bear_pend  = false
+var float  ob_bear_top   = na
+var float  ob_bear_bot   = na
+var int    ob_bear_idx   = na
 
-// OB pendiente de dibujar
-var bool  ob_bull_pend = false
-var float ob_bull_top  = na
-var float ob_bull_bot  = na
-var int   ob_bull_idx  = na
+// Etiquetas de estructura — SINGLE (reemplazadas si show_prev_lbl=false)
+var label  lbl_hh        = na
+var label  lbl_hl        = na
+var label  lbl_lh        = na
+var label  lbl_ll        = na
+// Historial (cuando show_prev_lbl=true)
+var label[] hist_ph_lbls = array.new<label>()
+var label[] hist_pl_lbls = array.new<label>()
 
-var bool  ob_bear_pend = false
-var float ob_bear_top  = na
-var float ob_bear_bot  = na
-var int   ob_bear_idx  = na
+// BOS — solo el último por dirección
+var line   bos_bull_ln   = na
+var label  bos_bull_lb   = na
+var line   bos_bear_ln   = na
+var label  bos_bear_lb   = na
 
-// Arrays de objetos gráficos
-var label[] s_lbls    = array.new<label>()
-var line[]  bos_lns   = array.new<line>()
-var label[] bos_lbls  = array.new<label>()
-var box[]   ob_bxs    = array.new<box>()
-var label[] ob_lbls2  = array.new<label>()
-var box[]   fvg_bxs   = array.new<box>()
-var label[] fvg_lbls  = array.new<label>()
+// OB boxes
+var box[]   ob_bxs       = array.new<box>()
+var label[] ob_lbl_arr   = array.new<label>()
+
+// FVG boxes
+var box[]   fvg_bxs      = array.new<box>()
+var label[] fvg_lbl_arr  = array.new<label>()
+
+// F3 persistente
+var float  f3            = 0.5
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  ESTRUCTURA DE MERCADO — HH / HL / LH / LL
@@ -117,83 +155,97 @@ bos_bear_bar := false
 
 // ── Procesar pivot HIGH ───────────────────────────────────────────────────────
 if not na(ph)
+    valid_highs += 1
     phbar = bar_index[pvt_len]
-
     if na(cur_ph)
         cur_ph     := ph
         cur_ph_idx := phbar
     else if ph >= cur_ph
-        lbl = label.new(phbar, ph + atr14_val * 0.15,
-             text          = "HH",
-             style         = label.style_label_down,
-             color         = #1565C0,
-             textcolor     = color.white,
-             size          = size.small,
-             text_font_family = font.family_monospace)
-        array.push(s_lbls, lbl)
-        if array.size(s_lbls) > 80
-            label.delete(array.shift(s_lbls))
-        cur_ph      := ph
-        cur_ph_idx  := phbar
-        hh_val      := ph
-        valid_highs += 1
-        racha       := trend == 1 ? racha + 1 : 1
-        trend       := 1
-        estado      := "Máximo confirmado"
+        lbl_txt = f_struct_name("HH")
+        lbl_col = color(#1565C0)
+        if show_prev_lbl
+            lbl = label.new(phbar, ph + atr14_val * 0.15, text=lbl_txt, style=label.style_label_down, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
+            array.push(hist_ph_lbls, lbl)
+            if array.size(hist_ph_lbls) > 10
+                label.delete(array.shift(hist_ph_lbls))
+        else
+            label.delete(lbl_hh)
+            lbl_hh := label.new(phbar, ph + atr14_val * 0.15, text=lbl_txt, style=label.style_label_down, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
+        cur_ph     := ph
+        cur_ph_idx := phbar
+        hh_val     := ph
+        racha      := trend == 1 ? racha + 1 : 1
+        trend      := 1
+        estado     := "Máximo confirmado"
     else
-        lbl = label.new(phbar, ph + atr14_val * 0.15,
-             text          = "LH",
-             style         = label.style_label_down,
-             color         = #B71C1C,
-             textcolor     = color.white,
-             size          = size.small,
-             text_font_family = font.family_monospace)
-        array.push(s_lbls, lbl)
-        if array.size(s_lbls) > 80
-            label.delete(array.shift(s_lbls))
+        lbl_txt = f_struct_name("LH")
+        lbl_col = color(#B71C1C)
+        if show_prev_lbl
+            lbl = label.new(phbar, ph + atr14_val * 0.15, text=lbl_txt, style=label.style_label_down, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
+            array.push(hist_ph_lbls, lbl)
+            if array.size(hist_ph_lbls) > 10
+                label.delete(array.shift(hist_ph_lbls))
+        else
+            label.delete(lbl_lh)
+            lbl_lh := label.new(phbar, ph + atr14_val * 0.15, text=lbl_txt, style=label.style_label_down, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
         lh_val := ph
         racha  := trend == -1 ? racha + 1 : 1
         trend  := -1
 
 // ── Procesar pivot LOW ────────────────────────────────────────────────────────
 if not na(pl)
+    valid_lows += 1
     plbar = bar_index[pvt_len]
-
     if na(cur_pl)
         cur_pl     := pl
         cur_pl_idx := plbar
     else if pl <= cur_pl
-        lbl = label.new(plbar, pl - atr14_val * 0.15,
-             text          = "LL",
-             style         = label.style_label_up,
-             color         = #B71C1C,
-             textcolor     = color.white,
-             size          = size.small,
-             text_font_family = font.family_monospace)
-        array.push(s_lbls, lbl)
-        if array.size(s_lbls) > 80
-            label.delete(array.shift(s_lbls))
+        lbl_txt = f_struct_name("LL")
+        lbl_col = color(#B71C1C)
+        if show_prev_lbl
+            lbl = label.new(plbar, pl - atr14_val * 0.15, text=lbl_txt, style=label.style_label_up, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
+            array.push(hist_pl_lbls, lbl)
+            if array.size(hist_pl_lbls) > 10
+                label.delete(array.shift(hist_pl_lbls))
+        else
+            label.delete(lbl_ll)
+            lbl_ll := label.new(plbar, pl - atr14_val * 0.15, text=lbl_txt, style=label.style_label_up, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
         cur_pl     := pl
         cur_pl_idx := plbar
         ll_val     := pl
-        valid_lows += 1
         racha      := trend == -1 ? racha + 1 : 1
         trend      := -1
         estado     := "Mínimo confirmado"
     else
-        lbl = label.new(plbar, pl - atr14_val * 0.15,
-             text          = "HL",
-             style         = label.style_label_up,
-             color         = #1565C0,
-             textcolor     = color.white,
-             size          = size.small,
-             text_font_family = font.family_monospace)
-        array.push(s_lbls, lbl)
-        if array.size(s_lbls) > 80
-            label.delete(array.shift(s_lbls))
+        lbl_txt = f_struct_name("HL")
+        lbl_col = color(#1565C0)
+        if show_prev_lbl
+            lbl = label.new(plbar, pl - atr14_val * 0.15, text=lbl_txt, style=label.style_label_up, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
+            array.push(hist_pl_lbls, lbl)
+            if array.size(hist_pl_lbls) > 10
+                label.delete(array.shift(hist_pl_lbls))
+        else
+            label.delete(lbl_hl)
+            lbl_hl := label.new(plbar, pl - atr14_val * 0.15, text=lbl_txt, style=label.style_label_up, color=lbl_col, textcolor=color.white, size=size.small, text_font_family=font.family_monospace)
         hl_val := pl
         racha  := trend == 1 ? racha + 1 : 1
         trend  := 1
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  RANGO DE ESTRUCTURA (calcular ANTES de OBs y FVGs para filtro "within struct")
+// ══════════════════════════════════════════════════════════════════════════════
+
+float rng_top = na
+float rng_bot = na
+if trend == 1
+    rng_top := not na(hh_val) ? hh_val : high
+    rng_bot := not na(hl_val) ? hl_val : low
+else if trend == -1
+    rng_top := not na(lh_val) ? lh_val : high
+    rng_bot := not na(ll_val) ? ll_val : low
+else
+    rng_top := high
+    rng_bot := low
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  BOS — BREAK OF STRUCTURE
@@ -201,27 +253,20 @@ if not na(pl)
 
 // Alcista: cierre rompe por encima del swing high activo
 if not na(cur_ph) and close > cur_ph and close[1] <= cur_ph
-    bos_bull_bar         := true
-    last_bos_bull_lvl    := cur_ph
+    bos_bull_bar := true
+    last_bos_bull := cur_ph
 
     if show_bos
-        bos_ln = line.new(cur_ph_idx, cur_ph, bar_index, cur_ph,
-                  color=color.new(#2962FF, 0), width=1,
-                  style=line.style_dashed)
-        bos_lb = label.new(bar_index, cur_ph + atr14_val * 0.5,
-                  text          = "BOS ▲",
-                  style         = label.style_label_left,
-                  color         = #1565C0,
-                  textcolor     = color.white,
-                  size          = size.small,
-                  text_font_family = font.family_monospace)
-        array.push(bos_lns,  bos_ln)
-        array.push(bos_lbls, bos_lb)
-        if array.size(bos_lns) > 25
-            line.delete(array.shift(bos_lns))
-            label.delete(array.shift(bos_lbls))
+        line.delete(bos_bull_ln)
+        label.delete(bos_bull_lb)
+        bos_bull_ln := line.new(cur_ph_idx, cur_ph, bar_index, cur_ph,
+                       color=color.new(#2962FF, 0), width=1, style=line.style_dashed)
+        bos_bull_lb := label.new(bar_index, cur_ph + atr14_val * 0.5,
+                       text="BOS ▲", style=label.style_label_left,
+                       color=#1565C0, textcolor=color.white,
+                       size=size.small, text_font_family=font.family_monospace)
 
-    // Buscar última vela bajista antes del BOS → Order Block alcista
+    // Buscar última vela bajista → Order Block alcista
     for i = 1 to 20
         if close[i] < open[i]
             ob_bull_pend := true
@@ -235,27 +280,20 @@ if not na(cur_ph) and close > cur_ph and close[1] <= cur_ph
 
 // Bajista: cierre rompe por debajo del swing low activo
 if not na(cur_pl) and close < cur_pl and close[1] >= cur_pl
-    bos_bear_bar         := true
-    last_bos_bear_lvl    := cur_pl
+    bos_bear_bar := true
+    last_bos_bear := cur_pl
 
     if show_bos
-        bos_ln = line.new(cur_pl_idx, cur_pl, bar_index, cur_pl,
-                  color=color.new(#FF1744, 0), width=1,
-                  style=line.style_dashed)
-        bos_lb = label.new(bar_index, cur_pl - atr14_val * 0.5,
-                  text          = "BOS ▼",
-                  style         = label.style_label_left,
-                  color         = #B71C1C,
-                  textcolor     = color.white,
-                  size          = size.small,
-                  text_font_family = font.family_monospace)
-        array.push(bos_lns,  bos_ln)
-        array.push(bos_lbls, bos_lb)
-        if array.size(bos_lns) > 25
-            line.delete(array.shift(bos_lns))
-            label.delete(array.shift(bos_lbls))
+        line.delete(bos_bear_ln)
+        label.delete(bos_bear_lb)
+        bos_bear_ln := line.new(cur_pl_idx, cur_pl, bar_index, cur_pl,
+                       color=color.new(#FF1744, 0), width=1, style=line.style_dashed)
+        bos_bear_lb := label.new(bar_index, cur_pl - atr14_val * 0.5,
+                       text="BOS ▼", style=label.style_label_left,
+                       color=#B71C1C, textcolor=color.white,
+                       size=size.small, text_font_family=font.family_monospace)
 
-    // Buscar última vela alcista antes del BOS → Order Block bajista
+    // Buscar última vela alcista → Order Block bajista
     for i = 1 to 20
         if close[i] > open[i]
             ob_bear_pend := true
@@ -271,46 +309,41 @@ if not na(cur_pl) and close < cur_pl and close[1] >= cur_pl
 //  ORDER BLOCKS
 // ══════════════════════════════════════════════════════════════════════════════
 
-if ob_bull_pend and show_ob
-    bx = box.new(ob_bull_idx, ob_bull_top, bar_index + 60, ob_bull_bot,
-         border_color = color.new(#2962FF, 10),
-         bgcolor      = ob_bull_col,
-         border_width = 1)
-    array.push(ob_bxs, bx)
-    if show_ob_labels
-        lb = label.new(ob_bull_idx, ob_bull_top,
-             text          = "OB",
-             style         = label.style_label_right,
-             color         = #1565C0,
-             textcolor     = color.white,
-             size          = size.tiny,
-             text_font_family = font.family_monospace)
-        array.push(ob_lbls2, lb)
-    if array.size(ob_bxs) > 12
-        box.delete(array.shift(ob_bxs))
-    if array.size(ob_lbls2) > 12
-        label.delete(array.shift(ob_lbls2))
+f_ob_in_struct(float top, float bot) =>
+    not ob_within_struct or (not na(rng_top) and not na(rng_bot) and top >= rng_bot and bot <= rng_top)
+
+if ob_bull_pend and show_ob_current
+    if f_ob_in_struct(ob_bull_top, ob_bull_bot)
+        bx = box.new(ob_bull_idx, ob_bull_top, bar_index + 60, ob_bull_bot,
+             border_color=color.new(#2962FF, 10), bgcolor=ob_bull_col, border_width=1)
+        array.push(ob_bxs, bx)
+        if show_ob_lbl
+            lb = label.new(ob_bull_idx, ob_bull_top, text=ob_name_txt,
+                 style=label.style_label_right, color=#1565C0,
+                 textcolor=color.white, size=size.tiny,
+                 text_font_family=font.family_monospace)
+            array.push(ob_lbl_arr, lb)
+            if array.size(ob_lbl_arr) > 5
+                label.delete(array.shift(ob_lbl_arr))
+        if array.size(ob_bxs) > 5
+            box.delete(array.shift(ob_bxs))
     ob_bull_pend := false
 
-if ob_bear_pend and show_ob
-    bx = box.new(ob_bear_idx, ob_bear_top, bar_index + 60, ob_bear_bot,
-         border_color = color.new(#FF1744, 10),
-         bgcolor      = ob_bear_col,
-         border_width = 1)
-    array.push(ob_bxs, bx)
-    if show_ob_labels
-        lb = label.new(ob_bear_idx, ob_bear_top,
-             text          = "OB",
-             style         = label.style_label_right,
-             color         = #B71C1C,
-             textcolor     = color.white,
-             size          = size.tiny,
-             text_font_family = font.family_monospace)
-        array.push(ob_lbls2, lb)
-    if array.size(ob_bxs) > 12
-        box.delete(array.shift(ob_bxs))
-    if array.size(ob_lbls2) > 12
-        label.delete(array.shift(ob_lbls2))
+if ob_bear_pend and show_ob_current
+    if f_ob_in_struct(ob_bear_top, ob_bear_bot)
+        bx = box.new(ob_bear_idx, ob_bear_top, bar_index + 60, ob_bear_bot,
+             border_color=color.new(#FF1744, 10), bgcolor=ob_bear_col, border_width=1)
+        array.push(ob_bxs, bx)
+        if show_ob_lbl
+            lb = label.new(ob_bear_idx, ob_bear_top, text=ob_name_txt,
+                 style=label.style_label_right, color=#B71C1C,
+                 textcolor=color.white, size=size.tiny,
+                 text_font_family=font.family_monospace)
+            array.push(ob_lbl_arr, lb)
+            if array.size(ob_lbl_arr) > 5
+                label.delete(array.shift(ob_lbl_arr))
+        if array.size(ob_bxs) > 5
+            box.delete(array.shift(ob_bxs))
     ob_bear_pend := false
 
 // Extender borde derecho de OBs activos
@@ -322,50 +355,49 @@ if array.size(ob_bxs) > 0
 //  FAIR VALUE GAPS — FVG
 // ══════════════════════════════════════════════════════════════════════════════
 
+f_fvg_in_struct(float top, float bot) =>
+    not fvg_within_struct or (not na(rng_top) and not na(rng_bot) and top >= rng_bot and bot <= rng_top)
+
 bull_fvg = low > high[2]
 bear_fvg = high < low[2]
 
 if bull_fvg and show_fvg
-    midp = (low + high[2]) / 2.0
-    bx = box.new(bar_index[2], low, bar_index + 30, high[2],
-         border_color = color.new(#00BCD4, 20),
-         bgcolor      = fvg_bull_col,
-         border_width = 1)
-    array.push(fvg_bxs, bx)
-    if show_fvg_lbl
-        lb = label.new(bar_index[1], midp,
-             text          = "FVG",
-             style         = label.style_label_right,
-             color         = color.new(#006064, 0),
-             textcolor     = color.white,
-             size          = size.tiny,
-             text_font_family = font.family_monospace)
-        array.push(fvg_lbls, lb)
-    if array.size(fvg_bxs) > 20
-        box.delete(array.shift(fvg_bxs))
-    if array.size(fvg_lbls) > 20
-        label.delete(array.shift(fvg_lbls))
+    fvg_top = low
+    fvg_bot = high[2]
+    if f_fvg_in_struct(fvg_top, fvg_bot)
+        midp = (fvg_top + fvg_bot) / 2.0
+        bx = box.new(bar_index[2], fvg_top, bar_index + 30, fvg_bot,
+             border_color=color.new(#00BCD4, 20), bgcolor=fvg_bull_col, border_width=1)
+        array.push(fvg_bxs, bx)
+        if show_fvg_lbl2
+            lb = label.new(bar_index[1], midp, text=fvg_lbl_txt,
+                 style=label.style_label_right, color=color.new(#006064, 0),
+                 textcolor=color.white, size=size.tiny,
+                 text_font_family=font.family_monospace)
+            array.push(fvg_lbl_arr, lb)
+            if array.size(fvg_lbl_arr) > 8
+                label.delete(array.shift(fvg_lbl_arr))
+        if array.size(fvg_bxs) > 8
+            box.delete(array.shift(fvg_bxs))
 
 if bear_fvg and show_fvg
-    midp = (low[2] + high) / 2.0
-    bx = box.new(bar_index[2], low[2], bar_index + 30, high,
-         border_color = color.new(#FF9800, 20),
-         bgcolor      = fvg_bear_col,
-         border_width = 1)
-    array.push(fvg_bxs, bx)
-    if show_fvg_lbl
-        lb = label.new(bar_index[1], midp,
-             text          = "FVG",
-             style         = label.style_label_right,
-             color         = color.new(#E65100, 0),
-             textcolor     = color.white,
-             size          = size.tiny,
-             text_font_family = font.family_monospace)
-        array.push(fvg_lbls, lb)
-    if array.size(fvg_bxs) > 20
-        box.delete(array.shift(fvg_bxs))
-    if array.size(fvg_lbls) > 20
-        label.delete(array.shift(fvg_lbls))
+    fvg_top = low[2]
+    fvg_bot = high
+    if f_fvg_in_struct(fvg_top, fvg_bot)
+        midp = (fvg_top + fvg_bot) / 2.0
+        bx = box.new(bar_index[2], fvg_top, bar_index + 30, fvg_bot,
+             border_color=color.new(#FF9800, 20), bgcolor=fvg_bear_col, border_width=1)
+        array.push(fvg_bxs, bx)
+        if show_fvg_lbl2
+            lb = label.new(bar_index[1], midp, text=fvg_lbl_txt,
+                 style=label.style_label_right, color=color.new(#E65100, 0),
+                 textcolor=color.white, size=size.tiny,
+                 text_font_family=font.family_monospace)
+            array.push(fvg_lbl_arr, lb)
+            if array.size(fvg_lbl_arr) > 8
+                label.delete(array.shift(fvg_lbl_arr))
+        if array.size(fvg_bxs) > 8
+            box.delete(array.shift(fvg_bxs))
 
 // Extender FVGs a la derecha mientras no sean llenados
 if array.size(fvg_bxs) > 0
@@ -377,56 +409,48 @@ if array.size(fvg_bxs) > 0
             box.set_right(bx, bar_index + 30)
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  SESIONES — LONDRES Y NY
+//  SESIONES
 // ══════════════════════════════════════════════════════════════════════════════
 
-is_london = not na(time(timeframe.period, "0800-1100:23456", "Europe/London"))  and show_london
-is_ny     = not na(time(timeframe.period, "1300-1800:23456", "America/New_York")) and show_ny
+is_sess_a = not na(time(timeframe.period, sess_a)) and show_sess_a_bg
+is_sess_b = not na(time(timeframe.period, sess_b)) and show_sess_b_bg
+is_sess_c = not na(time(timeframe.period, sess_c)) and show_sess_c_bg
 
-bgcolor(is_london ? london_col : na, title="Sesión Londres")
-bgcolor(is_ny     ? ny_col     : na, title="Sesión NY")
+// Para el panel (detectar sesión activa independientemente del fondo)
+is_sess_b_active = not na(time(timeframe.period, sess_b))
+is_sess_c_active = not na(time(timeframe.period, sess_c))
+
+bgcolor(is_sess_a ? sess_a_col : na, title="Sesión A")
+bgcolor(is_sess_b ? sess_b_col : na, title="Sesión B")
+bgcolor(is_sess_c ? sess_c_col : na, title="Sesión C")
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  CÁLCULO TASA DE CONTINUACIÓN
-//  Tasa = round( F1*0.35 + F2*0.25 + F3*0.25 + F4*0.15 ) * 100
 // ══════════════════════════════════════════════════════════════════════════════
 
-// F1 — Profundidad de continuación de tendencia (piernas HH-HL / LL-LH) · 35 %
-// Racha normalizada: cuántas estructuras consecutivas siguen la misma dirección
+// F1 — Racha de tendencia · 35 %
 f1 = math.min(racha / 7.0, 1.0)
 
-// F2 — Posición del precio dentro del rango de estructura activo · 25 %
-// FIX: declarar tipo float explícito para evitar error "NA type without type keyword"
-float rng_top = na
-float rng_bot = na
-if trend == 1
-    rng_top := not na(hh_val) ? hh_val : high
-    rng_bot := not na(hl_val) ? hl_val : low
-else if trend == -1
-    rng_top := not na(lh_val) ? lh_val : high
-    rng_bot := not na(ll_val) ? ll_val : low
-else
-    rng_top := high
-    rng_bot := low
+// F2 — Posición del precio dentro del rango de estructura · 25 %
+// Solo calcular cuando AMBOS extremos son válidos (corrige el bug F2=1%)
+float f2 = 0.5
+if trend == 1 and not na(hh_val) and not na(hl_val) and hh_val != hl_val
+    f2_raw = (close - hl_val) / (hh_val - hl_val)
+    f2 := math.max(math.min(f2_raw, 1.0), 0.0)
+else if trend == -1 and not na(lh_val) and not na(ll_val) and lh_val != ll_val
+    f2_raw = (close - ll_val) / (lh_val - ll_val)
+    f2 := math.max(math.min(1.0 - f2_raw, 1.0), 0.0)
 
-f2_raw = (not na(rng_top) and not na(rng_bot) and rng_top != rng_bot) ?
-          (close - rng_bot) / (rng_top - rng_bot) : 0.5
-// Para tendencia alcista queremos precio alto en el rango; bajista, precio bajo
-f2 = trend >= 0 ? f2_raw : 1.0 - f2_raw
-f2 := math.max(math.min(f2, 1.0), 0.0)
-
-// F3 — Alineación del último BOS/CHoCH con la tendencia · 25 %
-var float f3 = 0.5
+// F3 — Alineación BOS/CHoCH con tendencia · 25 % (var persistente)
 if bos_bull_bar
     f3 := trend >= 0 ? 1.0 : 0.1
 if bos_bear_bar
     f3 := trend <= 0 ? 1.0 : 0.1
 
-// F4 — Penalización por desgaste/consolidación · 15 %
-// ATR corto vs largo: si el mercado se comprime → penalizar
-f4 = (not na(atr50_val) and atr50_val > 0.0) ?
-      math.min(atr14_val / atr50_val, 1.0) : 0.5
-f4 := math.max(math.min(f4, 1.0), 0.0)
+// F4 — Penalización por consolidación · 15 %
+float f4 = 0.5
+if not na(atr50_val) and atr50_val > 0.0
+    f4 := math.max(math.min(atr14_val / atr50_val, 1.0), 0.0)
 
 // Tasa final
 tasa_f    = f1 * 0.35 + f2 * 0.25 + f3 * 0.25 + f4 * 0.15
@@ -438,33 +462,28 @@ tasa_clr  = f_col(tasa_cont)
 //  PROBABILIDADES DE RETEST
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Retest BOS Arriba — probabilidad de que el precio vuelva a testear el BOS alcista
 var float rb_up = 30.0
-if not na(last_bos_bull_lvl) and not na(atr14_val) and atr14_val > 0.0
-    dist    = math.abs(close - last_bos_bull_lvl) / atr14_val
-    prox    = math.max(0.0, 1.0 - dist / 14.0)
-    rb_up  := math.min(math.max(math.round(prox * 45.0 + tasa_f * 55.0), 10.0), 95.0)
+if not na(last_bos_bull) and not na(atr14_val) and atr14_val > 0.0
+    dist   = math.abs(close - last_bos_bull) / atr14_val
+    prox   = math.max(0.0, 1.0 - dist / 14.0)
+    rb_up := math.min(math.max(math.round(prox * 45.0 + tasa_f * 55.0), 10.0), 95.0)
 
-// Retest BOS Abajo — probabilidad de que el precio vuelva a testear el BOS bajista
 var float rb_dn = 30.0
-if not na(last_bos_bear_lvl) and not na(atr14_val) and atr14_val > 0.0
-    dist    = math.abs(close - last_bos_bear_lvl) / atr14_val
-    prox    = math.max(0.0, 1.0 - dist / 14.0)
-    rb_dn  := math.min(math.max(math.round(prox * 45.0 + (1.0 - tasa_f) * 55.0), 10.0), 95.0)
+if not na(last_bos_bear) and not na(atr14_val) and atr14_val > 0.0
+    dist   = math.abs(close - last_bos_bear) / atr14_val
+    prox   = math.max(0.0, 1.0 - dist / 14.0)
+    rb_dn := math.min(math.max(math.round(prox * 45.0 + (1.0 - tasa_f) * 55.0), 10.0), 95.0)
 
-// Retest zona general arriba / abajo
 bull_add = trend ==  1 ? 0.12 : 0.0
 bear_add = trend == -1 ? 0.12 : 0.0
 r_up     = math.min(math.max(math.round((tasa_f         * 0.72 + bull_add) * 100.0), 12.0), 93.0)
 r_dn     = math.min(math.max(math.round(((1.0 - tasa_f) * 0.72 + bear_add) * 100.0), 12.0), 93.0)
 
-// Dirección dominante (encabezado del panel)
-// FIX: ternario en una línea — Pine no acepta ternario multi-línea terminado en ":"
+// Dirección dominante
 dir_txt = r_dn > r_up ? "▼  BAJE  " + f_pct(r_dn) : "▲  SUBA  " + f_pct(r_up)
 dir_clr = r_dn > r_up ? color(#FF1744) : color(#00E676)
 
 // Calificación de estrellas
-// FIX: ternario en una línea
 stars_n   = tasa_cont > 80 ? 5 : tasa_cont > 65 ? 4 : tasa_cont > 55 ? 3 : tasa_cont > 45 ? 2 : 1
 stars_str = stars_n == 5 ? "★★★★★" : stars_n == 4 ? "★★★★☆" : stars_n == 3 ? "★★★☆☆" : stars_n == 2 ? "★★☆☆☆" : "★☆☆☆☆"
 stars_clr = stars_n >= 4 ? color(#00E676) : stars_n == 3 ? color(#FFD600) : color(#FF5252)
@@ -475,286 +494,278 @@ stars_clr = stars_n >= 4 ? color(#00E676) : stars_n == 3 ? color(#FFD600) : colo
 
 var table panel = na
 
-// FIX: ternario en una línea
 panel_pos = panel_pos_inp == "top_right" ? position.top_right : panel_pos_inp == "top_left" ? position.top_left : panel_pos_inp == "bottom_right" ? position.bottom_right : position.bottom_left
 
-// Sólo recalcular en la última barra para no degradar rendimiento
 if show_panel and barstate.islast
 
     if na(panel)
         panel := table.new(panel_pos, 3, 21,
-                 bgcolor      = #0D0D0D,
-                 border_color = #2A2A2A,
-                 border_width = 1,
-                 frame_color  = #555555,
-                 frame_width  = 2)
+                 bgcolor=      #0D0D0D,
+                 border_color= #2A2A2A,
+                 border_width= 1,
+                 frame_color=  #555555,
+                 frame_width=  2)
 
     // ── Fila 0 · Título ───────────────────────────────────────────────────────
     table.cell(panel, 0, 0, "EL SENSEI Español",
-              text_color   = #FFD700,
-              bgcolor      = #111111,
-              text_size    = size.normal,
-              text_halign  = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=#FFD700, bgcolor=#111111,
+              text_size=size.normal, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 0, 0, 2, 0)
 
     // ── Fila 1 · Dirección dominante ─────────────────────────────────────────
     table.cell(panel, 0, 1, dir_txt,
-              text_color   = dir_clr,
-              bgcolor      = color.new(dir_clr, 82),
-              text_size    = size.normal,
-              text_halign  = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=dir_clr, bgcolor=color.new(dir_clr, 82),
+              text_size=size.normal, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 0, 1, 2, 1)
 
     // ── Fila 2 · TENDENCIA ────────────────────────────────────────────────────
-    // FIX: ternario en una línea
     tr_txt = trend == 1 ? "▲ ALCISTA" : trend == -1 ? "▼ BAJISTA" : "— NEUTRAL"
     tr_clr = trend == 1 ? color(#00E676) : trend == -1 ? color(#FF1744) : color(#FFD600)
     table.cell(panel, 0, 2, "TENDENCIA",
-              text_color   = #888888, bgcolor = #161616,
-              text_size    = size.small, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#161616,
+              text_size=size.small, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 2, tr_txt,
-              text_color   = tr_clr, bgcolor = #161616,
-              text_size    = size.small, text_halign = text.align_right,
-              text_font_family = font.family_monospace)
+              text_color=tr_clr, bgcolor=#161616,
+              text_size=size.small, text_halign=text.align_right,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 1, 2, 2, 2)
 
     // ── Fila 3 · MÁXIMOS VÁLIDOS ──────────────────────────────────────────────
     table.cell(panel, 0, 3, "MÁXIMOS VÁLIDOS",
-              text_color   = #888888, bgcolor = #111111,
-              text_size    = size.small, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#111111,
+              text_size=size.small, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 3, str.tostring(valid_highs),
-              text_color   = #64B5F6, bgcolor = #111111,
-              text_size    = size.small, text_halign = text.align_right,
-              text_font_family = font.family_monospace)
+              text_color=#64B5F6, bgcolor=#111111,
+              text_size=size.small, text_halign=text.align_right,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 1, 3, 2, 3)
 
     // ── Fila 4 · MÍNIMOS VÁLIDOS ──────────────────────────────────────────────
     table.cell(panel, 0, 4, "MÍNIMOS VÁLIDOS",
-              text_color   = #888888, bgcolor = #161616,
-              text_size    = size.small, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#161616,
+              text_size=size.small, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 4, str.tostring(valid_lows),
-              text_color   = #EF9A9A, bgcolor = #161616,
-              text_size    = size.small, text_halign = text.align_right,
-              text_font_family = font.family_monospace)
+              text_color=#EF9A9A, bgcolor=#161616,
+              text_size=size.small, text_halign=text.align_right,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 1, 4, 2, 4)
 
     // ── Fila 5 · LL ACTUAL ────────────────────────────────────────────────────
     ll_txt = not na(ll_val) ? str.tostring(ll_val, "#.#####") : "—"
     table.cell(panel, 0, 5, "LL ACTUAL",
-              text_color   = #888888, bgcolor = #111111,
-              text_size    = size.small, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#111111,
+              text_size=size.small, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 5, ll_txt,
-              text_color   = #FF8A80, bgcolor = #111111,
-              text_size    = size.small, text_halign = text.align_right,
-              text_font_family = font.family_monospace)
+              text_color=#FF8A80, bgcolor=#111111,
+              text_size=size.small, text_halign=text.align_right,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 1, 5, 2, 5)
 
     // ── Fila 6 · LH ACTUAL ────────────────────────────────────────────────────
     lh_txt = not na(lh_val) ? str.tostring(lh_val, "#.#####") : "—"
     table.cell(panel, 0, 6, "LH ACTUAL",
-              text_color   = #888888, bgcolor = #161616,
-              text_size    = size.small, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#161616,
+              text_size=size.small, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 6, lh_txt,
-              text_color   = #FF8A80, bgcolor = #161616,
-              text_size    = size.small, text_halign = text.align_right,
-              text_font_family = font.family_monospace)
+              text_color=#FF8A80, bgcolor=#161616,
+              text_size=size.small, text_halign=text.align_right,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 1, 6, 2, 6)
 
     // ── Fila 7 · ESTADO ───────────────────────────────────────────────────────
     table.cell(panel, 0, 7, "ESTADO",
-              text_color   = #888888, bgcolor = #111111,
-              text_size    = size.small, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#111111,
+              text_size=size.small, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 7, estado,
-              text_color   = #FFD700, bgcolor = #111111,
-              text_size    = size.small, text_halign = text.align_right,
-              text_font_family = font.family_monospace)
+              text_color=#FFD700, bgcolor=#111111,
+              text_size=size.small, text_halign=text.align_right,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 1, 7, 2, 7)
 
     // ── Fila 8 · TASA CONT. ───────────────────────────────────────────────────
     tasa_disp = f_pct(tasa_cont) + "   " + tasa_cls
     table.cell(panel, 0, 8, "TASA CONT.",
-              text_color   = #CCCCCC, bgcolor = color.new(tasa_clr, 87),
-              text_size    = size.small, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#CCCCCC, bgcolor=color.new(tasa_clr, 87),
+              text_size=size.small, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 8, tasa_disp,
-              text_color   = tasa_clr, bgcolor = color.new(tasa_clr, 87),
-              text_size    = size.small, text_halign = text.align_right,
-              text_font_family = font.family_monospace)
+              text_color=tasa_clr, bgcolor=color.new(tasa_clr, 87),
+              text_size=size.small, text_halign=text.align_right,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 1, 8, 2, 8)
 
     // ── Fila 9 · RACHA TENDENCIA ──────────────────────────────────────────────
     table.cell(panel, 0, 9, "RACHA TENDENCIA",
-              text_color   = #888888, bgcolor = #111111,
-              text_size    = size.small, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#111111,
+              text_size=size.small, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 9, str.tostring(racha),
-              text_color   = #FFD700, bgcolor = #111111,
-              text_size    = size.small, text_halign = text.align_right,
-              text_font_family = font.family_monospace)
+              text_color=#FFD700, bgcolor=#111111,
+              text_size=size.small, text_halign=text.align_right,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 1, 9, 2, 9)
 
     // ── Fila 10 · Separador ARRIBA ────────────────────────────────────────────
     table.cell(panel, 0, 10, "▲   ARRIBA",
-              text_color   = #00E676, bgcolor = #0A1A0A,
-              text_size    = size.small, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=#00E676, bgcolor=#0A1A0A,
+              text_size=size.small, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 0, 10, 2, 10)
 
     // ── Fila 11 · RETEST BOS ARRIBA ───────────────────────────────────────────
     rb_up_clr = f_col(rb_up)
     rb_up_cls = f_class(rb_up)
     table.cell(panel, 0, 11, "RETEST BOS ARRIBA",
-              text_color   = #888888, bgcolor = #0D1A0D,
-              text_size    = size.tiny, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#0D1A0D,
+              text_size=size.tiny, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 11, f_pct(rb_up),
-              text_color   = rb_up_clr, bgcolor = #0D1A0D,
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=rb_up_clr, bgcolor=#0D1A0D,
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.cell(panel, 2, 11, rb_up_cls,
-              text_color   = rb_up_clr, bgcolor = color.new(rb_up_clr, 86),
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=rb_up_clr, bgcolor=color.new(rb_up_clr, 86),
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
 
     // ── Fila 12 · RETEST ARRIBA ───────────────────────────────────────────────
     r_up_clr = f_col(r_up)
     r_up_cls = f_class(r_up)
     table.cell(panel, 0, 12, "RETEST ARRIBA",
-              text_color   = #888888, bgcolor = #0A170A,
-              text_size    = size.tiny, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#0A170A,
+              text_size=size.tiny, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 12, f_pct(r_up),
-              text_color   = r_up_clr, bgcolor = #0A170A,
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=r_up_clr, bgcolor=#0A170A,
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.cell(panel, 2, 12, r_up_cls,
-              text_color   = r_up_clr, bgcolor = color.new(r_up_clr, 86),
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=r_up_clr, bgcolor=color.new(r_up_clr, 86),
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
 
     // ── Fila 13 · Separador ABAJO ─────────────────────────────────────────────
     table.cell(panel, 0, 13, "▼   ABAJO",
-              text_color   = #FF1744, bgcolor = #1A0A0A,
-              text_size    = size.small, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=#FF1744, bgcolor=#1A0A0A,
+              text_size=size.small, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 0, 13, 2, 13)
 
     // ── Fila 14 · RETEST BOS ABAJO ────────────────────────────────────────────
     rb_dn_clr = f_col(rb_dn)
     rb_dn_cls = f_class(rb_dn)
     table.cell(panel, 0, 14, "RETEST BOS ABAJO",
-              text_color   = #888888, bgcolor = #1A0D0D,
-              text_size    = size.tiny, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#1A0D0D,
+              text_size=size.tiny, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 14, f_pct(rb_dn),
-              text_color   = rb_dn_clr, bgcolor = #1A0D0D,
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=rb_dn_clr, bgcolor=#1A0D0D,
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.cell(panel, 2, 14, rb_dn_cls,
-              text_color   = rb_dn_clr, bgcolor = color.new(rb_dn_clr, 86),
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=rb_dn_clr, bgcolor=color.new(rb_dn_clr, 86),
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
 
     // ── Fila 15 · RETEST ABAJO ────────────────────────────────────────────────
     r_dn_clr = f_col(r_dn)
     r_dn_cls = f_class(r_dn)
     table.cell(panel, 0, 15, "RETEST ABAJO",
-              text_color   = #888888, bgcolor = #170A0A,
-              text_size    = size.tiny, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#170A0A,
+              text_size=size.tiny, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 15, f_pct(r_dn),
-              text_color   = r_dn_clr, bgcolor = #170A0A,
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=r_dn_clr, bgcolor=#170A0A,
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.cell(panel, 2, 15, r_dn_cls,
-              text_color   = r_dn_clr, bgcolor = color.new(r_dn_clr, 86),
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=r_dn_clr, bgcolor=color.new(r_dn_clr, 86),
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
 
     // ── Fila 16 · Separador ───────────────────────────────────────────────────
     table.cell(panel, 0, 16, "───────────────────────────",
-              text_color   = #222222, bgcolor = #0D0D0D,
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=#222222, bgcolor=#0D0D0D,
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 0, 16, 2, 16)
 
     // ── Fila 17 · CALIFICACIÓN ────────────────────────────────────────────────
     table.cell(panel, 0, 17, "CALIFICACIÓN",
-              text_color   = #888888, bgcolor = #111111,
-              text_size    = size.small, text_halign = text.align_left,
-              text_font_family = font.family_monospace)
+              text_color=#888888, bgcolor=#111111,
+              text_size=size.small, text_halign=text.align_left,
+              text_font_family=font.family_monospace)
     table.cell(panel, 1, 17, stars_str,
-              text_color   = stars_clr, bgcolor = #111111,
-              text_size    = size.small, text_halign = text.align_right,
-              text_font_family = font.family_monospace)
+              text_color=stars_clr, bgcolor=#111111,
+              text_size=size.small, text_halign=text.align_right,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 1, 17, 2, 17)
 
     // ── Fila 18 · Desglose F1-F4 ──────────────────────────────────────────────
     f_disp = "F1:" + str.tostring(math.round(f1 * 100), "#") +
-             "  F2:"  + str.tostring(math.round(f2 * 100), "#") +
-             "  F3:"  + str.tostring(math.round(f3 * 100), "#") +
-             "  F4:"  + str.tostring(math.round(f4 * 100), "#")
+             "  F2:" + str.tostring(math.round(f2 * 100), "#") +
+             "  F3:" + str.tostring(math.round(f3 * 100), "#") +
+             "  F4:" + str.tostring(math.round(f4 * 100), "#")
     table.cell(panel, 0, 18, f_disp,
-              text_color   = #444444, bgcolor = #0A0A0A,
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=#444444, bgcolor=#0A0A0A,
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 0, 18, 2, 18)
 
     // ── Fila 19 · Info técnica ────────────────────────────────────────────────
-    table.cell(panel, 0, 19, "Barras calc: 5000   |   v1.0",
-              text_color   = #333333, bgcolor = #0A0A0A,
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+    table.cell(panel, 0, 19, "Barras calc: " + str.tostring(calc_bars_disp) + "   |   v2.0",
+              text_color=#333333, bgcolor=#0A0A0A,
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 0, 19, 2, 19)
 
     // ── Fila 20 · Sesión activa ───────────────────────────────────────────────
-    // FIX: ternario en una línea
-    sesion_txt = is_london ? "● SESIÓN LONDRES activa" : is_ny ? "● SESIÓN NY activa" : "  —  mercado fuera de sesión"
-    sesion_clr = is_london ? color(#FFD700) : is_ny ? color(#00FF88) : color(#444444)
+    sesion_txt = is_sess_b_active ? "● " + sess_b_name + " activa" : is_sess_c_active ? "● " + sess_c_name + " activa" : "  —  mercado fuera de sesión"
+    sesion_clr = is_sess_b_active ? color(#00BCD4) : is_sess_c_active ? color(#FF9800) : color(#444444)
     table.cell(panel, 0, 20, sesion_txt,
-              text_color   = sesion_clr, bgcolor = #0D0D0D,
-              text_size    = size.tiny, text_halign = text.align_center,
-              text_font_family = font.family_monospace)
+              text_color=sesion_clr, bgcolor=#0D0D0D,
+              text_size=size.tiny, text_halign=text.align_center,
+              text_font_family=font.family_monospace)
     table.merge_cells(panel, 0, 20, 2, 20)
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  PLOTS (invisibles — expuestos en Data Window y alertas)
+//  PLOTS (invisibles — expuestos en Data Window)
 // ══════════════════════════════════════════════════════════════════════════════
 
-plot(tasa_cont, "Tasa Cont. %",       color=na, display=display.data_window)
-plot(r_up,      "Retest Arriba %",    color=na, display=display.data_window)
-plot(r_dn,      "Retest Abajo %",     color=na, display=display.data_window)
-plot(rb_up,     "Retest BOS Arriba %",color=na, display=display.data_window)
-plot(rb_dn,     "Retest BOS Abajo %", color=na, display=display.data_window)
+plot(tasa_cont, "Tasa Cont. %",        color=na, display=display.data_window)
+plot(r_up,      "Retest Arriba %",     color=na, display=display.data_window)
+plot(r_dn,      "Retest Abajo %",      color=na, display=display.data_window)
+plot(rb_up,     "Retest BOS Arriba %", color=na, display=display.data_window)
+plot(rb_dn,     "Retest BOS Abajo %",  color=na, display=display.data_window)
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  ALERTAS
 // ══════════════════════════════════════════════════════════════════════════════
 
 alertcondition(bos_bull_bar and tasa_cont >= 50,
-  title   = "BOS Alcista + Tasa MEDIO/ALTO",
-  message = "EL SENSEI: BOS ALCISTA detectado. Tasa de continuación MEDIO/ALTO.")
+  title=   "BOS Alcista + Tasa MEDIO/ALTO",
+  message= "EL SENSEI: BOS ALCISTA detectado. Tasa de continuación MEDIO/ALTO.")
 
 alertcondition(bos_bear_bar and tasa_cont >= 50,
-  title   = "BOS Bajista + Tasa MEDIO/ALTO",
-  message = "EL SENSEI: BOS BAJISTA detectado. Tasa de continuación MEDIO/ALTO.")
+  title=   "BOS Bajista + Tasa MEDIO/ALTO",
+  message= "EL SENSEI: BOS BAJISTA detectado. Tasa de continuación MEDIO/ALTO.")
 
 alertcondition(tasa_cont > 65,
-  title   = "Tasa ALTO",
-  message = "EL SENSEI: Zona de ALTA probabilidad activa.")
+  title=   "Tasa ALTO",
+  message= "EL SENSEI: Zona de ALTA probabilidad activa.")
 
 alertcondition(bos_bull_bar,
-  title   = "BOS Alcista",
-  message = "EL SENSEI: Quiebre de estructura alcista detectado.")
+  title=   "BOS Alcista",
+  message= "EL SENSEI: Quiebre de estructura alcista detectado.")
 
 alertcondition(bos_bear_bar,
-  title   = "BOS Bajista",
-  message = "EL SENSEI: Quiebre de estructura bajista detectado.")
+  title=   "BOS Bajista",
+  message= "EL SENSEI: Quiebre de estructura bajista detectado.")
