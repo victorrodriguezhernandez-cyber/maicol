@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AQUA UVC — Pure by Light</title>
+
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <!-- Lottie -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --uvc: #00f0ff;
+      --glow: #0af;
+      --deep: #000408;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--deep);
+      color: #fff;
+      font-family: 'Helvetica Neue', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ─── HERO ────────────────────────────────────── */
+    #hero {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* submarine radial-gradient atmosphere */
+    #hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 70% at 50% 60%, #00102a 0%, transparent 70%),
+        radial-gradient(ellipse 100% 100% at 50% 50%, #000c1e 30%, #000000 100%);
+      z-index: 0;
+    }
+
+    /* ambient UVC ring */
+    #hero::after {
+      content: '';
+      position: absolute;
+      bottom: 15%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 260px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(0,200,255,0.18) 0%, transparent 70%);
+      filter: blur(18px);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      cursor: grab;
+    }
+    #canvas-container:active { cursor: grabbing; }
+
+    #canvas-container canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .hero-badge {
+      position: absolute;
+      top: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      font-size: 0.65rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--uvc);
+      opacity: 0.75;
+    }
+
+    .hero-title {
+      position: absolute;
+      bottom: 12%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .hero-title h1 {
+      font-size: clamp(2.2rem, 6vw, 5rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      background: linear-gradient(135deg, #fff 30%, var(--uvc) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-title p {
+      margin-top: 0.6rem;
+      font-size: 0.85rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      opacity: 0.4;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .scroll-hint span {
+      display: block;
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--uvc), transparent);
+      animation: scrollPulse 1.6s ease-in-out infinite;
+    }
+
+    @keyframes scrollPulse {
+      0%, 100% { opacity: 0; transform: scaleY(0.5) translateY(-10px); }
+      50% { opacity: 1; transform: scaleY(1) translateY(0); }
+    }
+
+    /* ─── STICKY FEATURE SECTION ─────────────────── */
+    #features {
+      position: relative;
+    }
+
+    .sticky-scene {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .sticky-scene::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 50% 80% at 35% 50%, #000e25 0%, transparent 65%),
+        radial-gradient(ellipse 80% 100% at 50% 50%, #000510 40%, #000000 100%);
+    }
+
+    #sticky-canvas-wrap {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 55vw;
+      height: 100vh;
+      z-index: 2;
+    }
+
+    #sticky-canvas-wrap canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .copy-panels {
+      position: relative;
+      z-index: 5;
+      width: 100%;
+    }
+
+    .copy-panel {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 0 8vw;
+      max-width: 50%;
+    }
+
+    .copy-panel .inner {
+      max-width: 420px;
+    }
+
+    .copy-panel .tag {
+      display: inline-block;
+      font-size: 0.6rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--uvc);
+      border: 1px solid rgba(0,240,255,0.3);
+      padding: 0.25em 0.75em;
+      border-radius: 2px;
+      margin-bottom: 1.2rem;
+    }
+
+    .copy-panel h2 {
+      font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+
+    .copy-panel p {
+      font-size: 1rem;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.55);
+    }
+
+    .copy-panel .stat {
+      margin-top: 2rem;
+      display: flex;
+      gap: 2.5rem;
+    }
+
+    .copy-panel .stat-item strong {
+      display: block;
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--uvc);
+      line-height: 1;
+    }
+
+    .copy-panel .stat-item span {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* ─── HORIZONTAL SCROLL SECTION ──────────────── */
+    #specs {
+      padding: 8rem 0;
+      background: #000;
+    }
+
+    .specs-header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding: 0 2rem;
+    }
+
+    .specs-header h2 {
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 700;
+    }
+
+    .specs-header p {
+      margin-top: 0.5rem;
+      color: rgba(255,255,255,0.4);
+      font-size: 0.85rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .h-scroll-track {
+      display: flex;
+      overflow-x: scroll;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      gap: 0;
+      padding: 0 calc(50vw - 180px);
+    }
+
+    .h-scroll-track::-webkit-scrollbar { display: none; }
+
+    .spec-card {
+      flex: 0 0 360px;
+      scroll-snap-align: center;
+      height: 480px;
+      border: 1px solid rgba(0,240,255,0.1);
+      border-radius: 16px;
+      margin: 0 12px;
+      padding: 2.5rem;
+      background: linear-gradient(160deg, rgba(0,20,40,0.8) 0%, rgba(0,5,15,0.9) 100%);
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.3s, transform 0.3s;
+      cursor: pointer;
+    }
+
+    .spec-card:hover {
+      border-color: rgba(0,240,255,0.4);
+      transform: translateY(-6px);
+    }
+
+    .spec-card .lottie-icon {
+      width: 80px;
+      height: 80px;
+    }
+
+    .spec-card h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .spec-card p {
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.5);
+      flex-grow: 1;
+      margin-top: 0.5rem;
+    }
+
+    .spec-card .number {
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: var(--uvc);
+      line-height: 1;
+      opacity: 0.15;
+    }
+
+    /* ─── CTA ─────────────────────────────────────── */
+    #cta {
+      padding: 10rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #cta::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(0,180,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    #cta h2 {
+      font-size: clamp(2rem, 5vw, 4rem);
+      font-weight: 800;
+      max-width: 700px;
+      margin: 0 auto 1.5rem;
+      line-height: 1.1;
+    }
+
+    #cta p {
+      color: rgba(255,255,255,0.45);
+      max-width: 460px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      padding: 1rem 2.8rem;
+      background: var(--uvc);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border-radius: 50px;
+      transition: box-shadow 0.3s, transform 0.2s;
+      box-shadow: 0 0 30px rgba(0,240,255,0.35);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 60px rgba(0,240,255,0.6);
+      transform: translateY(-2px);
+    }
+
+    /* ─── NAV ─────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 4vw;
+      background: linear-gradient(to bottom, rgba(0,4,8,0.9), transparent);
+      backdrop-filter: blur(4px);
+    }
+
+    .nav-logo {
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--uvc);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2.5rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: rgba(255,255,255,0.55);
+      text-decoration: none;
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: #fff; }
+
+    .nav-cta {
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--uvc);
+      text-decoration: none;
+      border: 1px solid rgba(0,240,255,0.4);
+      padding: 0.45em 1.2em;
+      border-radius: 50px;
+      transition: background 0.2s;
+    }
+
+    .nav-cta:hover { background: rgba(0,240,255,0.1); }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">Aqua UVC</div>
+    <ul class="nav-links">
+      <li><a href="#features">Technology</a></li>
+      <li><a href="#specs">Specs</a></li>
+    </ul>
+    <a href="#cta" class="nav-cta">Buy Now</a>
+  </nav>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-badge">Pure by Light · UVC Purification</div>
+    <div id="canvas-container"></div>
+    <div class="hero-title">
+      <h1>AQUA UVC</h1>
+      <p>Kill 99.99% of bacteria · No filters · Forever pure</p>
+    </div>
+    <div class="scroll-hint">
+      scroll
+      <span></span>
+    </div>
+  </section>
+
+  <!-- STICKY FEATURES -->
+  <section id="features">
+    <div class="sticky-scene">
+      <div id="sticky-canvas-wrap"></div>
+    </div>
+
+    <div class="copy-panels">
+      <div class="copy-panel">
+        <div class="inner">
+          <span class="tag">UVC Technology</span>
+          <h2>Light that kills what eyes can't see</h2>
+          <p>Our 270nm deep-UV LED pulses 4× per second, destroying DNA in bacteria, viruses, and protozoa. No chemicals. No taste. No replacements.</p>
+          <div class="stat">
+            <div class="stat-item"><strong>99.99%</strong><span>Pathogens killed</span></div>
+            <div class="stat-item"><strong>60s</strong><span>Full purification</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="copy-panel">
+        <div class="inner">
+          <span class="tag">Smart Materials</span>
+          <h2>Grade-5 titanium meets borosilicate glass</h2>
+          <p>Medical-grade materials that never leach. The bottle becomes part of the purification system — UV light reflects off the internal mirror finish for complete coverage.</p>
+          <div class="stat">
+            <div class="stat-item"><strong>500ml</strong><span>Capacity</span></div>
+            <div class="stat-item"><strong>18h</strong><span>Battery life</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="copy-panel">
+        <div class="inner">
+          <span class="tag">Always Ready</span>
+          <h2>Charge once. Drink anywhere for weeks.</h2>
+          <p>Wireless charging via USB-C. Automatic activation when you open the cap. One press purifies. The companion app tracks purification cycles and water quality score.</p>
+          <div class="stat">
+            <div class="stat-item"><strong>3yr</strong><span>LED lifespan</span></div>
+            <div class="stat-item"><strong>IP68</strong><span>Waterproof</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HORIZONTAL SPEC CARDS -->
+  <section id="specs">
+    <div class="specs-header">
+      <h2>Every detail engineered.</h2>
+      <p>Swipe to explore</p>
+    </div>
+    <div class="h-scroll-track">
+      <div class="spec-card">
+        <div class="lottie-icon" id="lottie-0"></div>
+        <div>
+          <div class="number">01</div>
+          <h3>UVC LED Core</h3>
+          <p>270nm wavelength deep-UV LED rated for 10,000 hours. Pulsed operation extends lifespan and reduces heat while maintaining purification efficacy.</p>
+        </div>
+      </div>
+      <div class="spec-card">
+        <div class="lottie-icon" id="lottie-1"></div>
+        <div>
+          <div class="number">02</div>
+          <h3>Mirror Finish Interior</h3>
+          <p>Electropolished titanium interior acts as a reflective chamber, bouncing UV light to reach every molecule of water — no shadows, no safe zones for pathogens.</p>
+        </div>
+      </div>
+      <div class="spec-card">
+        <div class="lottie-icon" id="lottie-2"></div>
+        <div>
+          <div class="number">03</div>
+          <h3>Smart Cap Sensors</h3>
+          <p>Tilt and open sensors automatically trigger purification. Drink-safe indicator glows cyan when water is clean. Magnetic seal keeps UV locked in.</p>
+        </div>
+      </div>
+      <div class="spec-card">
+        <div class="lottie-icon" id="lottie-3"></div>
+        <div>
+          <div class="number">04</div>
+          <h3>Thermal Regulation</h3>
+          <p>Double-wall vacuum insulation keeps beverages cold 24h or hot 12h. The outer shell stays cool to the touch even during active UV purification cycles.</p>
+        </div>
+      </div>
+      <div class="spec-card">
+        <div class="lottie-icon" id="lottie-4"></div>
+        <div>
+          <div class="number">05</div>
+          <h3>App Integration</h3>
+          <p>Bluetooth 5.2 syncs purification history, water quality scores, and usage reminders. Track your hydration streaks and share stats with the Aqua community.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="cta">
+    <h2>The last water bottle you'll ever buy.</h2>
+    <p>No filters to replace. No chemicals to buy. Just pure water, anywhere on Earth.</p>
+    <a href="#" class="btn-primary">Order Now — $129</a>
+  </section>
+
+  <script>
+  // ════════════════════════════════════════════════════
+  // SHARED BOTTLE GEOMETRY FACTORY
+  // ════════════════════════════════════════════════════
+  function createBottleGeometry() {
+    const points = [];
+    const profile = [
+      [0.00, 0.00], [0.18, 0.00], [0.22, 0.02],
+      [0.24, 0.08], [0.22, 0.14], [0.22, 0.55],
+      [0.24, 0.60], [0.26, 0.65], [0.24, 0.72],
+      [0.20, 0.75], [0.20, 0.82], [0.22, 0.87],
+      [0.14, 0.90], [0.12, 0.93], [0.12, 1.00],
+      [0.08, 1.00],
+    ];
+    for (const [x, y] of profile) {
+      points.push(new THREE.Vector2(x * 1.2, y * 3.0 - 1.5));
+    }
+    return new THREE.LatheGeometry(points, 64);
+  }
+
+  function createBottleMaterial(roughness = 0.12, metalness = 0.85) {
+    return new THREE.MeshStandardMaterial({
+      color: 0x8ecfdd,
+      roughness,
+      metalness,
+      envMapIntensity: 2.2,
+    });
+  }
+
+  function createCapMaterial() {
+    return new THREE.MeshStandardMaterial({
+      color: 0x111820,
+      roughness: 0.3,
+      metalness: 0.9,
+    });
+  }
+
+  // ════════════════════════════════════════════════════
+  // HERO THREE.JS SCENE (interactive rotation)
+  // ════════════════════════════════════════════════════
+  (function initHero() {
+    const container = document.getElementById('canvas-container');
+    const W = container.clientWidth, H = container.clientHeight;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(W, H);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.4;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
+    camera.position.set(0, 0, 5);
+
+    // Lighting
+    const ambient = new THREE.AmbientLight(0x001a2e, 2.0);
+    scene.add(ambient);
+
+    const uvcLight = new THREE.PointLight(0x00f0ff, 12, 8);
+    uvcLight.position.set(0, -0.5, 2);
+    scene.add(uvcLight);
+
+    const rimLight = new THREE.PointLight(0x0050ff, 6, 10);
+    rimLight.position.set(-3, 1, -2);
+    scene.add(rimLight);
+
+    const topLight = new THREE.PointLight(0xffffff, 4, 10);
+    topLight.position.set(1, 4, 2);
+    scene.add(topLight);
+
+    // Environment (CubeCamera for reflections)
+    const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(128);
+    const cubeCamera = new THREE.CubeCamera(0.1, 100, cubeRenderTarget);
+    scene.add(cubeCamera);
+
+    // Bottle group
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const bottleGeo = createBottleGeometry();
+    const bottleMat = createBottleMaterial();
+    bottleMat.envMap = cubeRenderTarget.texture;
+
+    const bottle = new THREE.Mesh(bottleGeo, bottleMat);
+    group.add(bottle);
+
+    // Cap
+    const capGeo = new THREE.CylinderGeometry(0.096, 0.096, 0.25, 32);
+    const cap = new THREE.Mesh(capGeo, createCapMaterial());
+    cap.position.y = 1.38;
+    group.add(cap);
+
+    // UVC glow ring inside bottle
+    const glowGeo = new THREE.TorusGeometry(0.18, 0.025, 16, 64);
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.7 });
+    const glowRing = new THREE.Mesh(glowGeo, glowMat);
+    glowRing.rotation.x = Math.PI / 2;
+    glowRing.position.y = -0.5;
+    group.add(glowRing);
+
+    // Mouse interaction
+    let targetRotY = 0, targetRotX = 0;
+    let currentRotY = 0, currentRotX = 0;
+    let isDragging = false;
+    let lastMouseX = 0, lastMouseY = 0;
+    let velocityX = 0, velocityY = 0;
+
+    container.addEventListener('mousedown', e => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+      velocityX = velocityY = 0;
+    });
+    window.addEventListener('mouseup', () => { isDragging = false; });
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      velocityX = dy * 0.008;
+      velocityY = dx * 0.008;
+      targetRotX += velocityX;
+      targetRotY += velocityY;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    // Touch support
+    let lastTouchX = 0, lastTouchY = 0;
+    container.addEventListener('touchstart', e => {
+      lastTouchX = e.touches[0].clientX;
+      lastTouchY = e.touches[0].clientY;
+    }, { passive: true });
+    container.addEventListener('touchmove', e => {
+      const dx = e.touches[0].clientX - lastTouchX;
+      const dy = e.touches[0].clientY - lastTouchY;
+      targetRotY += dx * 0.01;
+      targetRotX += dy * 0.01;
+      lastTouchX = e.touches[0].clientX;
+      lastTouchY = e.touches[0].clientY;
+    }, { passive: true });
+
+    // Scroll → UVC light intensity
+    let scrollProgress = 0;
+    window.addEventListener('scroll', () => {
+      const hero = document.getElementById('hero');
+      const rect = hero.getBoundingClientRect();
+      scrollProgress = Math.max(0, Math.min(1, -rect.top / rect.height));
+      uvcLight.intensity = 12 + scrollProgress * 25;
+      uvcLight.position.y = -0.5 + scrollProgress * 0.8;
+      glowMat.opacity = 0.7 + scrollProgress * 0.3;
+    });
+
+    let autoRotate = true;
+    container.addEventListener('mousedown', () => { autoRotate = false; });
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      if (!isDragging) {
+        velocityX *= 0.96;
+        velocityY *= 0.96;
+        targetRotX += velocityX;
+        targetRotY += velocityY;
+        if (autoRotate) targetRotY += 0.003;
+      }
+
+      currentRotX += (targetRotX - currentRotX) * 0.08;
+      currentRotY += (targetRotY - currentRotY) * 0.08;
+
+      group.rotation.x = currentRotX;
+      group.rotation.y = currentRotY;
+
+      // floating bob
+      group.position.y = Math.sin(t * 0.6) * 0.06;
+
+      // pulsing UVC glow
+      uvcLight.intensity = (12 + scrollProgress * 25) + Math.sin(t * 3) * 2;
+      glowMat.opacity = 0.6 + Math.sin(t * 3) * 0.2;
+
+      cubeCamera.update(renderer, scene);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      const W2 = container.clientWidth, H2 = container.clientHeight;
+      camera.aspect = W2 / H2;
+      camera.updateProjectionMatrix();
+      renderer.setSize(W2, H2);
+    });
+  })();
+
+  // ════════════════════════════════════════════════════
+  // STICKY SECTION THREE.JS SCENE
+  // ════════════════════════════════════════════════════
+  (function initSticky() {
+    const container = document.getElementById('sticky-canvas-wrap');
+    const W = container.clientWidth, H = container.clientHeight;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(W, H);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.6;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, W / H, 0.1, 100);
+    camera.position.set(0, 0, 5.5);
+
+    const ambient = new THREE.AmbientLight(0x001a2e, 1.5);
+    scene.add(ambient);
+
+    const uvcLight = new THREE.PointLight(0x00f0ff, 15, 8);
+    uvcLight.position.set(0.5, -0.3, 2.5);
+    scene.add(uvcLight);
+
+    const rimL = new THREE.PointLight(0x0030ff, 8, 10);
+    rimL.position.set(-4, 0, -1);
+    scene.add(rimL);
+
+    const topL = new THREE.PointLight(0xffffff, 5, 10);
+    topL.position.set(2, 5, 2);
+    scene.add(topL);
+
+    const cubeRT = new THREE.WebGLCubeRenderTarget(128);
+    const cubeCamera = new THREE.CubeCamera(0.1, 100, cubeRT);
+    scene.add(cubeCamera);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const bottleGeo = createBottleGeometry();
+    const bottleMat = createBottleMaterial(0.1, 0.9);
+    bottleMat.envMap = cubeRT.texture;
+    const bottle = new THREE.Mesh(bottleGeo, bottleMat);
+    group.add(bottle);
+
+    const capGeo = new THREE.CylinderGeometry(0.096, 0.096, 0.25, 32);
+    const cap = new THREE.Mesh(capGeo, createCapMaterial());
+    cap.position.y = 1.38;
+    group.add(cap);
+
+    const glowGeo = new THREE.TorusGeometry(0.18, 0.025, 16, 64);
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.8 });
+    const glowRing = new THREE.Mesh(glowGeo, glowMat);
+    glowRing.rotation.x = Math.PI / 2;
+    glowRing.position.y = -0.5;
+    group.add(glowRing);
+
+    // Particle system — floating water particles
+    const particleCount = 120;
+    const positions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3]     = (Math.random() - 0.5) * 4;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 5;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 3 - 1;
+    }
+    const particleGeo = new THREE.BufferGeometry();
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const particleMat = new THREE.PointsMaterial({
+      color: 0x00a8ff,
+      size: 0.03,
+      transparent: true,
+      opacity: 0.5,
+      sizeAttenuation: true,
+    });
+    scene.add(new THREE.Points(particleGeo, particleMat));
+
+    // GSAP ScrollTrigger — drive bottle rotation/effects from scroll
+    gsap.registerPlugin(ScrollTrigger);
+
+    const featureSection = document.getElementById('features');
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: featureSection,
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: 1.2,
+      }
+    });
+
+    // animate via proxy object
+    const proxy = { rotY: 0.3, rotX: 0.05, glowIntensity: 15, posX: 0 };
+
+    tl.to(proxy, { rotY: Math.PI * 2.5, rotX: 0.15, glowIntensity: 40, posX: -0.4, ease: 'none' });
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      group.rotation.y = proxy.rotY;
+      group.rotation.x = proxy.rotX;
+      group.position.y = Math.sin(t * 0.5) * 0.05;
+      group.position.x = proxy.posX;
+
+      uvcLight.intensity = proxy.glowIntensity + Math.sin(t * 2.5) * 3;
+      glowMat.opacity = 0.5 + (proxy.glowIntensity / 80);
+
+      // rotate particle field slowly
+      const pos = particleGeo.attributes.position;
+      for (let i = 0; i < particleCount; i++) {
+        pos.array[i * 3 + 1] += 0.002;
+        if (pos.array[i * 3 + 1] > 2.5) pos.array[i * 3 + 1] = -2.5;
+      }
+      pos.needsUpdate = true;
+
+      cubeCamera.update(renderer, scene);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      const W2 = container.clientWidth, H2 = container.clientHeight;
+      camera.aspect = W2 / H2;
+      camera.updateProjectionMatrix();
+      renderer.setSize(W2, H2);
+    });
+  })();
+
+  // ════════════════════════════════════════════════════
+  // LOTTIE — inline JSON animations for spec cards
+  // ════════════════════════════════════════════════════
+  function makeLottieData(color1, color2, shape) {
+    // Procedural Lottie JSON: simple pulsing shape animation
+    return {
+      v: '5.7.4', fr: 30, ip: 0, op: 60, w: 80, h: 80,
+      layers: [{
+        ty: 4, nm: 'icon', sr: 1, ks: {
+          o: { a: 0, k: 100 }, r: { a: 1, k: [
+            { t: 0, s: [0], e: [360], i: { x: [0.5], y: [1] }, o: { x: [0.5], y: [0] } },
+            { t: 60, s: [360] }
+          ]},
+          p: { a: 0, k: [40, 40, 0] },
+          s: { a: 1, k: [
+            { t: 0, s: [80, 80, 100], e: [100, 100, 100], i: { x: [0.5], y: [1] }, o: { x: [0.5], y: [0] } },
+            { t: 30, s: [100, 100, 100], e: [80, 80, 100], i: { x: [0.5], y: [1] }, o: { x: [0.5], y: [0] } },
+            { t: 60, s: [80, 80, 100] }
+          ]},
+        },
+        ao: 0, shapes: [{
+          ty: 'gr', it: [
+            shape === 'circle' ? { ty: 'el', nm: 'e', p: { a: 0, k: [0, 0] }, s: { a: 0, k: [30, 30] } }
+            : shape === 'hex' ? { ty: 'sr', nm: 'star', sy: 1, pt: { a: 0, k: 6 }, p: { a: 0, k: [0, 0] }, r: { a: 0, k: 0 }, ir: { a: 0, k: 10 }, is: { a: 0, k: 0 }, or: { a: 0, k: 18 }, os: { a: 0, k: 0 }, ix: 1 }
+            : { ty: 'rc', nm: 'r', p: { a: 0, k: [0, 0] }, s: { a: 0, k: [26, 26] }, r: { a: 0, k: 4 } },
+            { ty: 'st', c: { a: 0, k: [color1[0]/255, color1[1]/255, color1[2]/255, 1] }, o: { a: 0, k: 100 }, w: { a: 0, k: 2.5 } },
+            { ty: 'fl', c: { a: 0, k: [color2[0]/255, color2[1]/255, color2[2]/255, 0.15] }, o: { a: 0, k: 100 } },
+            { ty: 'tr', p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, o: { a: 0, k: 100 } }
+          ]
+        }],
+        ip: 0, op: 60, st: 0, bm: 0,
+      }]
+    };
+  }
+
+  const lottieConfigs = [
+    { color1: [0, 240, 255], color2: [0, 100, 200], shape: 'circle' },
+    { color1: [0, 200, 255], color2: [0, 60, 150], shape: 'hex' },
+    { color1: [0, 180, 255], color2: [0, 80, 180], shape: 'rect' },
+    { color1: [0, 220, 255], color2: [0, 120, 200], shape: 'circle' },
+    { color1: [0, 160, 255], color2: [0, 40, 140], shape: 'hex' },
+  ];
+
+  lottieConfigs.forEach((cfg, i) => {
+    lottie.loadAnimation({
+      container: document.getElementById(`lottie-${i}`),
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      animationData: makeLottieData(cfg.color1, cfg.color2, cfg.shape),
+    });
+  });
+
+  // ════════════════════════════════════════════════════
+  // GSAP — copy panel entrance animations
+  // ════════════════════════════════════════════════════
+  gsap.registerPlugin(ScrollTrigger);
+
+  document.querySelectorAll('.copy-panel .inner').forEach(el => {
+    gsap.from(el, {
+      scrollTrigger: {
+        trigger: el,
+        start: 'top 75%',
+        toggleActions: 'play none none reverse',
+      },
+      opacity: 0,
+      x: -40,
+      duration: 0.9,
+      ease: 'power3.out',
+    });
+  });
+
+  gsap.from('#cta h2, #cta p, #cta .btn-primary', {
+    scrollTrigger: { trigger: '#cta', start: 'top 70%' },
+    opacity: 0,
+    y: 30,
+    stagger: 0.18,
+    duration: 0.9,
+    ease: 'power3.out',
+  });
+
+  document.querySelectorAll('.spec-card').forEach((card, i) => {
+    gsap.from(card, {
+      scrollTrigger: { trigger: card, start: 'top 85%' },
+      opacity: 0,
+      y: 30,
+      duration: 0.7,
+      delay: i * 0.05,
+      ease: 'power2.out',
+    });
+  });
+  </script>
+</body>
+</html>
