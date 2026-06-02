@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENSEI ZONES — BTC/USDT 15M</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0a0b0d;
+    --bg2:      #0e1117;
+    --bg3:      #12151e;
+    --border:   #1e2230;
+    --text:     #8892a4;
+    --bright:   #c5cad8;
+    --green:    #26a69a;
+    --red:      #ef5350;
+    --accent:   #7c83ff;
+    --gold:     #f0b429;
+    --font:     'JetBrains Mono', monospace;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--bright);
+    font-family: var(--font);
+    font-size: 12px;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding: 0 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+
+  .logo-icon {
+    width: 26px; height: 26px;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+
+  .header-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  #header-price {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--bright);
+    letter-spacing: 0.02em;
+  }
+
+  #header-change {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  #header-change.up   { color: var(--green); background: rgba(38,166,154,0.12); }
+  #header-change.down { color: var(--red);   background: rgba(239,83,80,0.12);  }
+
+  .header-tag {
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+
+  #ny-badge {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    transition: all 0.3s;
+  }
+  #ny-badge.active   { background: rgba(240,180,41,0.15); color: var(--gold); border: 1px solid rgba(240,180,41,0.3); }
+  #ny-badge.inactive { background: rgba(30,34,48,0.6);    color: var(--text); border: 1px solid var(--border); }
+
+  #ws-status {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text);
+    transition: background 0.3s;
+  }
+  #ws-status.connected    { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  #ws-status.disconnected { background: var(--red); }
+  #ws-status.connecting   { background: var(--gold); animation: pulse 1s infinite; }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+
+  /* ── Main layout ── */
+  #app {
+    display: flex;
+    height: calc(100vh - 44px);
+  }
+
+  /* ── Chart area ── */
+  #chart-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #chart-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .sb-section {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sb-title {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--text);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* Zone card */
+  .zone-card {
+    background: var(--bg3);
+    border-radius: 6px;
+    padding: 9px 10px;
+    margin-bottom: 6px;
+    border-left: 3px solid transparent;
+  }
+  .zone-card.supply { border-left-color: var(--red); }
+  .zone-card.demand { border-left-color: var(--green); }
+  .zone-card.empty  { border-left-color: var(--border); opacity: 0.5; }
+
+  .zone-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin-bottom: 5px;
+  }
+  .zone-card.supply .zone-label { color: var(--red); }
+  .zone-card.demand .zone-label { color: var(--green); }
+
+  .zone-range {
+    font-size: 11px;
+    color: var(--bright);
+    margin-bottom: 4px;
+  }
+
+  .zone-prob {
+    font-size: 10px;
+    color: var(--text);
+  }
+
+  .zone-prob span {
+    font-weight: 600;
+  }
+  .zone-prob .prob-high { color: var(--green); }
+  .zone-prob .prob-low  { color: var(--red); }
+  .zone-prob .prob-mid  { color: var(--gold); }
+
+  .zone-badge {
+    display: inline-block;
+    font-size: 8px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-top: 4px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+  .zone-badge.virgin  { background: rgba(240,180,41,0.15); color: var(--gold); }
+  .zone-badge.touched { background: rgba(138,150,180,0.1); color: var(--text); }
+
+  /* Level row */
+  .level-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .level-row:last-child { border-bottom: none; }
+  .level-lbl { font-size: 11px; font-weight: 600; }
+  .level-lbl.H { color: var(--red); }
+  .level-lbl.L { color: var(--green); }
+  .level-val  { font-size: 11px; color: var(--bright); }
+
+  /* History list */
+  .hist-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(30,34,48,0.6);
+    font-size: 10px;
+    color: var(--text);
+  }
+  .hist-item:last-child { border-bottom: none; }
+
+  .hist-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .hist-dot.supply { background: var(--red); }
+  .hist-dot.demand { background: var(--green); }
+
+  .hist-info { flex: 1; min-width: 0; }
+  .hist-price { color: var(--bright); }
+
+  .hist-result {
+    font-size: 8px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .hist-result.pending   { background: rgba(124,131,255,0.15); color: var(--accent); }
+  .hist-result.respected { background: rgba(38,166,154,0.15);  color: var(--green); }
+  .hist-result.broke     { background: rgba(239,83,80,0.15);   color: var(--red); }
+
+  /* Stats row */
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    color: var(--text);
+    font-size: 10px;
+  }
+  .stat-val { color: var(--bright); font-weight: 500; }
+
+  /* Loading overlay */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 999;
+    transition: opacity 0.4s;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+
+  .loader-logo {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+
+  .loader-bar {
+    width: 200px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .loader-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--gold));
+    border-radius: 2px;
+    animation: loadbar 1.8s ease-in-out infinite;
+  }
+  @keyframes loadbar {
+    0%   { width: 0%; margin-left: 0; }
+    50%  { width: 70%; margin-left: 15%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  .loader-text { color: var(--text); font-size: 11px; letter-spacing: 0.05em; }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    #sidebar { width: 180px; }
+    #header-price { font-size: 14px; }
+    .header-tag { display: none; }
+  }
+
+  @media (max-width: 520px) {
+    #sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading">
+  <div class="loader-logo">⬡ SENSEI ZONES</div>
+  <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+  <div class="loader-text" id="load-msg">Conectando a Binance WebSocket...</div>
+</div>
+
+<!-- Header -->
+<div id="header">
+  <div class="logo">
+    <div class="logo-icon">⬡</div>
+    SENSEI ZONES
+  </div>
+  <div class="header-info">
+    <span id="header-price">—</span>
+    <span id="header-change" class="up">+0.00%</span>
+    <span class="header-tag">BTC/USDT</span>
+    <span class="header-tag">15M</span>
+    <span id="ny-badge" class="inactive">NY SESSION</span>
+    <div id="ws-status" class="connecting" title="WebSocket"></div>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app">
+  <div id="chart-wrap">
+    <canvas id="chart-canvas"></canvas>
+  </div>
+
+  <div id="sidebar">
+    <!-- Supply zone -->
+    <div class="sb-section">
+      <div class="sb-title">Supply Zone</div>
+      <div id="supply-card" class="zone-card empty">
+        <div class="zone-label">SUPPLY</div>
+        <div class="zone-range" style="color:var(--text)">Sin zona activa</div>
+      </div>
+    </div>
+
+    <!-- Demand zone -->
+    <div class="sb-section">
+      <div class="sb-title">Demand Zone</div>
+      <div id="demand-card" class="zone-card empty">
+        <div class="zone-label">DEMAND</div>
+        <div class="zone-range" style="color:var(--text)">Sin zona activa</div>
+      </div>
+    </div>
+
+    <!-- H/L levels -->
+    <div class="sb-section">
+      <div class="sb-title">Niveles H/L</div>
+      <div id="levels-panel">
+        <div class="level-row">
+          <span class="level-lbl H">H</span>
+          <span class="level-val" id="level-h">—</span>
+        </div>
+        <div class="level-row">
+          <span class="level-lbl L">L</span>
+          <span class="level-val" id="level-l">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="sb-section">
+      <div class="sb-title">Estadísticas</div>
+      <div class="stat-row"><span>ATR(14)</span><span class="stat-val" id="stat-atr">—</span></div>
+      <div class="stat-row"><span>Velas cargadas</span><span class="stat-val" id="stat-candles">—</span></div>
+      <div class="stat-row"><span>Tendencia</span><span class="stat-val" id="stat-trend">—</span></div>
+      <div class="stat-row"><span>Último BOS</span><span class="stat-val" id="stat-bos">—</span></div>
+    </div>
+
+    <!-- Recent zones history -->
+    <div class="sb-section" style="flex:1">
+      <div class="sb-title">Últimas zonas (BD)</div>
+      <div id="history-list">
+        <div style="color:var(--text);font-size:10px;padding:4px 0">Cargando historial...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ES module imports -->
+<script type="module">
+import { SenseiChart }   from './chart.js';
+import {
+    calculateATR,
+    findPivotHighs, findPivotLows,
+    getNearestHigh, getNearestLow,
+    detectSupplyZone, detectDemandZone,
+    isZoneInvalidated, checkZoneTouched,
+    detectBOS, getTrendContext, isNYSessionNow
+} from './zones.js';
+import {
+    saveZone, getSimilarZones, updateZoneResult,
+    getRecentZones, markZoneTouched
+} from './supabase.js';
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+const SYMBOL   = 'BTCUSDT';
+const INTERVAL = '15m';
+const WS_URL   = `wss://stream.binance.com:9443/ws/${SYMBOL.toLowerCase()}@kline_${INTERVAL}`;
+const REST_URL = `https://api.binance.com/api/v3/klines?symbol=${SYMBOL}&interval=${INTERVAL}&limit=500`;
+
+const ZONE_PARAMS = {
+    pivotLen:      5,
+    levelLookback: 80,
+    minGapATR:     0.10,
+    maxDistATR:    5.00,
+    zoneBars:      5,
+    zoneLookback:  50,
+    maxZoneATR:    1.20,
+    minMoveATR:    1.00
+};
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let candles       = [];
+let atrs          = [];
+let pivotHighs    = [];
+let pivotLows     = [];
+let supplyZone    = null;
+let demandZone    = null;
+let nearestHigh   = null;
+let nearestLow    = null;
+let openPrice     = null;     // For % change calculation
+let activeSupplyId = null;   // Supabase row id of current supply zone
+let activeDemandId = null;
+let supplyProb    = null;
+let demandProb    = null;
+let ws            = null;
+let wsReconnectTimer = null;
+
+// ─── Chart init ──────────────────────────────────────────────────────────────
+const canvas = document.getElementById('chart-canvas');
+const chart  = new SenseiChart(canvas);
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function parseBinanceKline(k) {
+    return {
+        time:   k[0],
+        open:   parseFloat(k[1]),
+        high:   parseFloat(k[2]),
+        low:    parseFloat(k[3]),
+        close:  parseFloat(k[4]),
+        volume: parseFloat(k[5])
+    };
+}
+
+function setLoadMsg(msg) {
+    document.getElementById('load-msg').textContent = msg;
+}
+
+function hideLoading() {
+    document.getElementById('loading').classList.add('hidden');
+    setTimeout(() => {
+        const el = document.getElementById('loading');
+        if (el) el.remove();
+    }, 500);
+}
+
+function fmtPrice(p) { return p != null ? p.toFixed(2) : '—'; }
+
+// ─── Full analysis pipeline ───────────────────────────────────────────────────
+async function runAnalysis() {
+    if (candles.length < 50) return;
+
+    atrs        = calculateATR(candles, 14);
+    pivotHighs  = findPivotHighs(candles, ZONE_PARAMS.pivotLen);
+    pivotLows   = findPivotLows(candles,  ZONE_PARAMS.pivotLen);
+    nearestHigh = getNearestHigh(candles, atrs, pivotHighs, ZONE_PARAMS);
+    nearestLow  = getNearestLow(candles,  atrs, pivotLows,  ZONE_PARAMS);
+
+    const newSupply = detectSupplyZone(candles, atrs, ZONE_PARAMS);
+    const newDemand = detectDemandZone(candles, atrs, ZONE_PARAMS);
+    const trend     = getTrendContext(candles);
+
+    // ── Check invalidation of existing zones
+    if (supplyZone && isZoneInvalidated(supplyZone, candles, atrs)) {
+        if (activeSupplyId) await updateZoneResult(activeSupplyId, 'broke');
+        supplyZone    = null;
+        activeSupplyId = null;
+        supplyProb    = null;
+    }
+    if (demandZone && isZoneInvalidated(demandZone, candles, atrs)) {
+        if (activeDemandId) await updateZoneResult(activeDemandId, 'broke');
+        demandZone    = null;
+        activeDemandId = null;
+        demandProb    = null;
+    }
+
+    // ── Detect new supply zone
+    if (newSupply) {
+        const isDifferent = !supplyZone ||
+            Math.abs(newSupply.top - supplyZone.top) > 1 ||
+            Math.abs(newSupply.bottom - supplyZone.bottom) > 1;
+
+        if (isDifferent) {
+            supplyZone = newSupply;
+            supplyZone.isVirgin = !checkZoneTouched(supplyZone, candles);
+            supplyZone.trend    = trend;
+
+            // Save to Supabase + get probability
+            const [saved, prob] = await Promise.all([
+                saveZone({ ...supplyZone, confluenceScore: 0 }),
+                getSimilarZones({ type: 'supply', height: supplyZone.height, trend })
+            ]);
+            activeSupplyId = saved?.id || null;
+            supplyProb     = prob;
+        }
+    }
+
+    // ── Detect new demand zone
+    if (newDemand) {
+        const isDifferent = !demandZone ||
+            Math.abs(newDemand.top - demandZone.top) > 1 ||
+            Math.abs(newDemand.bottom - demandZone.bottom) > 1;
+
+        if (isDifferent) {
+            demandZone = newDemand;
+            demandZone.isVirgin = !checkZoneTouched(demandZone, candles);
+            demandZone.trend    = trend;
+
+            const [saved, prob] = await Promise.all([
+                saveZone({ ...demandZone, confluenceScore: 0 }),
+                getSimilarZones({ type: 'demand', height: demandZone.height, trend })
+            ]);
+            activeDemandId = saved?.id || null;
+            demandProb     = prob;
+        }
+    }
+
+    // ── BOS check
+    const { bosUp, bosDown } = detectBOS(candles, atrs, nearestHigh, nearestLow);
+    if (bosUp && nearestHigh != null) {
+        chart.addBOS({ index: candles.length - 1, direction: 'up', price: nearestHigh });
+        if (activeDemandId) await updateZoneResult(activeDemandId, 'respected');
+        updateStatBOS('↑ BOS ' + fmtPrice(nearestHigh));
+    }
+    if (bosDown && nearestLow != null) {
+        chart.addBOS({ index: candles.length - 1, direction: 'down', price: nearestLow });
+        if (activeSupplyId) await updateZoneResult(activeSupplyId, 'respected');
+        updateStatBOS('↓ BOS ' + fmtPrice(nearestLow));
+    }
+
+    // ── Update chart overlays
+    chart.setZones(supplyZone, demandZone);
+    chart.setLevels(nearestHigh, nearestLow);
+    chart.setATRs(atrs);
+
+    // ── Update sidebar
+    updateSidebar(trend);
+
+    // ── Refresh history from Supabase (every ~20 candles to avoid spam)
+    if (candles.length % 20 === 0) refreshHistory();
+}
+
+// ─── Sidebar update ───────────────────────────────────────────────────────────
+function updateSidebar(trend) {
+    const atr = atrs[atrs.length - 1];
+
+    // Supply card
+    const sc = document.getElementById('supply-card');
+    if (supplyZone) {
+        sc.className = 'zone-card supply';
+        const pct  = supplyProb?.probability;
+        const cnt  = supplyProb?.total ?? 0;
+        const pClass = pct == null ? '' : pct >= 60 ? 'prob-low' : pct <= 40 ? 'prob-high' : 'prob-mid';
+        const probTxt = pct != null
+            ? `<span class="${pClass}">${pct}% respetada</span> en ${cnt} casos`
+            : 'Sin datos históricos';
+        sc.innerHTML = `
+            <div class="zone-label">SUPPLY</div>
+            <div class="zone-range">${fmtPrice(supplyZone.top)} – ${fmtPrice(supplyZone.bottom)}</div>
+            <div class="zone-prob">${probTxt}</div>
+            <span class="zone-badge ${supplyZone.isVirgin ? 'virgin' : 'touched'}">${supplyZone.isVirgin ? '★ VIRGIN' : 'TOUCHED'}</span>`;
+    } else {
+        sc.className = 'zone-card empty';
+        sc.innerHTML = `<div class="zone-label">SUPPLY</div><div class="zone-range" style="color:var(--text)">Sin zona activa</div>`;
+    }
+
+    // Demand card
+    const dc = document.getElementById('demand-card');
+    if (demandZone) {
+        dc.className = 'zone-card demand';
+        const pct  = demandProb?.probability;
+        const cnt  = demandProb?.total ?? 0;
+        const pClass = pct == null ? '' : pct >= 60 ? 'prob-high' : pct <= 40 ? 'prob-low' : 'prob-mid';
+        const probTxt = pct != null
+            ? `<span class="${pClass}">${pct}% respetada</span> en ${cnt} casos`
+            : 'Sin datos históricos';
+        dc.innerHTML = `
+            <div class="zone-label">DEMAND</div>
+            <div class="zone-range">${fmtPrice(demandZone.top)} – ${fmtPrice(demandZone.bottom)}</div>
+            <div class="zone-prob">${probTxt}</div>
+            <span class="zone-badge ${demandZone.isVirgin ? 'virgin' : 'touched'}">${demandZone.isVirgin ? '★ VIRGIN' : 'TOUCHED'}</span>`;
+    } else {
+        dc.className = 'zone-card empty';
+        dc.innerHTML = `<div class="zone-label">DEMAND</div><div class="zone-range" style="color:var(--text)">Sin zona activa</div>`;
+    }
+
+    // Levels
+    document.getElementById('level-h').textContent = nearestHigh != null ? fmtPrice(nearestHigh) : '—';
+    document.getElementById('level-l').textContent = nearestLow  != null ? fmtPrice(nearestLow)  : '—';
+
+    // Stats
+    document.getElementById('stat-atr').textContent     = atr    ? atr.toFixed(1) : '—';
+    document.getElementById('stat-candles').textContent = candles.length;
+    const trendColors = { bullish: 'var(--green)', bearish: 'var(--red)', sideways: 'var(--gold)' };
+    const trendEl = document.getElementById('stat-trend');
+    trendEl.textContent = trend;
+    trendEl.style.color = trendColors[trend] || 'var(--text)';
+}
+
+let lastBOS = '—';
+function updateStatBOS(txt) {
+    lastBOS = txt;
+    document.getElementById('stat-bos').textContent = txt;
+}
+
+// ─── History from Supabase ────────────────────────────────────────────────────
+async function refreshHistory() {
+    const zones = await getRecentZones(5);
+    const list  = document.getElementById('history-list');
+    if (!zones.length) {
+        list.innerHTML = '<div style="color:var(--text);font-size:10px;padding:4px 0">Sin historial aún</div>';
+        return;
+    }
+    list.innerHTML = zones.map(z => {
+        const d  = new Date(z.detected_at);
+        const ts = `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+        return `<div class="hist-item">
+            <div class="hist-dot ${z.zone_type}"></div>
+            <div class="hist-info">
+                <div class="hist-price">${fmtPrice(z.zone_top)} – ${fmtPrice(z.zone_bottom)}</div>
+                <div style="color:var(--text);font-size:9px">${ts} · ${z.trend_context || '—'}</div>
+            </div>
+            <span class="hist-result ${z.result}">${z.result}</span>
+        </div>`;
+    }).join('');
+}
+
+// ─── Header price update ──────────────────────────────────────────────────────
+function updateHeaderPrice(price) {
+    document.getElementById('header-price').textContent = fmtPrice(price);
+    if (openPrice != null) {
+        const pct  = ((price - openPrice) / openPrice) * 100;
+        const el   = document.getElementById('header-change');
+        el.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+        el.className   = 'header-change ' + (pct >= 0 ? 'up' : 'down');
+        el.id          = 'header-change';
+    }
+}
+
+// ─── NY session badge ─────────────────────────────────────────────────────────
+function updateNYBadge() {
+    const el = document.getElementById('ny-badge');
+    if (isNYSessionNow()) {
+        el.className   = 'active';
+        el.textContent = '● NY SESSION';
+    } else {
+        el.className   = 'inactive';
+        el.textContent = 'NY SESSION';
+    }
+}
+setInterval(updateNYBadge, 60_000);
+updateNYBadge();
+
+// ─── WebSocket connection ─────────────────────────────────────────────────────
+function setWSStatus(state) {
+    const el = document.getElementById('ws-status');
+    el.className = state;
+}
+
+function connectWebSocket() {
+    if (ws) { try { ws.close(); } catch(_) {} }
+    setWSStatus('connecting');
+
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+        setWSStatus('connected');
+        console.log('[WS] Connected');
+    };
+
+    ws.onmessage = e => {
+        try {
+            const msg = JSON.parse(e.data);
+            if (msg.e !== 'kline') return;
+            const k   = msg.k;
+            const c   = {
+                time:   k.t,
+                open:   parseFloat(k.o),
+                high:   parseFloat(k.h),
+                low:    parseFloat(k.l),
+                close:  parseFloat(k.c),
+                volume: parseFloat(k.v)
+            };
+            chart.updateLastCandle(c);
+            updateHeaderPrice(c.close);
+
+            // Keep candles array in sync
+            const last = candles[candles.length - 1];
+            if (last && last.time === c.time) {
+                candles[candles.length - 1] = c;
+            } else {
+                candles.push(c);
+                runAnalysis(); // Run full analysis on new closed candle
+            }
+        } catch(err) { console.error('[WS] parse error', err); }
+    };
+
+    ws.onerror = err => {
+        console.error('[WS] error', err);
+        setWSStatus('disconnected');
+    };
+
+    ws.onclose = () => {
+        setWSStatus('disconnected');
+        console.warn('[WS] Disconnected — reconnecting in 5s...');
+        clearTimeout(wsReconnectTimer);
+        wsReconnectTimer = setTimeout(connectWebSocket, 5000);
+    };
+}
+
+// ─── Bootstrap ───────────────────────────────────────────────────────────────
+async function init() {
+    setLoadMsg('Descargando historial de Binance...');
+
+    // Fetch historical klines
+    let raw;
+    try {
+        const res = await fetch(REST_URL);
+        raw = await res.json();
+    } catch(e) {
+        setLoadMsg('Error al conectar con Binance. Reintentando...');
+        setTimeout(init, 4000);
+        return;
+    }
+
+    candles    = raw.map(parseBinanceKline);
+    openPrice  = candles[0]?.open ?? null;
+
+    setLoadMsg('Calculando zonas...');
+    chart.setCandles(candles);
+
+    // Initial analysis
+    atrs = calculateATR(candles, 14);
+    chart.setATRs(atrs);
+    await runAnalysis();
+
+    setLoadMsg('Conectando WebSocket...');
+    connectWebSocket();
+
+    // Load Supabase history
+    await refreshHistory();
+
+    hideLoading();
+    updateHeaderPrice(candles[candles.length - 1]?.close ?? 0);
+}
+
+init();
+</script>
+</body>
+</html>
