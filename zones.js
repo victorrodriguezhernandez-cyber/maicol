@@ -283,13 +283,20 @@ export function getTrendContext(candles) {
 }
 
 // ─── NY Session Check ────────────────────────────────────────────────────────
-// NY cash session = 13:30–20:00 UTC (covers DST variants for Spain 13:00–19:00)
+// Shades 13:00–19:00 Europe/Madrid (handles CET/CEST automatically via Intl)
+const _madridFmt = new Intl.DateTimeFormat('es-ES', {
+    timeZone: 'Europe/Madrid',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+});
+
 export function isNYSession(timestamp) {
-    const d = new Date(timestamp);
-    const h = d.getUTCHours();
-    const m = d.getUTCMinutes();
+    const parts = _madridFmt.formatToParts(new Date(timestamp));
+    const h = parseInt(parts.find(p => p.type === 'hour').value,  10);
+    const m = parseInt(parts.find(p => p.type === 'minute').value, 10);
     const totalMin = h * 60 + m;
-    return totalMin >= (13 * 60 + 30) && totalMin < (20 * 60);
+    return totalMin >= (13 * 60) && totalMin < (19 * 60);
 }
 
 export function isNYSessionNow() {
