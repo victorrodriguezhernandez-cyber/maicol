@@ -4,794 +4,941 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SENSEI ZONES — BTC/USDT 15M</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- TradingView Lightweight Charts v4 — gráfico profesional interactivo -->
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<!-- Supabase UMD -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg:       #0a0b0d;
-    --bg2:      #0e1117;
-    --bg3:      #12151e;
-    --border:   #1e2230;
-    --text:     #8892a4;
-    --bright:   #c5cad8;
-    --green:    #26a69a;
-    --red:      #ef5350;
-    --accent:   #7c83ff;
-    --gold:     #f0b429;
-    --font:     'JetBrains Mono', monospace;
-  }
+:root {
+  --bg:     #0a0b0d;
+  --bg2:    #0e1117;
+  --bg3:    #131722;
+  --border: #1e2230;
+  --text:   #787b86;
+  --bright: #d1d4dc;
+  --green:  #26a69a;
+  --red:    #ef5350;
+  --accent: #7c83ff;
+  --gold:   #f0b429;
+}
 
-  html, body {
-    height: 100%;
-    background: var(--bg);
-    color: var(--bright);
-    font-family: var(--font);
-    font-size: 12px;
-    overflow: hidden;
-  }
+html, body {
+  height: 100%; background: var(--bg);
+  color: var(--bright);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+}
 
-  /* ── Header ── */
-  #header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 44px;
-    padding: 0 16px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
+/* ── HEADER ── */
+#header {
+  display: flex; align-items: center;
+  height: 44px; padding: 0 14px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0; gap: 10px;
+}
+.logo {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.07em; color: var(--accent);
+  white-space: nowrap;
+}
+.logo-box {
+  width: 24px; height: 24px;
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+  border-radius: 5px; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.htags { display: flex; gap: 5px; flex: 1; justify-content: center; }
+.htag {
+  padding: 2px 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; font-size: 10px; color: var(--text);
+}
+.hright { display: flex; align-items: center; gap: 10px; }
+#hp { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
+#hc {
+  font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 4px;
+}
+#hc.up   { color: var(--green); background: rgba(38,166,154,0.12); }
+#hc.down { color: var(--red);   background: rgba(239,83,80,0.12);  }
+#ny {
+  padding: 3px 9px; border-radius: 4px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  border: 1px solid var(--border); color: var(--text);
+  white-space: nowrap; transition: all .3s;
+}
+#ny.on { color: var(--gold); border-color: rgba(240,180,41,0.4); background: rgba(240,180,41,0.07); }
+#wsdot {
+  width: 8px; height: 8px; border-radius: 50%; background: #555; flex-shrink: 0;
+}
+#wsdot.ok  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+#wsdot.err { background: var(--red); }
+#wsdot.con { background: var(--gold); animation: blink .9s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    color: var(--accent);
-  }
+/* ── LAYOUT ── */
+#app {
+  display: flex;
+  height: calc(100vh - 44px);
+  overflow: hidden;
+}
 
-  .logo-icon {
-    width: 26px; height: 26px;
-    background: linear-gradient(135deg, var(--accent), var(--gold));
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px;
-  }
+/* ── CHART AREA ── */
+#chart-area {
+  flex: 1; min-width: 0;
+  position: relative; overflow: hidden;
+}
+#chart-container { position: absolute; inset: 0; }
+#overlay {
+  position: absolute; top: 0; left: 0;
+  pointer-events: none; z-index: 2;
+}
 
-  .header-info {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    font-size: 11px;
-    color: var(--text);
-  }
+/* ── OHLC LEGEND ── */
+#legend {
+  position: absolute; top: 8px; left: 8px;
+  z-index: 3; background: rgba(10,11,13,0.88);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: 7px 11px; pointer-events: none;
+  min-width: 230px; line-height: 1.6;
+}
+#legend .l-ts  { color: var(--text); font-size: 9px; margin-bottom: 2px; }
+#legend .l-row { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; }
+#legend .ll    { color: var(--text); }
+#legend .lv    { color: var(--bright); font-weight: 500; }
+#legend .lv.up { color: var(--green); }
+#legend .lv.dn { color: var(--red); }
 
-  #header-price {
-    font-size: 17px;
-    font-weight: 600;
-    color: var(--bright);
-    letter-spacing: 0.02em;
-  }
+/* ── SIDEBAR ── */
+#sidebar {
+  width: 232px; flex-shrink: 0;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow-y: auto; overflow-x: hidden;
+}
+.sb-sec { padding: 11px 13px; border-bottom: 1px solid var(--border); }
+.sb-hd {
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .13em; color: var(--text);
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.zcard {
+  background: var(--bg3); border-radius: 5px;
+  padding: 9px 10px; border-left: 3px solid var(--border);
+}
+.zcard.s { border-left-color: var(--red); }
+.zcard.d { border-left-color: var(--green); }
+.ztype { font-size: 9px; font-weight: 600; letter-spacing: .08em; margin-bottom: 3px; color: var(--text); }
+.zcard.s .ztype { color: var(--red); }
+.zcard.d .ztype { color: var(--green); }
+.zrange { font-size: 11px; color: var(--bright); margin-bottom: 3px; }
+.zprob  { font-size: 10px; color: var(--text); }
+.zprob .ph { color: var(--green); font-weight: 600; }
+.zprob .pl { color: var(--red);   font-weight: 600; }
+.zprob .pm { color: var(--gold);  font-weight: 600; }
+.zbadge {
+  display: inline-block; margin-top: 4px;
+  padding: 1px 6px; border-radius: 3px;
+  font-size: 8px; font-weight: 600; letter-spacing: .06em;
+}
+.zbadge.vg { background: rgba(240,180,41,.12); color: var(--gold); }
+.zbadge.td { background: rgba(120,123,134,.1); color: var(--text); }
 
-  #header-change {
-    font-size: 12px;
-    font-weight: 500;
-    padding: 2px 7px;
-    border-radius: 4px;
-  }
-  #header-change.up   { color: var(--green); background: rgba(38,166,154,0.12); }
-  #header-change.down { color: var(--red);   background: rgba(239,83,80,0.12);  }
+.lvrow {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; border-bottom: 1px solid rgba(30,34,48,.5);
+}
+.lvrow:last-child { border-bottom: none; }
+.lvlbl { font-size: 11px; font-weight: 600; }
+.lvlbl.H { color: var(--red); }
+.lvlbl.L { color: var(--green); }
+.lvval  { font-size: 11px; color: var(--bright); }
 
-  .header-tag {
-    padding: 3px 8px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 10px;
-    letter-spacing: 0.05em;
-  }
+.strow { display: flex; justify-content: space-between; padding: 3px 0; font-size: 10px; color: var(--text); }
+.stval { color: var(--bright); font-weight: 500; }
 
-  #ny-badge {
-    padding: 3px 10px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    transition: all 0.3s;
-  }
-  #ny-badge.active   { background: rgba(240,180,41,0.15); color: var(--gold); border: 1px solid rgba(240,180,41,0.3); }
-  #ny-badge.inactive { background: rgba(30,34,48,0.6);    color: var(--text); border: 1px solid var(--border); }
+.hitem {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 0; border-bottom: 1px solid rgba(30,34,48,.4);
+  font-size: 10px;
+}
+.hitem:last-child { border-bottom: none; }
+.hdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.hdot.supply { background: var(--red); }
+.hdot.demand { background: var(--green); }
+.hinfo { flex: 1; min-width: 0; }
+.hprc  { color: var(--bright); }
+.hts   { color: var(--text); font-size: 9px; }
+.hres  { font-size: 8px; padding: 1px 5px; border-radius: 3px; font-weight: 600; flex-shrink: 0; }
+.hres.pending   { background: rgba(124,131,255,.15); color: var(--accent); }
+.hres.respected { background: rgba(38,166,154,.15);  color: var(--green); }
+.hres.broke     { background: rgba(239,83,80,.15);   color: var(--red); }
 
-  #ws-status {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--text);
-    transition: background 0.3s;
-  }
-  #ws-status.connected    { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  #ws-status.disconnected { background: var(--red); }
-  #ws-status.connecting   { background: var(--gold); animation: pulse 1s infinite; }
+/* ── LOADING ── */
+#loading {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; z-index: 999; transition: opacity .5s;
+}
+#loading.out { opacity: 0; pointer-events: none; }
+.ll { font-size: 21px; font-weight: 600; letter-spacing: .1em; color: var(--accent); }
+.lb { width: 200px; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.lbf { height: 100%; background: linear-gradient(90deg, var(--accent), var(--gold)); animation: ldbar 1.7s ease-in-out infinite; }
+.lt  { color: var(--text); font-size: 11px; }
+@keyframes ldbar { 0%{width:0;margin-left:0} 50%{width:60%;margin-left:20%} 100%{width:0;margin-left:100%} }
 
-  @keyframes pulse {
-    0%,100% { opacity: 1; } 50% { opacity: 0.4; }
-  }
-
-  /* ── Main layout ── */
-  #app {
-    display: flex;
-    height: calc(100vh - 44px);
-  }
-
-  /* ── Chart area ── */
-  #chart-wrap {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  #chart-canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-
-  /* ── Sidebar ── */
-  #sidebar {
-    width: 240px;
-    flex-shrink: 0;
-    background: var(--bg2);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
-  .sb-section {
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .sb-title {
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    color: var(--text);
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-
-  /* Zone card */
-  .zone-card {
-    background: var(--bg3);
-    border-radius: 6px;
-    padding: 9px 10px;
-    margin-bottom: 6px;
-    border-left: 3px solid transparent;
-  }
-  .zone-card.supply { border-left-color: var(--red); }
-  .zone-card.demand { border-left-color: var(--green); }
-  .zone-card.empty  { border-left-color: var(--border); opacity: 0.5; }
-
-  .zone-label {
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    margin-bottom: 5px;
-  }
-  .zone-card.supply .zone-label { color: var(--red); }
-  .zone-card.demand .zone-label { color: var(--green); }
-
-  .zone-range {
-    font-size: 11px;
-    color: var(--bright);
-    margin-bottom: 4px;
-  }
-
-  .zone-prob {
-    font-size: 10px;
-    color: var(--text);
-  }
-
-  .zone-prob span {
-    font-weight: 600;
-  }
-  .zone-prob .prob-high { color: var(--green); }
-  .zone-prob .prob-low  { color: var(--red); }
-  .zone-prob .prob-mid  { color: var(--gold); }
-
-  .zone-badge {
-    display: inline-block;
-    font-size: 8px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    margin-top: 4px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-  }
-  .zone-badge.virgin  { background: rgba(240,180,41,0.15); color: var(--gold); }
-  .zone-badge.touched { background: rgba(138,150,180,0.1); color: var(--text); }
-
-  /* Level row */
-  .level-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 5px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .level-row:last-child { border-bottom: none; }
-  .level-lbl { font-size: 11px; font-weight: 600; }
-  .level-lbl.H { color: var(--red); }
-  .level-lbl.L { color: var(--green); }
-  .level-val  { font-size: 11px; color: var(--bright); }
-
-  /* History list */
-  .hist-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(30,34,48,0.6);
-    font-size: 10px;
-    color: var(--text);
-  }
-  .hist-item:last-child { border-bottom: none; }
-
-  .hist-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .hist-dot.supply { background: var(--red); }
-  .hist-dot.demand { background: var(--green); }
-
-  .hist-info { flex: 1; min-width: 0; }
-  .hist-price { color: var(--bright); }
-
-  .hist-result {
-    font-size: 8px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    flex-shrink: 0;
-  }
-  .hist-result.pending   { background: rgba(124,131,255,0.15); color: var(--accent); }
-  .hist-result.respected { background: rgba(38,166,154,0.15);  color: var(--green); }
-  .hist-result.broke     { background: rgba(239,83,80,0.15);   color: var(--red); }
-
-  /* Stats row */
-  .stat-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 4px 0;
-    color: var(--text);
-    font-size: 10px;
-  }
-  .stat-val { color: var(--bright); font-weight: 500; }
-
-  /* Loading overlay */
-  #loading {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    z-index: 999;
-    transition: opacity 0.4s;
-  }
-  #loading.hidden { opacity: 0; pointer-events: none; }
-
-  .loader-logo {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-  }
-
-  .loader-bar {
-    width: 200px;
-    height: 2px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .loader-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--gold));
-    border-radius: 2px;
-    animation: loadbar 1.8s ease-in-out infinite;
-  }
-  @keyframes loadbar {
-    0%   { width: 0%; margin-left: 0; }
-    50%  { width: 70%; margin-left: 15%; }
-    100% { width: 0%; margin-left: 100%; }
-  }
-
-  .loader-text { color: var(--text); font-size: 11px; letter-spacing: 0.05em; }
-
-  /* Responsive */
-  @media (max-width: 700px) {
-    #sidebar { width: 180px; }
-    #header-price { font-size: 14px; }
-    .header-tag { display: none; }
-  }
-
-  @media (max-width: 520px) {
-    #sidebar { display: none; }
-  }
+@media (max-width: 640px) {
+  #sidebar { width: 160px; }
+  #legend  { min-width: 170px; font-size: 10px; }
+  .htags   { display: none; }
+}
+@media (max-width: 460px) {
+  #sidebar { display: none; }
+}
 </style>
 </head>
 <body>
 
-<!-- Loading screen -->
+<!-- ── LOADING ──────────────────────────────────────────────────────── -->
 <div id="loading">
-  <div class="loader-logo">⬡ SENSEI ZONES</div>
-  <div class="loader-bar"><div class="loader-bar-fill"></div></div>
-  <div class="loader-text" id="load-msg">Conectando a Binance WebSocket...</div>
+  <div class="ll">⬡ SENSEI ZONES</div>
+  <div class="lb"><div class="lbf"></div></div>
+  <div class="lt" id="lmsg">Conectando a Binance...</div>
 </div>
 
-<!-- Header -->
+<!-- ── HEADER ──────────────────────────────────────────────────────── -->
 <div id="header">
-  <div class="logo">
-    <div class="logo-icon">⬡</div>
-    SENSEI ZONES
+  <div class="logo"><div class="logo-box">⬡</div>SENSEI ZONES</div>
+  <div class="htags">
+    <span class="htag">BTC/USDT</span>
+    <span class="htag">15M</span>
   </div>
-  <div class="header-info">
-    <span id="header-price">—</span>
-    <span id="header-change" class="up">+0.00%</span>
-    <span class="header-tag">BTC/USDT</span>
-    <span class="header-tag">15M</span>
-    <span id="ny-badge" class="inactive">NY SESSION</span>
-    <div id="ws-status" class="connecting" title="WebSocket"></div>
+  <div class="hright">
+    <span id="hp" style="color:var(--bright)">—</span>
+    <span id="hc" class="up">+0.00%</span>
+    <span id="ny">NY SESSION</span>
+    <div id="wsdot" class="con" title="WebSocket Binance"></div>
   </div>
 </div>
 
-<!-- Main app -->
+<!-- ── APP ─────────────────────────────────────────────────────────── -->
 <div id="app">
-  <div id="chart-wrap">
-    <canvas id="chart-canvas"></canvas>
+
+  <!-- Chart -->
+  <div id="chart-area">
+    <div id="chart-container"></div>
+    <canvas id="overlay"></canvas>
+    <div id="legend">
+      <div class="l-ts" id="l-ts">—</div>
+      <div class="l-row">
+        <span><span class="ll">O&nbsp;</span><span class="lv" id="l-o">—</span></span>
+        <span><span class="ll">H&nbsp;</span><span class="lv" id="l-h">—</span></span>
+        <span><span class="ll">L&nbsp;</span><span class="lv" id="l-l">—</span></span>
+        <span><span class="ll">C&nbsp;</span><span class="lv" id="l-c">—</span></span>
+        <span><span class="ll">V&nbsp;</span><span class="lv" id="l-v" style="color:var(--text)">—</span></span>
+      </div>
+    </div>
   </div>
 
+  <!-- Sidebar -->
   <div id="sidebar">
-    <!-- Supply zone -->
-    <div class="sb-section">
-      <div class="sb-title">Supply Zone</div>
-      <div id="supply-card" class="zone-card empty">
-        <div class="zone-label">SUPPLY</div>
-        <div class="zone-range" style="color:var(--text)">Sin zona activa</div>
-      </div>
+    <div class="sb-sec">
+      <div class="sb-hd">Supply Zone</div>
+      <div id="sc" class="zcard"><div class="ztype">Sin zona activa</div></div>
     </div>
-
-    <!-- Demand zone -->
-    <div class="sb-section">
-      <div class="sb-title">Demand Zone</div>
-      <div id="demand-card" class="zone-card empty">
-        <div class="zone-label">DEMAND</div>
-        <div class="zone-range" style="color:var(--text)">Sin zona activa</div>
-      </div>
+    <div class="sb-sec">
+      <div class="sb-hd">Demand Zone</div>
+      <div id="dc" class="zcard"><div class="ztype">Sin zona activa</div></div>
     </div>
-
-    <!-- H/L levels -->
-    <div class="sb-section">
-      <div class="sb-title">Niveles H/L</div>
-      <div id="levels-panel">
-        <div class="level-row">
-          <span class="level-lbl H">H</span>
-          <span class="level-val" id="level-h">—</span>
-        </div>
-        <div class="level-row">
-          <span class="level-lbl L">L</span>
-          <span class="level-val" id="level-l">—</span>
-        </div>
-      </div>
+    <div class="sb-sec">
+      <div class="sb-hd">Niveles H / L</div>
+      <div class="lvrow"><span class="lvlbl H">H</span><span class="lvval" id="sb-h">—</span></div>
+      <div class="lvrow"><span class="lvlbl L">L</span><span class="lvval" id="sb-l">—</span></div>
     </div>
-
-    <!-- Stats -->
-    <div class="sb-section">
-      <div class="sb-title">Estadísticas</div>
-      <div class="stat-row"><span>ATR(14)</span><span class="stat-val" id="stat-atr">—</span></div>
-      <div class="stat-row"><span>Velas cargadas</span><span class="stat-val" id="stat-candles">—</span></div>
-      <div class="stat-row"><span>Tendencia</span><span class="stat-val" id="stat-trend">—</span></div>
-      <div class="stat-row"><span>Último BOS</span><span class="stat-val" id="stat-bos">—</span></div>
+    <div class="sb-sec">
+      <div class="sb-hd">Stats</div>
+      <div class="strow"><span>ATR (14)</span><span class="stval" id="st-atr">—</span></div>
+      <div class="strow"><span>Velas</span><span class="stval" id="st-cnt">—</span></div>
+      <div class="strow"><span>Tendencia</span><span class="stval" id="st-trd">—</span></div>
+      <div class="strow"><span>Último BOS</span><span class="stval" id="st-bos">—</span></div>
     </div>
-
-    <!-- Recent zones history -->
-    <div class="sb-section" style="flex:1">
-      <div class="sb-title">Últimas zonas (BD)</div>
-      <div id="history-list">
-        <div style="color:var(--text);font-size:10px;padding:4px 0">Cargando historial...</div>
-      </div>
+    <div class="sb-sec" style="flex:1">
+      <div class="sb-hd">Historial BD</div>
+      <div id="hist" style="color:var(--text);font-size:10px">Cargando...</div>
     </div>
   </div>
 </div>
 
-<!-- ES module imports -->
-<script type="module">
-import { SenseiChart }   from './chart.js';
-import {
-    calculateATR,
-    findPivotHighs, findPivotLows,
-    getNearestHigh, getNearestLow,
-    detectSupplyZone, detectDemandZone,
-    isZoneInvalidated, checkZoneTouched,
-    detectBOS, getTrendContext, isNYSessionNow
-} from './zones.js';
-import {
-    saveZone, getSimilarZones, updateZoneResult,
-    getRecentZones, markZoneTouched
-} from './supabase.js';
+<!-- ── SCRIPT ──────────────────────────────────────────────────────── -->
+<script>
+'use strict';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-const SYMBOL   = 'BTCUSDT';
-const INTERVAL = '15m';
-const WS_URL   = `wss://stream.binance.com:9443/ws/${SYMBOL.toLowerCase()}@kline_${INTERVAL}`;
-const REST_URL = `https://api.binance.com/api/v3/klines?symbol=${SYMBOL}&interval=${INTERVAL}&limit=500`;
+/* ════════════════════════════════════════════════
+   CONFIG
+════════════════════════════════════════════════ */
+const SB_URL  = 'https://pyiukqeuaxonsrrgbfzq.supabase.co';
+const SB_KEY  = 'sb_publishable_MvaYVraw3FqViy9G4nhKSQ_QbFpMudx';
+const REST    = 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=500';
+const WS_ENDPOINT = 'wss://stream.binance.com:9443/ws/btcusdt@kline_15m';
 
-const ZONE_PARAMS = {
-    pivotLen:      5,
-    levelLookback: 80,
-    minGapATR:     0.10,
-    maxDistATR:    5.00,
-    zoneBars:      5,
-    zoneLookback:  50,
-    maxZoneATR:    1.20,
-    minMoveATR:    1.00
+/* ════════════════════════════════════════════════
+   SUPABASE
+════════════════════════════════════════════════ */
+const db = supabase.createClient(SB_URL, SB_KEY);
+
+async function dbSave(z) {
+  try {
+    const { data } = await db.from('zones_history').insert([{
+      asset:'BTCUSDT', timeframe:'15m',
+      zone_type: z.type, zone_top: z.top, zone_bottom: z.bottom,
+      zone_height: z.top - z.bottom, atr_value: z.atr,
+      trend_context: z.trend, is_virgin: z.isVirgin,
+      result:'pending', confluence_score:0
+    }]).select().single();
+    return data;
+  } catch(e) { console.warn('sb save:', e.message); return null; }
+}
+
+async function dbProb(type, height, trend) {
+  try {
+    const { data } = await db.from('zones_history')
+      .select('result')
+      .eq('zone_type', type).eq('trend_context', trend)
+      .gte('zone_height', height * 0.8).lte('zone_height', height * 1.2)
+      .neq('result','pending').limit(100);
+    if (!data || !data.length) return null;
+    const r = data.filter(x => x.result === 'respected').length;
+    return { pct: Math.round(r / data.length * 100), total: data.length };
+  } catch(e) { return null; }
+}
+
+async function dbUpdate(id, result) {
+  if (!id) return;
+  try { await db.from('zones_history').update({ result, result_at: new Date().toISOString() }).eq('id', id); }
+  catch(e) { console.warn('sb update:', e.message); }
+}
+
+async function dbRecent() {
+  try {
+    const { data } = await db.from('zones_history')
+      .select('*').order('detected_at', { ascending:false }).limit(5);
+    return data || [];
+  } catch(e) { return []; }
+}
+
+/* ════════════════════════════════════════════════
+   INDICADORES (Pine Script v0.6.1 traducción fiel)
+════════════════════════════════════════════════ */
+
+function calcATR(cs, period) {
+  period = period || 14;
+  const n = cs.length;
+  const trs = [];
+  for (let i = 1; i < n; i++) {
+    const c = cs[i], p = cs[i-1];
+    trs.push(Math.max(c.high - c.low, Math.abs(c.high - p.close), Math.abs(c.low - p.close)));
+  }
+  const out = new Array(n).fill(NaN);
+  if (trs.length < period) return out;
+  let s = 0;
+  for (let i = 0; i < period; i++) s += trs[i];
+  out[period] = s / period;
+  for (let i = period; i < trs.length; i++) out[i+1] = (out[i] * (period-1) + trs[i]) / period;
+  return out;
+}
+
+function pivotHighs(cs, len) {
+  len = len || 5;
+  const out = [];
+  for (let i = len; i < cs.length - len; i++) {
+    const h = cs[i].high; let ok = true;
+    for (let j = i-len; j <= i+len && ok; j++) if (j!==i && cs[j].high >= h) ok = false;
+    if (ok) out.push({ index:i, price:h });
+  }
+  return out;
+}
+
+function pivotLows(cs, len) {
+  len = len || 5;
+  const out = [];
+  for (let i = len; i < cs.length - len; i++) {
+    const l = cs[i].low; let ok = true;
+    for (let j = i-len; j <= i+len && ok; j++) if (j!==i && cs[j].low <= l) ok = false;
+    if (ok) out.push({ index:i, price:l });
+  }
+  return out;
+}
+
+function getH(cs, atrs, pivs) {
+  const n = cs.length, cl = cs[n-1].close, atr = atrs[n-1];
+  if (!atr || isNaN(atr)) return null;
+  let best = null, bd = Infinity;
+  for (const p of pivs) {
+    const age = n-1-p.index, d = p.price - cl;
+    if (age <= 80 && d > atr*0.1 && d <= atr*5 && d < bd) { best = p.price; bd = d; }
+  }
+  return best;
+}
+
+function getL(cs, atrs, pivs) {
+  const n = cs.length, cl = cs[n-1].close, atr = atrs[n-1];
+  if (!atr || isNaN(atr)) return null;
+  let best = null, bd = Infinity;
+  for (const p of pivs) {
+    const age = n-1-p.index, d = cl - p.price;
+    if (age <= 80 && d > atr*0.1 && d <= atr*5 && d < bd) { best = p.price; bd = d; }
+  }
+  return best;
+}
+
+function detectSupply(cs, atrs) {
+  const n = cs.length, atr = atrs[n-1], cur = cs[n-1];
+  if (!atr || isNaN(atr)) return null;
+  for (let i = 5; i <= 50; i++) {
+    const base = n-1-i; if (base < 0) break;
+    let bH = cs[base].high, bL = cs[base].low;
+    for (let j = 0; j < 5; j++) {
+      const idx = n-1-(i-j);
+      if (idx >= 0 && idx < n) { bH = Math.max(bH, cs[idx].high); bL = Math.min(bL, cs[idx].low); }
+    }
+    if (bH-bL <= atr*1.2 && bL-cur.low >= atr*1.0 && cur.close < bL)
+      return { type:'supply', top:bH, bottom:bL, leftIndex:base, leftTime:cs[base].time, height:bH-bL, atr };
+  }
+  return null;
+}
+
+function detectDemand(cs, atrs) {
+  const n = cs.length, atr = atrs[n-1], cur = cs[n-1];
+  if (!atr || isNaN(atr)) return null;
+  for (let i = 5; i <= 50; i++) {
+    const base = n-1-i; if (base < 0) break;
+    let bH = cs[base].high, bL = cs[base].low;
+    for (let j = 0; j < 5; j++) {
+      const idx = n-1-(i-j);
+      if (idx >= 0 && idx < n) { bH = Math.max(bH, cs[idx].high); bL = Math.min(bL, cs[idx].low); }
+    }
+    if (bH-bL <= atr*1.2 && cur.high-bH >= atr*1.0 && cur.close > bH)
+      return { type:'demand', top:bH, bottom:bL, leftIndex:base, leftTime:cs[base].time, height:bH-bL, atr };
+  }
+  return null;
+}
+
+function invalidated(zone, cs, atrs) {
+  const atr = atrs[cs.length-1];
+  if (!atr || isNaN(atr)) return false;
+  const cl = cs[cs.length-1].close, m = atr * 0.1;
+  return zone.type === 'supply' ? cl > zone.top + m : cl < zone.bottom - m;
+}
+
+function zoneVirgin(zone, cs) {
+  for (let i = zone.leftIndex+1; i < cs.length-1; i++) {
+    const c = cs[i];
+    if (zone.type === 'supply' && c.high >= zone.bottom) return false;
+    if (zone.type === 'demand' && c.low  <= zone.top)    return false;
+  }
+  return true;
+}
+
+function trendOf(cs) {
+  const n = cs.length; if (n < 5) return 'sideways';
+  const a = (cs[n-5].high + cs[n-5].low) / 2;
+  const b = (cs[n-1].high + cs[n-1].low) / 2;
+  return b > a*1.001 ? 'bullish' : b < a*0.999 ? 'bearish' : 'sideways';
+}
+
+// 13:00–19:00 hora España (Europe/Madrid, CET/CEST automático)
+const _mfmt = new Intl.DateTimeFormat('es-ES', { timeZone:'Europe/Madrid', hour:'numeric', minute:'numeric', hour12:false });
+function isNYS(ms) {
+  const p = _mfmt.formatToParts(new Date(ms));
+  const h = +p.find(x => x.type==='hour').value;
+  const m = +p.find(x => x.type==='minute').value;
+  const t = h*60 + m;
+  return t >= 780 && t < 1140;
+}
+
+/* ════════════════════════════════════════════════
+   CHART — Lightweight Charts v4 (TradingView)
+════════════════════════════════════════════════ */
+const { createChart, CrosshairMode, LineStyle } = LightweightCharts;
+
+const chartEl  = document.getElementById('chart-container');
+const overlayEl = document.getElementById('overlay');
+const octx = overlayEl.getContext('2d');
+
+const chart = createChart(chartEl, {
+  layout: {
+    background:  { color: '#0a0b0d' },
+    textColor:   '#787b86',
+    fontFamily:  "'JetBrains Mono', monospace",
+    fontSize:    11,
+  },
+  grid: {
+    vertLines: { color: '#161b26' },
+    horzLines: { color: '#161b26' },
+  },
+  crosshair: {
+    mode: CrosshairMode.Normal,
+    vertLine: { color: '#3c4353', width:1, style:0, labelBackgroundColor:'#1a1f2e' },
+    horzLine: { color: '#3c4353', width:1, style:0, labelBackgroundColor:'#1a1f2e' },
+  },
+  rightPriceScale: {
+    borderColor: '#1e2230',
+    scaleMargins: { top:0.06, bottom:0.22 },
+  },
+  timeScale: {
+    borderColor: '#1e2230',
+    timeVisible: true,
+    secondsVisible: false,
+    barSpacing: 8,
+    rightOffset: 8,
+    fixLeftEdge: false,
+  },
+  handleScroll: { mouseWheel:true, pressedMouseMove:true, horzTouchDrag:true, vertTouchDrag:false },
+  handleScale:  { mouseWheel:true, pinch:true, axisPressedMouseMove:{ time:true, price:false } },
+  localization: { priceFormatter: p => p.toFixed(2) },
+});
+
+// Velas japonesas
+const candleSeries = chart.addCandlestickSeries({
+  upColor:'#26a69a', downColor:'#ef5350',
+  borderVisible:false,
+  wickUpColor:'#26a69a', wickDownColor:'#ef5350',
+});
+
+// Volumen
+const volSeries = chart.addHistogramSeries({
+  priceFormat: { type:'volume' },
+  priceScaleId: 'vol',
+});
+chart.priceScale('vol').applyOptions({ scaleMargins:{ top:0.82, bottom:0 } });
+
+/* ── Resize responsivo ── */
+function syncSize() {
+  const r = chartEl.getBoundingClientRect();
+  chart.resize(r.width, r.height);
+  overlayEl.width  = r.width;
+  overlayEl.height = r.height;
+  drawOverlay();
+}
+new ResizeObserver(syncSize).observe(chartEl);
+syncSize();
+
+/* ════════════════════════════════════════════════
+   ESTADO GLOBAL
+════════════════════════════════════════════════ */
+const S = {
+  candles:   [],
+  atrs:      [],
+  pivH:      [],
+  pivL:      [],
+  openPrice: null,
+  lastC:     null,
 };
 
-// ─── State ───────────────────────────────────────────────────────────────────
-let candles       = [];
-let atrs          = [];
-let pivotHighs    = [];
-let pivotLows     = [];
-let supplyZone    = null;
-let demandZone    = null;
-let nearestHigh   = null;
-let nearestLow    = null;
-let openPrice     = null;     // For % change calculation
-let activeSupplyId = null;   // Supabase row id of current supply zone
-let activeDemandId = null;
-let supplyProb    = null;
-let demandProb    = null;
-let ws            = null;
-let wsReconnectTimer = null;
+let supplyZone = null, demandZone  = null;
+let supplyId   = null, demandId    = null;
+let supplyProb = null, demandProb  = null;
+let hLine = null, lLine = null;
+const bosMarkers = [];
 
-// ─── Chart init ──────────────────────────────────────────────────────────────
-const canvas = document.getElementById('chart-canvas');
-const chart  = new SenseiChart(canvas);
+/* ════════════════════════════════════════════════
+   OVERLAY (zonas + NY session shading)
+════════════════════════════════════════════════ */
+function drawOverlay() {
+  const W = overlayEl.width, H = overlayEl.height;
+  octx.clearRect(0, 0, W, H);
+  if (!S.candles.length) return;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function parseBinanceKline(k) {
-    return {
-        time:   k[0],
-        open:   parseFloat(k[1]),
-        high:   parseFloat(k[2]),
-        low:    parseFloat(k[3]),
-        close:  parseFloat(k[4]),
-        volume: parseFloat(k[5])
-    };
+  const RW = 65; // ancho aprox del eje de precios
+  const CW = W - RW;
+
+  function toX(ms) { return chart.timeScale().timeToCoordinate(Math.floor(ms/1000)); }
+  function toY(p)  { return candleSeries.priceToCoordinate(p); }
+
+  // ── NY session shading ──
+  const vr = chart.timeScale().getVisibleRange();
+  if (vr) {
+    for (const c of S.candles) {
+      if (!isNYS(c.time)) continue;
+      const x = toX(c.time);
+      if (x === null || x < -20 || x > CW + 20) continue;
+      const x2 = toX(c.time + 15*60*1000);
+      const bw = x2 !== null ? Math.abs(x2 - x) : 9;
+      octx.fillStyle = 'rgba(124,131,255,0.038)';
+      octx.fillRect(x, 0, bw, H);
+    }
+  }
+
+  // ── Supply zone ──
+  if (supplyZone) {
+    const y1 = toY(supplyZone.top);
+    const y2 = toY(supplyZone.bottom);
+    if (y1 !== null && y2 !== null) {
+      const x1 = toX(supplyZone.leftTime);
+      const sx  = x1 !== null ? Math.max(0, x1) : 0;
+      octx.fillStyle = 'rgba(239,83,80,0.1)';
+      octx.fillRect(sx, y1, CW - sx, y2 - y1);
+      octx.strokeStyle = 'rgba(239,83,80,0.65)';
+      octx.lineWidth = 1; octx.setLineDash([]);
+      octx.beginPath();
+      octx.moveTo(sx, y1); octx.lineTo(CW, y1);
+      octx.moveTo(sx, y2); octx.lineTo(CW, y2);
+      octx.stroke();
+      octx.font = '10px JetBrains Mono,monospace';
+      octx.fillStyle = 'rgba(239,83,80,0.85)';
+      octx.textAlign = 'right';
+      octx.fillText('SUPPLY', CW - 5, y1 - 4);
+      octx.textAlign = 'left';
+    }
+  }
+
+  // ── Demand zone ──
+  if (demandZone) {
+    const y1 = toY(demandZone.top);
+    const y2 = toY(demandZone.bottom);
+    if (y1 !== null && y2 !== null) {
+      const x1 = toX(demandZone.leftTime);
+      const sx  = x1 !== null ? Math.max(0, x1) : 0;
+      octx.fillStyle = 'rgba(38,166,154,0.1)';
+      octx.fillRect(sx, y1, CW - sx, y2 - y1);
+      octx.strokeStyle = 'rgba(38,166,154,0.65)';
+      octx.lineWidth = 1; octx.setLineDash([]);
+      octx.beginPath();
+      octx.moveTo(sx, y1); octx.lineTo(CW, y1);
+      octx.moveTo(sx, y2); octx.lineTo(CW, y2);
+      octx.stroke();
+      octx.font = '10px JetBrains Mono,monospace';
+      octx.fillStyle = 'rgba(38,166,154,0.85)';
+      octx.textAlign = 'right';
+      octx.fillText('DEMAND', CW - 5, y2 + 12);
+      octx.textAlign = 'left';
+    }
+  }
 }
 
-function setLoadMsg(msg) {
-    document.getElementById('load-msg').textContent = msg;
+// Redibujar overlay al mover/zoom el gráfico
+chart.timeScale().subscribeVisibleLogicalRangeChange(drawOverlay);
+chart.subscribeCrosshairMove(drawOverlay);
+
+/* ════════════════════════════════════════════════
+   NIVELES H / L  (líneas nativas de lightweight-charts)
+════════════════════════════════════════════════ */
+function setLevelLines(h, l) {
+  if (hLine) { try { candleSeries.removePriceLine(hLine); } catch(_){} hLine = null; }
+  if (lLine) { try { candleSeries.removePriceLine(lLine); } catch(_){} lLine = null; }
+  if (h != null) hLine = candleSeries.createPriceLine({ price:h, color:'#ef5350', lineWidth:1, lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:'H' });
+  if (l != null) lLine = candleSeries.createPriceLine({ price:l, color:'#26a69a', lineWidth:1, lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:'L' });
+  document.getElementById('sb-h').textContent = h != null ? h.toFixed(2) : '—';
+  document.getElementById('sb-l').textContent = l != null ? l.toFixed(2) : '—';
 }
 
-function hideLoading() {
-    document.getElementById('loading').classList.add('hidden');
-    setTimeout(() => {
-        const el = document.getElementById('loading');
-        if (el) el.remove();
-    }, 500);
+/* ════════════════════════════════════════════════
+   BOS MARKERS (flechas nativas de lightweight-charts)
+════════════════════════════════════════════════ */
+function addBOS(c, dir) {
+  bosMarkers.push({
+    time: Math.floor(c.time/1000),
+    position: dir==='up' ? 'aboveBar' : 'belowBar',
+    color: dir==='up' ? '#26a69a' : '#ef5350',
+    shape: dir==='up' ? 'arrowUp' : 'arrowDown',
+    text: 'BOS', size: 0.8,
+  });
+  candleSeries.setMarkers(bosMarkers);
+  document.getElementById('st-bos').textContent = (dir==='up'?'↑':'↓') + ' ' + c.close.toFixed(2);
 }
 
-function fmtPrice(p) { return p != null ? p.toFixed(2) : '—'; }
+/* ════════════════════════════════════════════════
+   OHLC LEGEND (actualiza con crosshair)
+════════════════════════════════════════════════ */
+chart.subscribeCrosshairMove(param => {
+  const d = param.seriesData && param.seriesData.get(candleSeries);
+  const c = d || S.lastC;
+  if (!c) return;
+  const ms = d ? param.time * 1000 : (S.lastC ? S.lastC.time : 0);
+  const dt = new Date(ms);
+  const ts = `${String(dt.getUTCDate()).padStart(2,'0')}/${String(dt.getUTCMonth()+1).padStart(2,'0')} ` +
+             `${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')} UTC`;
+  document.getElementById('l-ts').textContent = ts;
+  document.getElementById('l-o').textContent  = (c.open  || 0).toFixed(2);
+  document.getElementById('l-h').textContent  = (c.high  || 0).toFixed(2);
+  document.getElementById('l-l').textContent  = (c.low   || 0).toFixed(2);
+  const lc = document.getElementById('l-c');
+  lc.textContent = (c.close || 0).toFixed(2);
+  lc.className   = 'lv ' + (c.close >= c.open ? 'up' : 'dn');
+  if (d && param.time) {
+    const cv = S.candles.find(x => Math.floor(x.time/1000) === param.time);
+    document.getElementById('l-v').textContent = cv ? (cv.volume/1000).toFixed(1)+'K' : '—';
+  }
+});
 
-// ─── Full analysis pipeline ───────────────────────────────────────────────────
-async function runAnalysis() {
-    if (candles.length < 50) return;
+/* ════════════════════════════════════════════════
+   ANÁLISIS COMPLETO
+════════════════════════════════════════════════ */
+let analyzing = false;
+async function analyze() {
+  if (analyzing || S.candles.length < 50) return;
+  analyzing = true;
+  try {
+    S.atrs = calcATR(S.candles, 14);
+    S.pivH  = pivotHighs(S.candles, 5);
+    S.pivL  = pivotLows(S.candles, 5);
 
-    atrs        = calculateATR(candles, 14);
-    pivotHighs  = findPivotHighs(candles, ZONE_PARAMS.pivotLen);
-    pivotLows   = findPivotLows(candles,  ZONE_PARAMS.pivotLen);
-    nearestHigh = getNearestHigh(candles, atrs, pivotHighs, ZONE_PARAMS);
-    nearestLow  = getNearestLow(candles,  atrs, pivotLows,  ZONE_PARAMS);
+    const atr   = S.atrs[S.atrs.length-1];
+    const h     = getH(S.candles, S.atrs, S.pivH);
+    const l     = getL(S.candles, S.atrs, S.pivL);
+    const trend = trendOf(S.candles);
 
-    const newSupply = detectSupplyZone(candles, atrs, ZONE_PARAMS);
-    const newDemand = detectDemandZone(candles, atrs, ZONE_PARAMS);
-    const trend     = getTrendContext(candles);
+    setLevelLines(h, l);
 
-    // ── Check invalidation of existing zones
-    if (supplyZone && isZoneInvalidated(supplyZone, candles, atrs)) {
-        if (activeSupplyId) await updateZoneResult(activeSupplyId, 'broke');
-        supplyZone    = null;
-        activeSupplyId = null;
-        supplyProb    = null;
+    // Invalidación
+    if (supplyZone && invalidated(supplyZone, S.candles, S.atrs)) {
+      await dbUpdate(supplyId, 'broke');
+      supplyZone = null; supplyId = null; supplyProb = null;
     }
-    if (demandZone && isZoneInvalidated(demandZone, candles, atrs)) {
-        if (activeDemandId) await updateZoneResult(activeDemandId, 'broke');
-        demandZone    = null;
-        activeDemandId = null;
-        demandProb    = null;
-    }
-
-    // ── Detect new supply zone
-    if (newSupply) {
-        const isDifferent = !supplyZone ||
-            Math.abs(newSupply.top - supplyZone.top) > 1 ||
-            Math.abs(newSupply.bottom - supplyZone.bottom) > 1;
-
-        if (isDifferent) {
-            supplyZone = newSupply;
-            supplyZone.isVirgin = !checkZoneTouched(supplyZone, candles);
-            supplyZone.trend    = trend;
-
-            // Save to Supabase + get probability
-            const [saved, prob] = await Promise.all([
-                saveZone({ ...supplyZone, confluenceScore: 0 }),
-                getSimilarZones({ type: 'supply', height: supplyZone.height, trend })
-            ]);
-            activeSupplyId = saved?.id || null;
-            supplyProb     = prob;
-        }
-    }
-
-    // ── Detect new demand zone
-    if (newDemand) {
-        const isDifferent = !demandZone ||
-            Math.abs(newDemand.top - demandZone.top) > 1 ||
-            Math.abs(newDemand.bottom - demandZone.bottom) > 1;
-
-        if (isDifferent) {
-            demandZone = newDemand;
-            demandZone.isVirgin = !checkZoneTouched(demandZone, candles);
-            demandZone.trend    = trend;
-
-            const [saved, prob] = await Promise.all([
-                saveZone({ ...demandZone, confluenceScore: 0 }),
-                getSimilarZones({ type: 'demand', height: demandZone.height, trend })
-            ]);
-            activeDemandId = saved?.id || null;
-            demandProb     = prob;
-        }
+    if (demandZone && invalidated(demandZone, S.candles, S.atrs)) {
+      await dbUpdate(demandId, 'broke');
+      demandZone = null; demandId = null; demandProb = null;
     }
 
-    // ── BOS check
-    const { bosUp, bosDown } = detectBOS(candles, atrs, nearestHigh, nearestLow);
-    if (bosUp && nearestHigh != null) {
-        chart.addBOS({ index: candles.length - 1, direction: 'up', price: nearestHigh });
-        if (activeDemandId) await updateZoneResult(activeDemandId, 'respected');
-        updateStatBOS('↑ BOS ' + fmtPrice(nearestHigh));
-    }
-    if (bosDown && nearestLow != null) {
-        chart.addBOS({ index: candles.length - 1, direction: 'down', price: nearestLow });
-        if (activeSupplyId) await updateZoneResult(activeSupplyId, 'respected');
-        updateStatBOS('↓ BOS ' + fmtPrice(nearestLow));
+    // Supply nueva
+    const ns = detectSupply(S.candles, S.atrs);
+    if (ns) {
+      const diff = !supplyZone || Math.abs(ns.top-supplyZone.top)>1 || Math.abs(ns.bottom-supplyZone.bottom)>1;
+      if (diff) {
+        supplyZone = ns; supplyZone.isVirgin = zoneVirgin(ns, S.candles); supplyZone.trend = trend;
+        const [sv, sp] = await Promise.all([dbSave(supplyZone), dbProb('supply', ns.height, trend)]);
+        supplyId = sv && sv.id; supplyProb = sp;
+      }
     }
 
-    // ── Update chart overlays
-    chart.setZones(supplyZone, demandZone);
-    chart.setLevels(nearestHigh, nearestLow);
-    chart.setATRs(atrs);
+    // Demand nueva
+    const nd = detectDemand(S.candles, S.atrs);
+    if (nd) {
+      const diff = !demandZone || Math.abs(nd.top-demandZone.top)>1 || Math.abs(nd.bottom-demandZone.bottom)>1;
+      if (diff) {
+        demandZone = nd; demandZone.isVirgin = zoneVirgin(nd, S.candles); demandZone.trend = trend;
+        const [dv, dp] = await Promise.all([dbSave(demandZone), dbProb('demand', nd.height, trend)]);
+        demandId = dv && dv.id; demandProb = dp;
+      }
+    }
 
-    // ── Update sidebar
-    updateSidebar(trend);
+    // BOS
+    if (S.candles.length >= 2) {
+      const prev = S.candles[S.candles.length-2];
+      const cur  = S.candles[S.candles.length-1];
+      const m = (atr || 0) * 0.1;
+      if (h != null && cur.close > h+m && prev.close <= h+m) {
+        addBOS(cur, 'up');
+        if (demandId) await dbUpdate(demandId, 'respected');
+      }
+      if (l != null && cur.close < l-m && prev.close >= l-m) {
+        addBOS(cur, 'down');
+        if (supplyId) await dbUpdate(supplyId, 'respected');
+      }
+    }
 
-    // ── Refresh history from Supabase (every ~20 candles to avoid spam)
-    if (candles.length % 20 === 0) refreshHistory();
+    refreshSidebar(atr, trend);
+    drawOverlay();
+
+    if (S.candles.length % 20 === 0) loadHistory();
+
+  } finally { analyzing = false; }
 }
 
-// ─── Sidebar update ───────────────────────────────────────────────────────────
-function updateSidebar(trend) {
-    const atr = atrs[atrs.length - 1];
+/* ════════════════════════════════════════════════
+   SIDEBAR
+════════════════════════════════════════════════ */
+function fp(p) { return p != null ? p.toFixed(2) : '—'; }
 
-    // Supply card
-    const sc = document.getElementById('supply-card');
-    if (supplyZone) {
-        sc.className = 'zone-card supply';
-        const pct  = supplyProb?.probability;
-        const cnt  = supplyProb?.total ?? 0;
-        const pClass = pct == null ? '' : pct >= 60 ? 'prob-low' : pct <= 40 ? 'prob-high' : 'prob-mid';
-        const probTxt = pct != null
-            ? `<span class="${pClass}">${pct}% respetada</span> en ${cnt} casos`
-            : 'Sin datos históricos';
-        sc.innerHTML = `
-            <div class="zone-label">SUPPLY</div>
-            <div class="zone-range">${fmtPrice(supplyZone.top)} – ${fmtPrice(supplyZone.bottom)}</div>
-            <div class="zone-prob">${probTxt}</div>
-            <span class="zone-badge ${supplyZone.isVirgin ? 'virgin' : 'touched'}">${supplyZone.isVirgin ? '★ VIRGIN' : 'TOUCHED'}</span>`;
+function refreshSidebar(atr, trend) {
+  // Supply
+  const sc = document.getElementById('sc');
+  if (supplyZone) {
+    const p = supplyProb;
+    const ph = p ? `<span class="${p.pct>=60?'pl':p.pct<=40?'ph':'pm'}">${p.pct}% respetada</span> / ${p.total} casos` : 'Sin datos históricos';
+    sc.className = 'zcard s';
+    sc.innerHTML = `<div class="ztype">SUPPLY</div>
+      <div class="zrange">${fp(supplyZone.top)} — ${fp(supplyZone.bottom)}</div>
+      <div class="zprob">${ph}</div>
+      <span class="zbadge ${supplyZone.isVirgin?'vg':'td'}">${supplyZone.isVirgin?'★ VIRGIN':'TOUCHED'}</span>`;
+  } else {
+    sc.className = 'zcard'; sc.innerHTML = '<div class="ztype">Sin zona activa</div>';
+  }
+
+  // Demand
+  const dc = document.getElementById('dc');
+  if (demandZone) {
+    const p = demandProb;
+    const ph = p ? `<span class="${p.pct>=60?'ph':p.pct<=40?'pl':'pm'}">${p.pct}% respetada</span> / ${p.total} casos` : 'Sin datos históricos';
+    dc.className = 'zcard d';
+    dc.innerHTML = `<div class="ztype">DEMAND</div>
+      <div class="zrange">${fp(demandZone.top)} — ${fp(demandZone.bottom)}</div>
+      <div class="zprob">${ph}</div>
+      <span class="zbadge ${demandZone.isVirgin?'vg':'td'}">${demandZone.isVirgin?'★ VIRGIN':'TOUCHED'}</span>`;
+  } else {
+    dc.className = 'zcard'; dc.innerHTML = '<div class="ztype">Sin zona activa</div>';
+  }
+
+  document.getElementById('st-atr').textContent = atr ? atr.toFixed(1) : '—';
+  document.getElementById('st-cnt').textContent = S.candles.length;
+  const te = document.getElementById('st-trd');
+  te.textContent = trend;
+  te.style.color = trend==='bullish' ? 'var(--green)' : trend==='bearish' ? 'var(--red)' : 'var(--gold)';
+}
+
+async function loadHistory() {
+  const data = await dbRecent();
+  const el = document.getElementById('hist');
+  if (!data.length) { el.innerHTML = '<div style="color:var(--text);font-size:10px">Sin historial aún</div>'; return; }
+  el.innerHTML = data.map(z => {
+    const d = new Date(z.detected_at);
+    const ts = `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')} `+
+               `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+    return `<div class="hitem">
+      <div class="hdot ${z.zone_type}"></div>
+      <div class="hinfo">
+        <div class="hprc">${fp(z.zone_top)} — ${fp(z.zone_bottom)}</div>
+        <div class="hts">${ts} · ${z.trend_context||'—'}</div>
+      </div>
+      <span class="hres ${z.result}">${z.result}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════
+   HEADER — precio y NY badge
+════════════════════════════════════════════════ */
+function updatePrice(price) {
+  document.getElementById('hp').textContent = price.toFixed(2);
+  if (S.openPrice) {
+    const pct = (price - S.openPrice) / S.openPrice * 100;
+    const el = document.getElementById('hc');
+    el.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+    el.className = pct >= 0 ? 'up' : 'down';
+  }
+}
+
+function tickNY() {
+  const el = document.getElementById('ny');
+  const on = isNYS(Date.now());
+  el.className = on ? 'on' : '';
+  el.textContent = on ? '● NY SESSION' : 'NY SESSION';
+}
+setInterval(tickNY, 60000);
+tickNY();
+
+/* ════════════════════════════════════════════════
+   BINANCE DATA
+════════════════════════════════════════════════ */
+function kl(k)   { return { time:k[0], open:+k[1], high:+k[2], low:+k[3], close:+k[4], volume:+k[5] }; }
+function wk(k)   { return { time:k.t,  open:+k.o,  high:+k.h,  low:+k.l,  close:+k.c,  volume:+k.v  }; }
+function toLWC(c) { return { time:Math.floor(c.time/1000), open:c.open, high:c.high, low:c.low, close:c.close }; }
+function toVol(c) { return { time:Math.floor(c.time/1000), value:c.volume, color:c.close>=c.open?'rgba(38,166,154,.5)':'rgba(239,83,80,.5)' }; }
+
+let ws = null, wsTimer = null;
+
+function wsDot(s) { document.getElementById('wsdot').className = s; }
+
+function connectWS() {
+  if (ws) { try { ws.close(); } catch(_){} }
+  wsDot('con');
+  ws = new WebSocket(WS_ENDPOINT);
+
+  ws.onopen = () => wsDot('ok');
+
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.e !== 'kline') return;
+    const c = wk(msg.k);
+    S.lastC = c;
+    updatePrice(c.close);
+    document.getElementById('l-o').textContent = c.open.toFixed(2);
+    document.getElementById('l-h').textContent = c.high.toFixed(2);
+    document.getElementById('l-l').textContent = c.low.toFixed(2);
+    const lc = document.getElementById('l-c'); lc.textContent = c.close.toFixed(2);
+    lc.className = 'lv ' + (c.close >= c.open ? 'up' : 'dn');
+
+    const last = S.candles[S.candles.length-1];
+    if (last && last.time === c.time) {
+      S.candles[S.candles.length-1] = c;
+      candleSeries.update(toLWC(c));
+      volSeries.update(toVol(c));
     } else {
-        sc.className = 'zone-card empty';
-        sc.innerHTML = `<div class="zone-label">SUPPLY</div><div class="zone-range" style="color:var(--text)">Sin zona activa</div>`;
+      S.candles.push(c);
+      candleSeries.update(toLWC(c));
+      volSeries.update(toVol(c));
+      analyze();
     }
+  };
 
-    // Demand card
-    const dc = document.getElementById('demand-card');
-    if (demandZone) {
-        dc.className = 'zone-card demand';
-        const pct  = demandProb?.probability;
-        const cnt  = demandProb?.total ?? 0;
-        const pClass = pct == null ? '' : pct >= 60 ? 'prob-high' : pct <= 40 ? 'prob-low' : 'prob-mid';
-        const probTxt = pct != null
-            ? `<span class="${pClass}">${pct}% respetada</span> en ${cnt} casos`
-            : 'Sin datos históricos';
-        dc.innerHTML = `
-            <div class="zone-label">DEMAND</div>
-            <div class="zone-range">${fmtPrice(demandZone.top)} – ${fmtPrice(demandZone.bottom)}</div>
-            <div class="zone-prob">${probTxt}</div>
-            <span class="zone-badge ${demandZone.isVirgin ? 'virgin' : 'touched'}">${demandZone.isVirgin ? '★ VIRGIN' : 'TOUCHED'}</span>`;
-    } else {
-        dc.className = 'zone-card empty';
-        dc.innerHTML = `<div class="zone-label">DEMAND</div><div class="zone-range" style="color:var(--text)">Sin zona activa</div>`;
-    }
-
-    // Levels
-    document.getElementById('level-h').textContent = nearestHigh != null ? fmtPrice(nearestHigh) : '—';
-    document.getElementById('level-l').textContent = nearestLow  != null ? fmtPrice(nearestLow)  : '—';
-
-    // Stats
-    document.getElementById('stat-atr').textContent     = atr    ? atr.toFixed(1) : '—';
-    document.getElementById('stat-candles').textContent = candles.length;
-    const trendColors = { bullish: 'var(--green)', bearish: 'var(--red)', sideways: 'var(--gold)' };
-    const trendEl = document.getElementById('stat-trend');
-    trendEl.textContent = trend;
-    trendEl.style.color = trendColors[trend] || 'var(--text)';
+  ws.onerror = () => wsDot('err');
+  ws.onclose = () => {
+    wsDot('err');
+    clearTimeout(wsTimer);
+    wsTimer = setTimeout(connectWS, 5000);
+  };
 }
 
-let lastBOS = '—';
-function updateStatBOS(txt) {
-    lastBOS = txt;
-    document.getElementById('stat-bos').textContent = txt;
+/* ════════════════════════════════════════════════
+   LOADING
+════════════════════════════════════════════════ */
+function setMsg(m) { document.getElementById('lmsg').textContent = m; }
+function hideLoader() {
+  const el = document.getElementById('loading');
+  el.classList.add('out');
+  setTimeout(() => { try { el.remove(); } catch(_){} }, 600);
 }
 
-// ─── History from Supabase ────────────────────────────────────────────────────
-async function refreshHistory() {
-    const zones = await getRecentZones(5);
-    const list  = document.getElementById('history-list');
-    if (!zones.length) {
-        list.innerHTML = '<div style="color:var(--text);font-size:10px;padding:4px 0">Sin historial aún</div>';
-        return;
-    }
-    list.innerHTML = zones.map(z => {
-        const d  = new Date(z.detected_at);
-        const ts = `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
-        return `<div class="hist-item">
-            <div class="hist-dot ${z.zone_type}"></div>
-            <div class="hist-info">
-                <div class="hist-price">${fmtPrice(z.zone_top)} – ${fmtPrice(z.zone_bottom)}</div>
-                <div style="color:var(--text);font-size:9px">${ts} · ${z.trend_context || '—'}</div>
-            </div>
-            <span class="hist-result ${z.result}">${z.result}</span>
-        </div>`;
-    }).join('');
-}
-
-// ─── Header price update ──────────────────────────────────────────────────────
-function updateHeaderPrice(price) {
-    document.getElementById('header-price').textContent = fmtPrice(price);
-    if (openPrice != null) {
-        const pct  = ((price - openPrice) / openPrice) * 100;
-        const el   = document.getElementById('header-change');
-        el.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
-        el.className   = 'header-change ' + (pct >= 0 ? 'up' : 'down');
-        el.id          = 'header-change';
-    }
-}
-
-// ─── NY session badge ─────────────────────────────────────────────────────────
-function updateNYBadge() {
-    const el = document.getElementById('ny-badge');
-    if (isNYSessionNow()) {
-        el.className   = 'active';
-        el.textContent = '● NY SESSION';
-    } else {
-        el.className   = 'inactive';
-        el.textContent = 'NY SESSION';
-    }
-}
-setInterval(updateNYBadge, 60_000);
-updateNYBadge();
-
-// ─── WebSocket connection ─────────────────────────────────────────────────────
-function setWSStatus(state) {
-    const el = document.getElementById('ws-status');
-    el.className = state;
-}
-
-function connectWebSocket() {
-    if (ws) { try { ws.close(); } catch(_) {} }
-    setWSStatus('connecting');
-
-    ws = new WebSocket(WS_URL);
-
-    ws.onopen = () => {
-        setWSStatus('connected');
-        console.log('[WS] Connected');
-    };
-
-    ws.onmessage = e => {
-        try {
-            const msg = JSON.parse(e.data);
-            if (msg.e !== 'kline') return;
-            const k   = msg.k;
-            const c   = {
-                time:   k.t,
-                open:   parseFloat(k.o),
-                high:   parseFloat(k.h),
-                low:    parseFloat(k.l),
-                close:  parseFloat(k.c),
-                volume: parseFloat(k.v)
-            };
-            chart.updateLastCandle(c);
-            updateHeaderPrice(c.close);
-
-            // Keep candles array in sync
-            const last = candles[candles.length - 1];
-            if (last && last.time === c.time) {
-                candles[candles.length - 1] = c;
-            } else {
-                candles.push(c);
-                runAnalysis(); // Run full analysis on new closed candle
-            }
-        } catch(err) { console.error('[WS] parse error', err); }
-    };
-
-    ws.onerror = err => {
-        console.error('[WS] error', err);
-        setWSStatus('disconnected');
-    };
-
-    ws.onclose = () => {
-        setWSStatus('disconnected');
-        console.warn('[WS] Disconnected — reconnecting in 5s...');
-        clearTimeout(wsReconnectTimer);
-        wsReconnectTimer = setTimeout(connectWebSocket, 5000);
-    };
-}
-
-// ─── Bootstrap ───────────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════ */
 async function init() {
-    setLoadMsg('Descargando historial de Binance...');
+  setMsg('Descargando 500 velas de Binance...');
+  let raw;
+  try {
+    const res = await fetch(REST);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    raw = await res.json();
+    if (!Array.isArray(raw) || !raw.length) throw new Error('Sin datos');
+  } catch(e) {
+    setMsg('Error: ' + e.message + '. Reintentando...');
+    setTimeout(init, 4000);
+    return;
+  }
 
-    // Fetch historical klines
-    let raw;
-    try {
-        const res = await fetch(REST_URL);
-        raw = await res.json();
-    } catch(e) {
-        setLoadMsg('Error al conectar con Binance. Reintentando...');
-        setTimeout(init, 4000);
-        return;
-    }
+  S.candles   = raw.map(kl);
+  S.openPrice = S.candles[0].open;
+  S.lastC     = S.candles[S.candles.length-1];
 
-    candles    = raw.map(parseBinanceKline);
-    openPrice  = candles[0]?.open ?? null;
+  candleSeries.setData(S.candles.map(toLWC));
+  volSeries.setData(S.candles.map(toVol));
+  chart.timeScale().scrollToRealTime();
 
-    setLoadMsg('Calculando zonas...');
-    chart.setCandles(candles);
+  setMsg('Calculando zonas...');
+  S.atrs = calcATR(S.candles, 14);
+  await analyze();
 
-    // Initial analysis
-    atrs = calculateATR(candles, 14);
-    chart.setATRs(atrs);
-    await runAnalysis();
+  setMsg('Conectando WebSocket en tiempo real...');
+  connectWS();
+  await loadHistory();
+  updatePrice(S.lastC.close);
 
-    setLoadMsg('Conectando WebSocket...');
-    connectWebSocket();
+  const dt = new Date(S.lastC.time);
+  document.getElementById('l-ts').textContent =
+    `${String(dt.getUTCDate()).padStart(2,'0')}/${String(dt.getUTCMonth()+1).padStart(2,'0')} ` +
+    `${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')} UTC`;
 
-    // Load Supabase history
-    await refreshHistory();
-
-    hideLoading();
-    updateHeaderPrice(candles[candles.length - 1]?.close ?? 0);
+  hideLoader();
 }
 
 init();
