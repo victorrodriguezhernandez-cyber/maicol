@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Producto — KITPRO SUPPLIER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0B1E3C;--navy2:#0d2347;--gold:#C9A844;--gold2:#e0bc55;
+  --white:#fff;--off:#F8F6F0;--gray:#6b7280;--border:#e5e7eb;
+  --font:'Inter',-apple-system,sans-serif;--radius:8px;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);color:#111;background:#fff;-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+
+/* ── ANNOUNCE ── */
+.announce{background:var(--gold);color:var(--navy);font-size:13px;font-weight:600;letter-spacing:.5px;text-align:center;padding:9px 16px;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+
+/* ── HEADER ── */
+header{background:var(--navy);position:sticky;top:0;z-index:200}
+.header-inner{max-width:1280px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:64px;gap:20px}
+.logo{font-size:22px;font-weight:900;letter-spacing:-1px;color:#fff}
+.logo span{color:var(--gold)}
+nav ul{display:flex;list-style:none;gap:4px}
+nav a{font-size:13px;font-weight:500;color:rgba(255,255,255,.85);padding:6px 12px;border-radius:6px;transition:all .15s}
+nav a:hover{color:#fff;background:rgba(255,255,255,.1)}
+.cart-btn{display:flex;align-items:center;gap:6px;background:var(--gold);color:var(--navy);border:none;cursor:pointer;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;transition:background .15s}
+.cart-btn:hover{background:var(--gold2)}
+.cart-count{background:var(--navy);color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* ── BREADCRUMB ── */
+.breadcrumb{background:var(--off);padding:12px 20px;font-size:13px;color:var(--gray)}
+.breadcrumb-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:6px}
+.breadcrumb a{color:var(--gray);transition:color .15s}.breadcrumb a:hover{color:var(--navy)}
+.breadcrumb span{opacity:.5}
+
+/* ── PRODUCT LAYOUT ── */
+.product-page{max-width:1280px;margin:0 auto;padding:40px 20px 80px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+
+/* ── GALLERY ── */
+.gallery{position:sticky;top:80px}
+.main-img{border-radius:12px;overflow:hidden;background:var(--off);aspect-ratio:3/4;margin-bottom:12px}
+.main-img img{width:100%;height:100%;object-fit:cover;transition:opacity .3s}
+.thumbnails{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.thumb{border-radius:8px;overflow:hidden;background:var(--off);aspect-ratio:3/4;cursor:pointer;border:2px solid transparent;transition:border-color .2s}
+.thumb.active{border-color:var(--gold)}
+.thumb img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.thumb:hover img{transform:scale(1.05)}
+
+/* ── PRODUCT INFO ── */
+.product-info{padding-top:8px}
+.product-badges{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.badge{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.badge-sale{background:#ef4444;color:#fff}
+.badge-popular{background:var(--gold);color:var(--navy)}
+.badge-new{background:var(--navy);color:#fff}
+.product-team{font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.product-title{font-size:clamp(22px,3vw,30px);font-weight:800;letter-spacing:-1px;line-height:1.2;margin-bottom:12px}
+.product-rating-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.stars{color:var(--gold);font-size:15px;letter-spacing:1px}
+.rating-num{font-weight:700;font-size:14px}
+.rating-count{font-size:13px;color:var(--gray)}
+
+/* PRICING */
+.pricing-row{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.price-main{font-size:34px;font-weight:900;color:var(--navy);letter-spacing:-1px}
+.price-old{font-size:18px;color:var(--gray);text-decoration:line-through}
+.price-save{background:#fef3c7;color:#92400e;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:700}
+
+/* VERSION TOGGLE */
+.version-toggle{margin-bottom:20px}
+.version-toggle label{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px;display:block}
+.version-btns{display:flex;gap:8px}
+.version-btn{
+  flex:1;padding:12px 8px;border:1.5px solid var(--border);border-radius:8px;
+  background:#fff;cursor:pointer;text-align:center;transition:all .2s;font-family:var(--font);
+}
+.version-btn.active{border-color:var(--navy);background:var(--navy);color:#fff}
+.version-btn .vname{display:block;font-size:13px;font-weight:700;margin-bottom:2px}
+.version-btn .vprice{display:block;font-size:12px;opacity:.7}
+
+/* SIZE SELECTOR */
+.size-selector{margin-bottom:20px}
+.size-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.size-label{font-size:13px;font-weight:700;color:var(--navy)}
+.size-guide-link{font-size:12px;color:var(--gold);cursor:pointer;text-decoration:underline}
+.sizes-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.size-btn{
+  padding:10px 4px;border:1.5px solid var(--border);border-radius:6px;
+  background:#fff;cursor:pointer;font-size:13px;font-weight:600;
+  text-align:center;transition:all .2s;font-family:var(--font);
+}
+.size-btn:hover{border-color:var(--navy)}
+.size-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.size-btn.oos{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+
+/* QUANTITY */
+.qty-row{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.qty-label{font-size:13px;font-weight:700;color:var(--navy)}
+.qty-ctrl{display:flex;align-items:center;gap:0;border:1.5px solid var(--border);border-radius:8px;overflow:hidden}
+.qty-btn{background:none;border:none;cursor:pointer;width:36px;height:36px;font-size:18px;font-weight:500;transition:background .15s}
+.qty-btn:hover{background:var(--off)}
+.qty-num{width:40px;text-align:center;font-size:15px;font-weight:700;border:none;outline:none;font-family:var(--font)}
+
+/* CUSTOM */
+.custom-row{
+  background:var(--off);border-radius:8px;padding:16px;margin-bottom:20px;
+  border:1px solid var(--border);
+}
+.custom-row label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);display:block;margin-bottom:6px}
+.custom-inputs{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.custom-input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:14px;font-family:var(--font);outline:none;transition:border-color .2s}
+.custom-input:focus{border-color:var(--navy)}
+.num-input{width:60px;padding:10px 8px;text-align:center;border:1.5px solid var(--border);border-radius:6px;font-size:14px;font-family:var(--font);outline:none}
+.num-input:focus{border-color:var(--navy)}
+.custom-note{font-size:11px;color:var(--gray);margin-top:6px}
+
+/* CTA BUTTONS */
+.cta-btns{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.btn-add{
+  background:var(--navy);color:#fff;border:none;cursor:pointer;
+  border-radius:8px;padding:16px;font-size:16px;font-weight:700;
+  font-family:var(--font);transition:background .2s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-add:hover{background:var(--navy2)}
+.btn-buy{
+  background:var(--gold);color:var(--navy);border:none;cursor:pointer;
+  border-radius:8px;padding:16px;font-size:16px;font-weight:700;
+  font-family:var(--font);transition:all .2s;
+}
+.btn-buy:hover{background:var(--gold2)}
+
+/* TRUST ROW */
+.trust-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:24px}
+.trust-mini{background:var(--off);border-radius:8px;padding:12px;text-align:center}
+.trust-mini-icon{font-size:20px;margin-bottom:4px}
+.trust-mini p{font-size:11px;font-weight:600;line-height:1.4}
+
+/* ACCORDIONS */
+.accordion{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.accordion-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;cursor:pointer;background:#fff;transition:background .15s;
+  font-size:14px;font-weight:600;
+}
+.accordion-header:hover{background:var(--off)}
+.accordion-arrow{transition:transform .3s;font-size:12px;color:var(--gray)}
+.accordion-body{display:none;padding:16px;border-top:1px solid var(--border);background:var(--off);font-size:14px;line-height:1.7;color:#374151}
+.accordion.open .accordion-body{display:block}
+.accordion.open .accordion-arrow{transform:rotate(180deg)}
+.accordion-body ul{padding-left:16px;margin-top:8px;display:flex;flex-direction:column;gap:6px}
+
+/* RELATED */
+.related{max-width:1280px;margin:0 auto;padding:40px 20px 80px}
+.related h2{font-size:24px;font-weight:800;letter-spacing:-1px;margin-bottom:24px}
+.related-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.product-card{background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:all .25s;cursor:pointer;display:flex;flex-direction:column}
+.product-card:hover{transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,0,0,.12)}
+.product-card-img{position:relative;overflow:hidden;background:var(--off);aspect-ratio:3/4}
+.product-card-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.product-card:hover .product-card-img img{transform:scale(1.06)}
+.product-card-body{padding:12px;flex:1;display:flex;flex-direction:column}
+.product-team-s{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin-bottom:4px}
+.product-name-s{font-size:13px;font-weight:600;line-height:1.4;margin-bottom:8px;flex:1}
+.price-tag{font-size:16px;font-weight:800;color:var(--navy)}
+.price-old-s{font-size:12px;color:var(--gray);text-decoration:line-through;margin-left:6px}
+
+/* FOOTER MINIMAL */
+.footer-mini{background:var(--navy);color:rgba(255,255,255,.6);text-align:center;padding:24px;font-size:13px}
+.footer-mini a{color:rgba(255,255,255,.6);margin:0 8px}
+
+@media(max-width:900px){
+  .product-page{grid-template-columns:1fr;gap:32px}
+  .gallery{position:static}
+}
+@media(max-width:600px){
+  .sizes-grid{grid-template-columns:repeat(4,1fr)}
+  .trust-row{grid-template-columns:1fr}
+  nav{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="announce">
+  <span>🌍 Envío gratis +5 camisetas</span>
+  <span>⚡ Sin mínimo de pedido</span>
+  <span>✂️ Personalización disponible</span>
+</div>
+
+<header>
+  <div class="header-inner">
+    <a href="index.html" class="logo">KIT<span>PRO</span></a>
+    <nav>
+      <ul>
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="index.html#mundial">Mundial 2026</a></li>
+        <li><a href="index.html#europa">Europa</a></li>
+        <li><a href="index.html#retro">Retro</a></li>
+        <li><a href="index.html#todos">Todos</a></li>
+      </ul>
+    </nav>
+    <button class="cart-btn" onclick="window.location='pago.html'">
+      🛒 Carrito <span class="cart-count" id="cartCount">0</span>
+    </button>
+  </div>
+</header>
+
+<div class="breadcrumb">
+  <div class="breadcrumb-inner">
+    <a href="index.html">Inicio</a>
+    <span>/</span>
+    <a href="index.html#todos">Productos</a>
+    <span>/</span>
+    <span id="breadProduct">Cargando...</span>
+  </div>
+</div>
+
+<div class="product-page" id="productPage">
+  <!-- Filled by JS -->
+</div>
+
+<div class="related">
+  <h2>También te puede interesar</h2>
+  <div class="related-grid" id="relatedGrid"></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" style="position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:600;display:none;align-items:center;gap:10px;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+  <span>✓</span><span id="toastMsg"></span>
+</div>
+
+<footer class="footer-mini">
+  © 2026 KITPRO Supplier — <a href="index.html">Inicio</a> · <a href="#">Envíos</a> · <a href="#">Devoluciones</a> · <a href="#">Contacto</a>
+</footer>
+
+<script>
+// ── DATA (duplicated for standalone use) ──
+const products = JSON.parse(localStorage.getItem('kitpro_products')||'[]');
+let cart = JSON.parse(localStorage.getItem('kitpro_cart')||'[]');
+
+function updateCartCount(){document.getElementById('cartCount').textContent=cart.reduce((a,c)=>a+c.qty,0)}
+updateCartCount();
+
+// Get product ID from URL
+const params = new URLSearchParams(window.location.search);
+const pid = parseInt(params.get('id')||'1');
+const p = products.find(x=>x.id===pid) || {
+  id:1,team:'España',name:'2026 Camiseta España Local',type:'mundial',
+  price:14,oldPrice:19,badge:'sale',rating:4.9,reviews:214,
+  images:[
+    'https://loremflickr.com/640/800/soccer,jersey,red?random=201',
+    'https://loremflickr.com/640/800/soccer,jersey,red?random=202',
+    'https://loremflickr.com/640/800/soccer,shirt,red?random=203',
+    'https://loremflickr.com/640/800/football,jersey,spain?random=204'
+  ]
+};
+
+document.title = p.name + ' — KITPRO SUPPLIER';
+document.getElementById('breadProduct').textContent = p.name;
+
+let selectedSize = '';
+let qty = 1;
+let version = 'fan';
+let currentImg = 0;
+
+const badgeMap = {sale:'badge-sale',new:'badge-new',popular:'badge-popular'};
+const badgeLabel = {sale:'OFERTA',new:'NUEVO',popular:'POPULAR'};
+
+document.getElementById('productPage').innerHTML = `
+<div class="gallery">
+  <div class="main-img">
+    <img id="mainImg" src="${p.images[0]}" alt="${p.name}"/>
+  </div>
+  <div class="thumbnails">
+    ${p.images.map((img,i)=>`
+    <div class="thumb ${i===0?'active':''}" onclick="setImg(${i})" id="thumb${i}">
+      <img src="${img}" alt="${p.name} ${i+1}" loading="lazy"/>
+    </div>`).join('')}
+  </div>
+</div>
+
+<div class="product-info">
+  <div class="product-badges">
+    ${p.badge?`<span class="badge ${badgeMap[p.badge]}">${badgeLabel[p.badge]}</span>`:''}
+    <span class="badge" style="background:var(--off);color:var(--navy);border:1px solid var(--border)">Fan Version</span>
+    <span class="badge" style="background:var(--off);color:var(--navy);border:1px solid var(--border)">Player Version</span>
+  </div>
+  <p class="product-team">${p.team}</p>
+  <h1 class="product-title">${p.name}</h1>
+  <div class="product-rating-row">
+    <span class="stars">${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5-Math.round(p.rating))}</span>
+    <span class="rating-num">${p.rating}</span>
+    <span class="rating-count">${p.reviews} valoraciones</span>
+  </div>
+  <div class="pricing-row">
+    <span class="price-main" id="priceDisplay">${p.price}€</span>
+    ${p.oldPrice?`<span class="price-old">${p.oldPrice}€</span><span class="price-save">Ahorra ${p.oldPrice-p.price}€</span>`:''}
+  </div>
+
+  <!-- Version toggle -->
+  <div class="version-toggle">
+    <label>Versión</label>
+    <div class="version-btns">
+      <button class="version-btn active" id="vFan" onclick="setVersion('fan')">
+        <span class="vname">Fan Version</span>
+        <span class="vprice">${p.price}€</span>
+      </button>
+      <button class="version-btn" id="vPlayer" onclick="setVersion('player')">
+        <span class="vname">Player Version</span>
+        <span class="vprice">${p.price+5}€</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Size selector -->
+  <div class="size-selector">
+    <div class="size-header">
+      <span class="size-label">Talla <span id="selectedSizeLabel" style="color:var(--gold)"></span></span>
+      <span class="size-guide-link" onclick="alert('Guía de tallas:\\nXS: pecho 84–88cm\\nS: pecho 88–92cm\\nM: pecho 92–96cm\\nL: pecho 96–100cm\\nXL: pecho 100–104cm\\nXXL: pecho 104–108cm')">Guía de tallas →</span>
+    </div>
+    <div class="sizes-grid">
+      ${['XS','S','M','L','XL','XXL'].map(s=>`<button class="size-btn" onclick="setSize('${s}',this)">${s}</button>`).join('')}
+    </div>
+    <p style="font-size:12px;color:var(--gray);margin-top:6px">Selecciona una talla</p>
+  </div>
+
+  <!-- Quantity -->
+  <div class="qty-row">
+    <span class="qty-label">Cantidad</span>
+    <div class="qty-ctrl">
+      <button class="qty-btn" onclick="changeQty(-1)">−</button>
+      <input class="qty-num" id="qtyNum" type="number" value="1" min="1" max="99" onchange="qty=parseInt(this.value)||1"/>
+      <button class="qty-btn" onclick="changeQty(1)">+</button>
+    </div>
+    <span style="font-size:12px;color:var(--gray)">Envío gratis desde 5 ud.</span>
+  </div>
+
+  <!-- Personalización -->
+  <div class="custom-row">
+    <label>✂️ Personalización (opcional · +3€)</label>
+    <div class="custom-inputs">
+      <input class="custom-input" id="playerName" type="text" placeholder="Nombre del jugador (ej: GARCÍA)"/>
+      <input class="num-input" id="playerNum" type="number" min="1" max="99" placeholder="Nº"/>
+    </div>
+    <p class="custom-note">Tipografía oficial. Resistente a 60+ lavados. Parches de competición disponibles.</p>
+  </div>
+
+  <!-- CTAs -->
+  <div class="cta-btns">
+    <button class="btn-add" onclick="addToCart()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      Añadir al carrito
+    </button>
+    <button class="btn-buy" onclick="buyNow()">Comprar ahora →</button>
+  </div>
+
+  <!-- Trust minis -->
+  <div class="trust-row">
+    <div class="trust-mini">
+      <div class="trust-mini-icon">🌍</div>
+      <p>Envío mundial<br>con seguimiento</p>
+    </div>
+    <div class="trust-mini">
+      <div class="trust-mini-icon">📸</div>
+      <p>Fotos reales<br>incluidas</p>
+    </div>
+    <div class="trust-mini">
+      <div class="trust-mini-icon">↩️</div>
+      <p>Devolución<br>garantizada</p>
+    </div>
+  </div>
+
+  <!-- Accordions -->
+  <div class="accordion" onclick="toggleAccordion(this)">
+    <div class="accordion-header">📋 Descripción del producto <span class="accordion-arrow">▼</span></div>
+    <div class="accordion-body">
+      <p>La <strong>${p.name}</strong> es una réplica premium de alta calidad, extremadamente cercana a la camiseta original en tejido, corte y detalles.</p>
+      <ul>
+        <li>Tejido poliéster transpirable de alta densidad</li>
+        <li>Escudo bordado o termo-sellado según versión</li>
+        <li>Costuras reforzadas en zonas de mayor tensión</li>
+        <li>Fan Version: corte regular, logos bordados</li>
+        <li>Player Version: corte atlético slim, logos en relieve</li>
+        <li>Lavable a máquina hasta 30°C</li>
+      </ul>
+    </div>
+  </div>
+  <div class="accordion" onclick="toggleAccordion(this)">
+    <div class="accordion-header">🚚 Envíos y plazos <span class="accordion-arrow">▼</span></div>
+    <div class="accordion-body">
+      <ul>
+        <li><strong>Envío estándar:</strong> 12–18 días laborables</li>
+        <li><strong>Envío express:</strong> 7–14 días (+precio)</li>
+        <li><strong>Gratis desde 5 camisetas</strong> o pedidos &gt;60€</li>
+        <li>Número de seguimiento enviado por email</li>
+        <li>Envíos a España, Europa y el mundo entero</li>
+        <li>Preparación: 3–5 días laborables</li>
+      </ul>
+    </div>
+  </div>
+  <div class="accordion" onclick="toggleAccordion(this)">
+    <div class="accordion-header">✂️ Personalización <span class="accordion-arrow">▼</span></div>
+    <div class="accordion-body">
+      <p>Añade nombre y número al precio de <strong>+3€ por unidad</strong>.</p>
+      <ul>
+        <li>Tipografía oficial de la selección/club</li>
+        <li>Resistente a más de 60 lavados a máquina</li>
+        <li>Parches disponibles: UCL, La Liga, Copa del Rey, etc.</li>
+        <li>Foto de confirmación previa al envío</li>
+      </ul>
+    </div>
+  </div>
+  <div class="accordion" onclick="toggleAccordion(this)">
+    <div class="accordion-header">↩️ Devoluciones <span class="accordion-arrow">▼</span></div>
+    <div class="accordion-body">
+      <ul>
+        <li>30 días para devolver desde la recepción</li>
+        <li>Producto en estado original, sin lavar</li>
+        <li>Camisetas personalizadas no son devolvibles</li>
+        <li>Reembolso en 5–10 días laborables</li>
+        <li>Contacta a hola@kitprosupplier.com</li>
+      </ul>
+    </div>
+  </div>
+</div>
+`;
+
+// Related products
+const related = (JSON.parse(localStorage.getItem('kitpro_products')||'[]')).filter(x=>x.id!==pid).slice(0,4);
+document.getElementById('relatedGrid').innerHTML = related.map(r=>`
+<div class="product-card" onclick="window.location='producto.html?id=${r.id}'">
+  <div class="product-card-img"><img src="${r.images?r.images[0]:r.image}" alt="${r.name}" loading="lazy"/></div>
+  <div class="product-card-body">
+    <p class="product-team-s">${r.team}</p>
+    <p class="product-name-s">${r.name}</p>
+    <div><span class="price-tag">${r.price}€</span>${r.oldPrice?`<span class="price-old-s">${r.oldPrice}€</span>`:''}</div>
+  </div>
+</div>`).join('');
+
+// ── FUNCTIONS ──
+function setImg(i){
+  document.getElementById('mainImg').src = p.images[i];
+  document.querySelectorAll('.thumb').forEach((t,j)=>t.classList.toggle('active',j===i));
+  currentImg=i;
+}
+
+function setVersion(v){
+  version=v;
+  document.getElementById('vFan').classList.toggle('active',v==='fan');
+  document.getElementById('vPlayer').classList.toggle('active',v==='player');
+  const basePrice = p.price + (v==='player'?5:0);
+  document.getElementById('priceDisplay').textContent = basePrice+'€';
+}
+
+function setSize(s,btn){
+  selectedSize=s;
+  document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('selectedSizeLabel').textContent = '- '+s;
+}
+
+function changeQty(d){
+  qty=Math.max(1,qty+d);
+  document.getElementById('qtyNum').value=qty;
+}
+
+function addToCart(){
+  if(!selectedSize){showToast('⚠️ Selecciona una talla',true);return}
+  const basePrice = p.price + (version==='player'?5:0);
+  const name_custom = document.getElementById('playerName')?.value||'';
+  const num_custom = document.getElementById('playerNum')?.value||'';
+  const customized = name_custom || num_custom;
+  const finalPrice = basePrice + (customized?3:0);
+  const key = `${p.id}-${selectedSize}-${version}`;
+  const existing = cart.find(x=>x.key===key);
+  if(existing) existing.qty+=qty;
+  else cart.push({id:p.id,key,name:p.name,price:finalPrice,image:p.images[0],qty,size:selectedSize,version,custom:name_custom+' '+num_custom});
+  localStorage.setItem('kitpro_cart',JSON.stringify(cart));
+  updateCartCount();
+  showToast('✓ Añadido al carrito — '+p.name.substring(0,30)+'...');
+}
+
+function buyNow(){
+  if(!selectedSize){showToast('⚠️ Selecciona una talla',true);return}
+  addToCart();
+  setTimeout(()=>window.location='pago.html',500);
+}
+
+function showToast(msg,err=false){
+  const t=document.getElementById('toast');
+  const m=document.getElementById('toastMsg');
+  m.textContent=msg;
+  t.style.background=err?'#ef4444':'var(--navy)';
+  t.style.display='flex';
+  setTimeout(()=>t.style.display='none',2500);
+}
+
+function toggleAccordion(el){
+  el.classList.toggle('open');
+}
+</script>
+</body>
+</html>

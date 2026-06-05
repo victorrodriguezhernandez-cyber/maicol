@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Checkout — KITPRO SUPPLIER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0B1E3C;--navy2:#0d2347;--gold:#C9A844;--gold2:#e0bc55;
+  --white:#fff;--off:#F8F6F0;--gray:#6b7280;--border:#e5e7eb;
+  --font:'Inter',-apple-system,sans-serif;--radius:8px;
+  --error:#ef4444;--success:#22c55e;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);color:#111;background:#f9f9f9;-webkit-font-smoothing:antialiased;min-height:100vh}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+
+/* ── CHECKOUT HEADER ── */
+.checkout-header{
+  background:var(--navy);padding:0 24px;height:60px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.checkout-logo{font-size:20px;font-weight:900;letter-spacing:-1px;color:#fff}
+.checkout-logo span{color:var(--gold)}
+.checkout-header-right{font-size:13px;color:rgba(255,255,255,.7)}
+.checkout-header-right a{color:var(--gold)}
+.secure-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.6)}
+
+/* ── BREADCRUMB ── */
+.checkout-steps{
+  background:#fff;border-bottom:1px solid var(--border);
+  padding:12px 24px;display:flex;align-items:center;justify-content:center;
+  gap:8px;font-size:13px;
+}
+.step{display:flex;align-items:center;gap:6px;color:var(--gray)}
+.step.active{color:var(--navy);font-weight:700}
+.step.done{color:var(--success)}
+.step-num{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--border);color:var(--gray);
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;
+  transition:all .3s;
+}
+.step.active .step-num{background:var(--navy);color:#fff}
+.step.done .step-num{background:var(--success);color:#fff}
+.step-divider{width:40px;height:1px;background:var(--border)}
+
+/* ── MAIN LAYOUT ── */
+.checkout-main{
+  max-width:1100px;margin:0 auto;padding:40px 20px 80px;
+  display:grid;grid-template-columns:1fr 400px;gap:40px;align-items:start;
+}
+
+/* ── FORM STYLES ── */
+.checkout-form-section{background:#fff;border-radius:10px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px}
+.form-section-header{
+  padding:16px 20px;background:var(--off);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.form-section-header h3{font-size:15px;font-weight:700}
+.form-section-header .badge-num{
+  width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;
+  font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
+}
+.form-body{padding:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-row.full{grid-template-columns:1fr}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px}
+.form-input{
+  padding:12px 14px;border:1.5px solid var(--border);border-radius:6px;
+  font-size:15px;font-family:var(--font);outline:none;transition:border-color .2s;
+  background:#fff;
+}
+.form-input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(11,30,60,.08)}
+.form-input.error{border-color:var(--error)}
+.form-input::placeholder{color:#c4c4c4}
+.form-select{
+  padding:12px 14px;border:1.5px solid var(--border);border-radius:6px;
+  font-size:15px;font-family:var(--font);outline:none;cursor:pointer;
+  background:#fff;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;
+  padding-right:36px;
+}
+.form-select:focus{border-color:var(--navy)}
+.field-note{font-size:11px;color:var(--gray);margin-top:2px}
+
+/* ── SHIPPING METHODS ── */
+.shipping-options{display:flex;flex-direction:column;gap:8px}
+.shipping-opt{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border:1.5px solid var(--border);border-radius:8px;
+  cursor:pointer;transition:all .2s;
+}
+.shipping-opt:hover{border-color:var(--navy)}
+.shipping-opt.selected{border-color:var(--navy);background:rgba(11,30,60,.03)}
+.shipping-opt-left{display:flex;align-items:center;gap:10px}
+.shipping-opt-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.shipping-opt.selected .shipping-opt-radio{border-color:var(--navy)}
+.shipping-opt.selected .shipping-opt-radio::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--navy)}
+.shipping-opt-info strong{font-size:14px;font-weight:600;display:block}
+.shipping-opt-info span{font-size:12px;color:var(--gray)}
+.shipping-opt-price{font-size:15px;font-weight:700;color:var(--navy)}
+
+/* ── PAYMENT ── */
+.payment-methods{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.pay-method{
+  flex:1;min-width:80px;padding:10px 8px;border:1.5px solid var(--border);border-radius:6px;
+  text-align:center;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;
+}
+.pay-method.active{border-color:var(--navy);background:var(--off)}
+.pay-method-icon{font-size:20px;display:block;margin-bottom:2px}
+
+.card-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card-field-wrap{position:relative}
+.card-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:18px}
+
+/* ── PROMO ── */
+.promo-row{display:flex;gap:8px}
+.promo-input{flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:6px;font-size:15px;font-family:var(--font);outline:none}
+.promo-input:focus{border-color:var(--navy)}
+.promo-btn{background:var(--off);border:1.5px solid var(--border);padding:12px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .2s;white-space:nowrap}
+.promo-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* ── ORDER SUMMARY ── */
+.order-summary{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;position:sticky;top:20px}
+.summary-header{padding:16px 20px;background:var(--navy);color:#fff}
+.summary-header h3{font-size:15px;font-weight:700}
+.summary-items{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:12px;max-height:300px;overflow-y:auto}
+.summary-item{display:flex;gap:12px;align-items:center}
+.summary-item-img{
+  width:56px;height:70px;border-radius:6px;background:var(--off);
+  overflow:hidden;flex-shrink:0;position:relative;
+}
+.summary-item-img img{width:100%;height:100%;object-fit:cover}
+.summary-item-qty{
+  position:absolute;top:-6px;right:-6px;
+  background:var(--navy);color:#fff;border-radius:50%;
+  width:18px;height:18px;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+.summary-item-info{flex:1}
+.summary-item-name{font-size:13px;font-weight:600;line-height:1.3;margin-bottom:3px}
+.summary-item-meta{font-size:11px;color:var(--gray)}
+.summary-item-price{font-size:14px;font-weight:700;color:var(--navy);white-space:nowrap}
+.summary-totals{padding:16px 20px}
+.total-row{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-bottom:8px}
+.total-row span:first-child{color:var(--gray)}
+.total-row span:last-child{font-weight:600}
+.total-row.free span:last-child{color:var(--success)}
+.total-divider{border:none;border-top:1px solid var(--border);margin:12px 0}
+.grand-total{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.grand-total span:first-child{font-size:16px;font-weight:700}
+.grand-total span:last-child{font-size:22px;font-weight:900;color:var(--navy)}
+.btn-pay{
+  width:100%;background:var(--gold);color:var(--navy);border:none;cursor:pointer;
+  padding:16px;font-size:16px;font-weight:800;border-radius:8px;
+  font-family:var(--font);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-pay:hover{background:var(--gold2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(201,168,68,.4)}
+.pay-note{font-size:11px;color:var(--gray);text-align:center;margin-top:10px}
+.payment-icons-row{display:flex;gap:6px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.pi{background:var(--off);border-radius:4px;padding:4px 8px;font-size:10px;font-weight:700;color:var(--gray);border:1px solid var(--border)}
+
+/* ── SUCCESS OVERLAY ── */
+.success-overlay{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px;
+}
+.success-overlay.show{display:flex}
+.success-box{
+  background:#fff;border-radius:16px;padding:48px 40px;
+  max-width:480px;width:100%;text-align:center;
+  animation:popIn .4s ease;
+}
+@keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.success-icon{font-size:64px;margin-bottom:20px}
+.success-box h2{font-size:26px;font-weight:900;letter-spacing:-1px;margin-bottom:10px;color:var(--navy)}
+.success-box p{font-size:15px;color:var(--gray);line-height:1.6;margin-bottom:24px}
+.order-num{background:var(--off);border-radius:8px;padding:12px;margin-bottom:20px;font-size:14px}
+.order-num strong{display:block;font-size:18px;font-weight:900;color:var(--navy);letter-spacing:1px}
+.btn-continue{display:inline-block;background:var(--navy);color:#fff;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700}
+
+@media(max-width:900px){
+  .checkout-main{grid-template-columns:1fr}
+  .order-summary{position:static}
+}
+@media(max-width:600px){
+  .form-row{grid-template-columns:1fr}
+  .card-row{grid-template-columns:1fr}
+  .checkout-steps{display:none}
+  .payment-methods{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- CHECKOUT HEADER -->
+<header class="checkout-header">
+  <a href="index.html" class="checkout-logo">KIT<span>PRO</span></a>
+  <div class="secure-badge">
+    🔒 Pago 100% seguro · SSL
+  </div>
+  <div class="checkout-header-right">
+    <a href="index.html">← Volver a la tienda</a>
+  </div>
+</header>
+
+<!-- STEPS -->
+<div class="checkout-steps">
+  <div class="step done">
+    <div class="step-num">✓</div>
+    <span>Carrito</span>
+  </div>
+  <div class="step-divider"></div>
+  <div class="step active">
+    <div class="step-num">2</div>
+    <span>Datos y envío</span>
+  </div>
+  <div class="step-divider"></div>
+  <div class="step" id="step3">
+    <div class="step-num">3</div>
+    <span>Pago</span>
+  </div>
+  <div class="step-divider"></div>
+  <div class="step" id="step4">
+    <div class="step-num">4</div>
+    <span>Confirmación</span>
+  </div>
+</div>
+
+<div class="checkout-main">
+  <!-- LEFT: FORMS -->
+  <div>
+    <!-- 1. CONTACT -->
+    <div class="checkout-form-section">
+      <div class="form-section-header">
+        <div class="badge-num">1</div>
+        <h3>Información de contacto</h3>
+      </div>
+      <div class="form-body">
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Email</label>
+            <input class="form-input" id="email" type="email" placeholder="tu@email.com"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre</label>
+            <input class="form-input" id="firstName" type="text" placeholder="Juan"/>
+          </div>
+          <div class="form-group">
+            <label>Apellido</label>
+            <input class="form-input" id="lastName" type="text" placeholder="García"/>
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Teléfono (opcional — para actualizaciones del envío)</label>
+            <input class="form-input" id="phone" type="tel" placeholder="+34 600 000 000"/>
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:4px">
+          <input type="checkbox" checked style="accent-color:var(--navy)"/>
+          Recibir novedades y ofertas por email
+        </label>
+      </div>
+    </div>
+
+    <!-- 2. SHIPPING ADDRESS -->
+    <div class="checkout-form-section">
+      <div class="form-section-header">
+        <div class="badge-num">2</div>
+        <h3>Dirección de envío</h3>
+      </div>
+      <div class="form-body">
+        <div class="form-row full">
+          <div class="form-group">
+            <label>País / Región</label>
+            <select class="form-select" id="country">
+              <option value="">Selecciona un país</option>
+              <option value="ES" selected>🇪🇸 España</option>
+              <option value="PT">🇵🇹 Portugal</option>
+              <option value="FR">🇫🇷 Francia</option>
+              <option value="DE">🇩🇪 Alemania</option>
+              <option value="IT">🇮🇹 Italia</option>
+              <option value="GB">🇬🇧 Reino Unido</option>
+              <option value="MX">🇲🇽 México</option>
+              <option value="AR">🇦🇷 Argentina</option>
+              <option value="BR">🇧🇷 Brasil</option>
+              <option value="US">🇺🇸 Estados Unidos</option>
+              <option value="MA">🇲🇦 Marruecos</option>
+              <option value="OTHER">🌍 Otro país</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Dirección</label>
+            <input class="form-input" id="address" type="text" placeholder="Calle y número"/>
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Apartamento, piso, etc. (opcional)</label>
+            <input class="form-input" id="address2" type="text" placeholder="Piso 3B, puerta 2"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Ciudad</label>
+            <input class="form-input" id="city" type="text" placeholder="Madrid"/>
+          </div>
+          <div class="form-group">
+            <label>Provincia</label>
+            <input class="form-input" id="state" type="text" placeholder="Madrid"/>
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Código postal</label>
+            <input class="form-input" id="zip" type="text" placeholder="28001" style="max-width:200px"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. SHIPPING METHOD -->
+    <div class="checkout-form-section">
+      <div class="form-section-header">
+        <div class="badge-num">3</div>
+        <h3>Método de envío</h3>
+      </div>
+      <div class="form-body">
+        <div class="shipping-options">
+          <div class="shipping-opt selected" onclick="selectShipping(this,'standard',0)" id="shipStd">
+            <div class="shipping-opt-left">
+              <div class="shipping-opt-radio"></div>
+              <div class="shipping-opt-info">
+                <strong>Envío estándar</strong>
+                <span>12–18 días laborables · Con número de seguimiento</span>
+              </div>
+            </div>
+            <span class="shipping-opt-price" id="stdPrice">Gratis</span>
+          </div>
+          <div class="shipping-opt" onclick="selectShipping(this,'express',8.99)" id="shipExp">
+            <div class="shipping-opt-left">
+              <div class="shipping-opt-radio"></div>
+              <div class="shipping-opt-info">
+                <strong>Envío express ⚡</strong>
+                <span>7–14 días laborables · Prioritario</span>
+              </div>
+            </div>
+            <span class="shipping-opt-price">+8.99€</span>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--gray);margin-top:12px">💡 Envío gratis en pedidos superiores a 5 camisetas o 60€</p>
+      </div>
+    </div>
+
+    <!-- 4. PAYMENT -->
+    <div class="checkout-form-section">
+      <div class="form-section-header">
+        <div class="badge-num">4</div>
+        <h3>Método de pago · <span style="font-size:12px;color:var(--gray);font-weight:400">🔒 Pago seguro SSL</span></h3>
+      </div>
+      <div class="form-body">
+        <div class="payment-methods">
+          <div class="pay-method active" onclick="selectPayMethod(this,'card')">
+            <span class="pay-method-icon">💳</span>
+            Tarjeta
+          </div>
+          <div class="pay-method" onclick="selectPayMethod(this,'paypal')">
+            <span class="pay-method-icon">🅿️</span>
+            PayPal
+          </div>
+          <div class="pay-method" onclick="selectPayMethod(this,'klarna')">
+            <span class="pay-method-icon">🌸</span>
+            Klarna
+          </div>
+          <div class="pay-method" onclick="selectPayMethod(this,'transfer')">
+            <span class="pay-method-icon">🏦</span>
+            Transferencia
+          </div>
+        </div>
+
+        <!-- CARD FORM -->
+        <div id="cardForm">
+          <div class="form-row full" style="margin-bottom:12px">
+            <div class="form-group">
+              <label>Número de tarjeta</label>
+              <div class="card-field-wrap">
+                <input class="form-input" id="cardNum" type="text" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCard(this)"/>
+                <span class="card-icon" id="cardIcon">💳</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-row" style="margin-bottom:12px">
+            <div class="form-group">
+              <label>Fecha de caducidad</label>
+              <input class="form-input" id="cardExp" type="text" placeholder="MM/AA" maxlength="5" oninput="formatExp(this)"/>
+            </div>
+            <div class="form-group">
+              <label>CVV</label>
+              <div class="card-field-wrap">
+                <input class="form-input" id="cardCVV" type="text" placeholder="123" maxlength="4"/>
+                <span class="card-icon" title="Los 3 dígitos del dorso">❓</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-row full">
+            <div class="form-group">
+              <label>Nombre en la tarjeta</label>
+              <input class="form-input" id="cardName" type="text" placeholder="JUAN GARCÍA"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAYPAL MESSAGE -->
+        <div id="paypalMsg" style="display:none;padding:20px;background:var(--off);border-radius:8px;text-align:center">
+          <div style="font-size:32px;margin-bottom:8px">🅿️</div>
+          <p style="font-size:14px;color:var(--gray)">Serás redirigido a PayPal para completar el pago de forma segura.</p>
+        </div>
+
+        <!-- KLARNA MESSAGE -->
+        <div id="klarnaMsg" style="display:none;padding:20px;background:#fce4ec;border-radius:8px;text-align:center">
+          <div style="font-size:32px;margin-bottom:8px">🌸</div>
+          <p style="font-size:14px;color:#880e4f">Paga en 3 cuotas sin intereses con Klarna. Serás redirigido al completar.</p>
+        </div>
+
+        <!-- TRANSFER MESSAGE -->
+        <div id="transferMsg" style="display:none;padding:20px;background:var(--off);border-radius:8px">
+          <p style="font-size:14px;font-weight:700;margin-bottom:8px">Datos bancarios para transferencia:</p>
+          <p style="font-size:13px;color:var(--gray);line-height:1.8">
+            <strong>Banco:</strong> Banco Santander<br/>
+            <strong>Titular:</strong> KITPRO SUPPLIER S.L.<br/>
+            <strong>IBAN:</strong> ES12 3456 7890 1234 5678 9012<br/>
+            <strong>Concepto:</strong> Tu email de pedido
+          </p>
+        </div>
+
+        <p style="font-size:11px;color:var(--gray);margin-top:12px;display:flex;align-items:center;gap:4px">
+          🔒 Tus datos de pago están cifrados con SSL 256-bit y nunca se almacenan en nuestros servidores.
+        </p>
+      </div>
+    </div>
+
+    <!-- PROMO CODE -->
+    <div class="checkout-form-section">
+      <div class="form-section-header">
+        <div class="badge-num">🎁</div>
+        <h3>Código de descuento</h3>
+      </div>
+      <div class="form-body">
+        <div class="promo-row">
+          <input class="promo-input" id="promoCode" type="text" placeholder="Ingresa tu código"/>
+          <button class="promo-btn" onclick="applyPromo()">Aplicar</button>
+        </div>
+        <p id="promoMsg" style="font-size:12px;margin-top:8px;display:none"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: ORDER SUMMARY -->
+  <div class="order-summary">
+    <div class="summary-header">
+      <h3>Resumen del pedido (<span id="summaryCount">0</span> artículos)</h3>
+    </div>
+    <div class="summary-items" id="summaryItems">
+      <p style="text-align:center;font-size:13px;color:var(--gray);padding:20px 0">Tu carrito está vacío. <a href="index.html" style="color:var(--gold)">Ver productos →</a></p>
+    </div>
+    <div class="summary-totals">
+      <div class="total-row">
+        <span>Subtotal</span>
+        <span id="subtotalDisplay">0.00€</span>
+      </div>
+      <div class="total-row free">
+        <span>Envío</span>
+        <span id="shippingDisplay">Gratis</span>
+      </div>
+      <div class="total-row" id="discountRow" style="display:none">
+        <span>Descuento</span>
+        <span style="color:var(--success)" id="discountDisplay">-0.00€</span>
+      </div>
+      <div class="total-row" id="ivaRow">
+        <span>IVA incluido</span>
+        <span id="ivaDisplay">0.00€</span>
+      </div>
+      <hr class="total-divider"/>
+      <div class="grand-total">
+        <span>Total</span>
+        <span id="totalDisplay">0.00€</span>
+      </div>
+      <button class="btn-pay" onclick="placeOrder()">
+        🔒 Confirmar pedido
+      </button>
+      <p class="pay-note">Al confirmar aceptas los Términos de Servicio y la Política de Privacidad de KITPRO Supplier.</p>
+      <div class="payment-icons-row">
+        <span class="pi">VISA</span>
+        <span class="pi">MC</span>
+        <span class="pi">AMEX</span>
+        <span class="pi">PayPal</span>
+        <span class="pi">Klarna</span>
+        <span class="pi">🔒 SSL</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-box">
+    <div class="success-icon">✅</div>
+    <h2>¡Pedido confirmado!</h2>
+    <p>Gracias por tu compra. Recibirás un email de confirmación con los detalles de tu pedido y el número de seguimiento en cuanto tu pedido sea enviado.</p>
+    <div class="order-num">
+      Número de pedido<br/>
+      <strong id="orderNumber">#KP-000000</strong>
+    </div>
+    <p style="font-size:14px;color:var(--gray);margin-bottom:24px">⏱️ Preparación: 3–5 días · 📦 Envío: 12–18 días</p>
+    <a href="index.html" class="btn-continue">Seguir comprando →</a>
+  </div>
+</div>
+
+<script>
+let cart = JSON.parse(localStorage.getItem('kitpro_cart')||'[]');
+let shippingCost = 0;
+let discount = 0;
+let paymentMethod = 'card';
+
+// ── RENDER SUMMARY ──
+function renderSummary(){
+  const el = document.getElementById('summaryItems');
+  if(!cart.length){
+    el.innerHTML='<p style="text-align:center;font-size:13px;color:var(--gray);padding:20px 0">Tu carrito está vacío. <a href="index.html" style="color:var(--gold)">Ver productos →</a></p>';
+    updateTotals();return;
+  }
+  el.innerHTML = cart.map(item=>`
+  <div class="summary-item">
+    <div class="summary-item-img">
+      <img src="${item.image}" alt="${item.name}" loading="lazy"/>
+      <div class="summary-item-qty">${item.qty}</div>
+    </div>
+    <div class="summary-item-info">
+      <p class="summary-item-name">${item.name}</p>
+      <p class="summary-item-meta">Talla: ${item.size||'M'} · ${item.version==='player'?'Player':'Fan'} Version</p>
+      ${item.custom&&item.custom.trim()?`<p class="summary-item-meta">✂️ ${item.custom}</p>`:''}
+    </div>
+    <span class="summary-item-price">${(item.price*item.qty).toFixed(2)}€</span>
+  </div>`).join('');
+  document.getElementById('summaryCount').textContent = cart.reduce((a,c)=>a+c.qty,0);
+  updateTotals();
+}
+
+function updateTotals(){
+  const subtotal = cart.reduce((a,c)=>a+c.price*c.qty,0);
+  const free = subtotal >= 60 || cart.reduce((a,c)=>a+c.qty,0)>=5;
+  const shipping = free ? 0 : shippingCost;
+  const total = Math.max(0, subtotal + shipping - discount);
+  const iva = total * 0.21 / 1.21;
+
+  document.getElementById('subtotalDisplay').textContent = subtotal.toFixed(2)+'€';
+  document.getElementById('shippingDisplay').textContent = shipping===0 ? 'Gratis 🎉' : shipping.toFixed(2)+'€';
+  document.getElementById('ivaDisplay').textContent = iva.toFixed(2)+'€';
+  document.getElementById('totalDisplay').textContent = total.toFixed(2)+'€';
+
+  if(discount>0){
+    document.getElementById('discountRow').style.display='flex';
+    document.getElementById('discountDisplay').textContent = '-'+discount.toFixed(2)+'€';
+  }
+}
+
+renderSummary();
+
+// ── SHIPPING ──
+let selectedShipping = 'standard';
+function selectShipping(el, method, cost){
+  document.querySelectorAll('.shipping-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedShipping=method; shippingCost=cost;
+  updateTotals();
+}
+
+// ── PAYMENT METHOD ──
+function selectPayMethod(el, method){
+  document.querySelectorAll('.pay-method').forEach(m=>m.classList.remove('active'));
+  el.classList.add('active');
+  paymentMethod=method;
+  document.getElementById('cardForm').style.display = method==='card'?'block':'none';
+  document.getElementById('paypalMsg').style.display = method==='paypal'?'block':'none';
+  document.getElementById('klarnaMsg').style.display = method==='klarna'?'block':'none';
+  document.getElementById('transferMsg').style.display = method==='transfer'?'block':'none';
+}
+
+// ── CARD FORMATTING ──
+function formatCard(el){
+  let v = el.value.replace(/\D/g,'').substring(0,16);
+  el.value = v.replace(/(\d{4})(?=\d)/g,'$1 ');
+  // Card icon
+  const icon = document.getElementById('cardIcon');
+  if(v.startsWith('4')) icon.textContent='💙'; // Visa
+  else if(v.startsWith('5')) icon.textContent='🔴'; // MC
+  else if(v.startsWith('3')) icon.textContent='🟢'; // Amex
+  else icon.textContent='💳';
+}
+function formatExp(el){
+  let v = el.value.replace(/\D/g,'').substring(0,4);
+  if(v.length>=2) v = v.substring(0,2)+'/'+v.substring(2);
+  el.value=v;
+}
+
+// ── PROMO CODE ──
+const promoCodes = {
+  'KITPRO10': 0.10,
+  'MUNDIAL2026': 0.15,
+  'BIENVENIDO': 0.05,
+};
+function applyPromo(){
+  const code = document.getElementById('promoCode').value.toUpperCase().trim();
+  const msg = document.getElementById('promoMsg');
+  msg.style.display='block';
+  if(promoCodes[code]){
+    const subtotal = cart.reduce((a,c)=>a+c.price*c.qty,0);
+    discount = subtotal * promoCodes[code];
+    msg.style.color='var(--success)';
+    msg.textContent = `✓ Código aplicado. Descuento del ${(promoCodes[code]*100).toFixed(0)}%: -${discount.toFixed(2)}€`;
+    updateTotals();
+  } else {
+    msg.style.color='var(--error)';
+    msg.textContent='✗ Código no válido. Prueba: KITPRO10, MUNDIAL2026';
+  }
+}
+
+// ── PLACE ORDER ──
+function placeOrder(){
+  const fields = ['email','firstName','lastName','address','city','zip'];
+  let valid = true;
+  fields.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el.value.trim()){el.classList.add('error');valid=false;}
+    else el.classList.remove('error');
+  });
+  if(document.getElementById('country').value===''){
+    document.getElementById('country').style.borderColor='var(--error)'; valid=false;
+  }
+  if(paymentMethod==='card'){
+    const cardFields=['cardNum','cardExp','cardCVV','cardName'];
+    cardFields.forEach(id=>{
+      const el=document.getElementById(id);
+      if(!el.value.trim()){el.classList.add('error');valid=false;}
+      else el.classList.remove('error');
+    });
+  }
+  if(!valid){
+    document.querySelector('.form-input.error')?.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  if(!cart.length){alert('Tu carrito está vacío.');return;}
+
+  // Simulate processing
+  const btn = document.querySelector('.btn-pay');
+  btn.disabled=true;btn.textContent='⏳ Procesando...';
+  setTimeout(()=>{
+    // Clear cart
+    localStorage.removeItem('kitpro_cart');
+    // Show success
+    const orderId = 'KP-'+Math.floor(100000+Math.random()*900000);
+    document.getElementById('orderNumber').textContent = '#'+orderId;
+    document.getElementById('successOverlay').classList.add('show');
+  },2200);
+}
+
+// ── PROMO CODES HINT ──
+document.getElementById('promoCode').addEventListener('focus',function(){
+  if(!this.placeholder.includes('KITPRO10'))
+    this.placeholder='Prueba: KITPRO10';
+});
+</script>
+</body>
+</html>

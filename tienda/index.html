@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>KITPRO SUPPLIER — Proveedor Oficial de Camisetas de Fútbol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0B1E3C;
+  --navy2:#0d2347;
+  --gold:#C9A844;
+  --gold2:#e0bc55;
+  --white:#fff;
+  --off:#F8F6F0;
+  --gray:#6b7280;
+  --lightgray:#f1f1f1;
+  --border:#e5e7eb;
+  --font:'Inter',-apple-system,sans-serif;
+  --radius:8px;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);color:#111;background:#fff;-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+
+/* ── ANNOUNCEMENT BAR ── */
+.announce{
+  background:var(--gold);color:var(--navy);
+  font-size:13px;font-weight:600;letter-spacing:.5px;
+  text-align:center;padding:9px 16px;
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  flex-wrap:wrap;
+}
+.announce span{display:flex;align-items:center;gap:5px}
+
+/* ── HEADER ── */
+header{background:var(--navy);position:sticky;top:0;z-index:200}
+.header-inner{
+  max-width:1280px;margin:0 auto;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;height:64px;gap:20px;
+}
+.logo{font-size:22px;font-weight:900;letter-spacing:-1px;color:var(--white);white-space:nowrap}
+.logo span{color:var(--gold)}
+nav ul{display:flex;list-style:none;gap:4px}
+nav a{
+  font-size:13px;font-weight:500;color:rgba(255,255,255,.85);
+  padding:6px 12px;border-radius:6px;transition:all .15s;white-space:nowrap;
+}
+nav a:hover{color:#fff;background:rgba(255,255,255,.1)}
+nav a.active{color:var(--gold)}
+.header-actions{display:flex;align-items:center;gap:12px}
+.search-box{
+  display:flex;align-items:center;
+  background:rgba(255,255,255,.1);border-radius:6px;
+  padding:0 12px;gap:8px;height:36px;
+}
+.search-box input{
+  background:transparent;border:none;outline:none;
+  color:#fff;font-size:13px;width:150px;
+}
+.search-box input::placeholder{color:rgba(255,255,255,.5)}
+.search-box svg{flex-shrink:0;opacity:.6}
+.cart-btn{
+  display:flex;align-items:center;gap:6px;
+  background:var(--gold);color:var(--navy);
+  border:none;cursor:pointer;border-radius:6px;
+  padding:8px 14px;font-size:13px;font-weight:700;
+  transition:background .15s;position:relative;
+}
+.cart-btn:hover{background:var(--gold2)}
+.cart-count{
+  background:var(--navy);color:var(--white);
+  border-radius:50%;width:18px;height:18px;
+  font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+.mobile-menu-btn{display:none;background:none;border:none;cursor:pointer;color:#fff;padding:8px}
+
+/* ── HERO SLIDER ── */
+.hero{position:relative;overflow:hidden;height:560px;background:var(--navy2)}
+.hero-slide{
+  position:absolute;inset:0;opacity:0;transition:opacity .8s;
+  display:flex;align-items:center;
+}
+.hero-slide.active{opacity:1}
+.hero-slide img{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;opacity:.35;
+}
+.hero-content{
+  position:relative;z-index:2;max-width:1280px;margin:0 auto;
+  padding:0 40px;width:100%;
+}
+.hero-eyebrow{
+  font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+  color:var(--gold);margin-bottom:16px;
+}
+.hero-title{
+  font-size:clamp(36px,5vw,68px);font-weight:900;
+  color:#fff;line-height:1.05;letter-spacing:-2px;margin-bottom:16px;
+}
+.hero-title em{font-style:normal;color:var(--gold)}
+.hero-sub{font-size:18px;color:rgba(255,255,255,.75);margin-bottom:36px;max-width:500px;line-height:1.6}
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn-gold{
+  background:var(--gold);color:var(--navy);
+  font-weight:700;font-size:15px;padding:14px 28px;
+  border-radius:6px;transition:all .2s;border:none;cursor:pointer;
+}
+.btn-gold:hover{background:var(--gold2);transform:translateY(-1px)}
+.btn-outline{
+  background:transparent;color:#fff;
+  border:1.5px solid rgba(255,255,255,.4);
+  font-weight:600;font-size:15px;padding:14px 28px;border-radius:6px;
+  transition:all .2s;cursor:pointer;
+}
+.btn-outline:hover{background:rgba(255,255,255,.1)}
+.hero-badge{
+  position:absolute;right:60px;top:50%;transform:translateY(-50%);
+  background:var(--gold);color:var(--navy);
+  border-radius:50%;width:120px;height:120px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-weight:900;text-align:center;font-size:11px;letter-spacing:.5px;
+  z-index:2;box-shadow:0 8px 32px rgba(201,168,68,.4);
+}
+.hero-badge .from{font-size:10px;font-weight:500;opacity:.8}
+.hero-badge .price{font-size:26px;letter-spacing:-1px}
+.hero-arrows{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
+.hero-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4);cursor:pointer;transition:background .2s}
+.hero-dot.active{background:var(--gold);width:24px;border-radius:4px}
+
+/* ── TRUST BAR ── */
+.trust-bar{
+  background:var(--navy);padding:20px;
+  display:flex;justify-content:center;gap:0;flex-wrap:wrap;
+  border-top:1px solid rgba(255,255,255,.06);
+}
+.trust-item{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 28px;border-right:1px solid rgba(255,255,255,.08);
+  flex:1;min-width:180px;max-width:240px;
+}
+.trust-item:last-child{border-right:none}
+.trust-icon{font-size:24px;flex-shrink:0}
+.trust-text strong{display:block;font-size:13px;font-weight:700;color:#fff;margin-bottom:2px}
+.trust-text span{font-size:12px;color:rgba(255,255,255,.55)}
+
+/* ── SECTIONS ── */
+.section{padding:64px 20px}
+.section-inner{max-width:1280px;margin:0 auto}
+.section-header{text-align:center;margin-bottom:40px}
+.section-eyebrow{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.section-title{font-size:clamp(24px,4vw,38px);font-weight:800;letter-spacing:-1px;margin-bottom:10px}
+.section-sub{font-size:16px;color:var(--gray);max-width:500px;margin:0 auto}
+
+/* ── PRODUCT GRID ── */
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+.product-card{
+  background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;transition:all .25s;cursor:pointer;
+  display:flex;flex-direction:column;
+}
+.product-card:hover{transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,0,0,.12)}
+.product-card-img{
+  position:relative;overflow:hidden;
+  background:var(--off);aspect-ratio:3/4;
+}
+.product-card-img img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform .4s;
+}
+.product-card:hover .product-card-img img{transform:scale(1.06)}
+.badge{
+  position:absolute;top:10px;left:10px;
+  padding:4px 8px;border-radius:4px;font-size:11px;font-weight:700;
+  letter-spacing:.5px;text-transform:uppercase;
+}
+.badge-sale{background:#ef4444;color:#fff}
+.badge-new{background:var(--navy);color:#fff}
+.badge-popular{background:var(--gold);color:var(--navy)}
+.product-card-body{padding:14px;flex:1;display:flex;flex-direction:column}
+.product-team{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin-bottom:4px}
+.product-name{font-size:14px;font-weight:600;line-height:1.4;margin-bottom:8px;flex:1}
+.product-rating{display:flex;align-items:center;gap:4px;margin-bottom:8px}
+.stars{color:var(--gold);font-size:12px;letter-spacing:1px}
+.rating-count{font-size:11px;color:var(--gray)}
+.product-pricing{display:flex;align-items:center;gap:8px}
+.price-now{font-size:17px;font-weight:800;color:var(--navy)}
+.price-old{font-size:13px;color:var(--gray);text-decoration:line-through}
+.product-card-footer{padding:0 14px 14px}
+.add-to-cart-mini{
+  width:100%;background:var(--navy);color:#fff;
+  border:none;cursor:pointer;border-radius:6px;
+  padding:10px;font-size:13px;font-weight:600;
+  transition:background .2s;
+}
+.add-to-cart-mini:hover{background:var(--gold);color:var(--navy)}
+
+/* ── COLLECTIONS GRID ── */
+.collections-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;
+}
+.collection-card{
+  position:relative;overflow:hidden;border-radius:var(--radius);
+  aspect-ratio:4/5;cursor:pointer;
+}
+.collection-card img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform .5s;
+}
+.collection-card:hover img{transform:scale(1.08)}
+.collection-card-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(11,30,60,.85) 0%,transparent 60%);
+}
+.collection-card-content{
+  position:absolute;bottom:20px;left:20px;color:#fff;
+}
+.collection-card-content span{
+  display:block;font-size:11px;font-weight:600;letter-spacing:2px;
+  text-transform:uppercase;color:var(--gold);margin-bottom:4px;
+}
+.collection-card-content h3{font-size:20px;font-weight:800;line-height:1.2}
+.collection-arrow{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:12px;font-weight:600;color:rgba(255,255,255,.7);
+  margin-top:8px;transition:color .2s;
+}
+.collection-card:hover .collection-arrow{color:#fff}
+
+/* ── PROMO BANNER ── */
+.promo-banner{
+  background:linear-gradient(135deg,var(--navy) 0%,#162d56 100%);
+  padding:70px 20px;
+}
+.promo-inner{
+  max-width:1280px;margin:0 auto;
+  display:flex;align-items:center;gap:60px;flex-wrap:wrap;justify-content:center;
+}
+.promo-text{flex:1;min-width:280px;color:#fff}
+.promo-text .eyebrow{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.promo-text h2{font-size:clamp(28px,4vw,44px);font-weight:900;letter-spacing:-1.5px;margin-bottom:14px}
+.promo-text p{font-size:16px;color:rgba(255,255,255,.7);line-height:1.7;max-width:480px;margin-bottom:28px}
+.promo-steps{display:flex;flex-direction:column;gap:14px;margin-bottom:30px}
+.promo-step{display:flex;align-items:flex-start;gap:12px}
+.step-num{
+  width:28px;height:28px;border-radius:50%;background:var(--gold);
+  color:var(--navy);font-size:13px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;
+}
+.step-text strong{font-size:14px;font-weight:700;display:block;margin-bottom:2px}
+.step-text span{font-size:13px;color:rgba(255,255,255,.6)}
+.promo-visual{
+  flex:1;min-width:280px;max-width:400px;
+  background:rgba(255,255,255,.06);border-radius:16px;padding:30px;
+  border:1px solid rgba(255,255,255,.1);
+}
+.promo-visual h3{font-size:18px;font-weight:700;color:#fff;margin-bottom:16px}
+.benefit-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+.benefit-list li{
+  display:flex;align-items:center;gap:10px;
+  font-size:14px;color:rgba(255,255,255,.8);
+}
+.benefit-list li::before{
+  content:'✓';background:var(--gold);color:var(--navy);
+  width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;flex-shrink:0;
+}
+
+/* ── REVIEWS ── */
+.reviews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.review-card{
+  background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;
+}
+.review-stars{color:var(--gold);font-size:14px;letter-spacing:2px;margin-bottom:10px}
+.review-text{font-size:14px;line-height:1.7;color:#374151;margin-bottom:16px}
+.reviewer{display:flex;align-items:center;gap:10px}
+.reviewer-avatar{
+  width:38px;height:38px;border-radius:50%;
+  background:var(--navy);color:var(--gold);
+  font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;
+}
+.reviewer-name{font-size:13px;font-weight:700}
+.reviewer-sub{font-size:12px;color:var(--gray)}
+.review-product{
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+  font-size:12px;color:var(--gray);
+}
+
+/* ── HOW IT WORKS ── */
+.how-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:24px;margin-top:48px}
+.how-card{text-align:center;padding:32px 24px}
+.how-icon{
+  width:64px;height:64px;border-radius:16px;background:var(--navy);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 16px;font-size:28px;
+}
+.how-card h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.how-card p{font-size:14px;color:var(--gray);line-height:1.6}
+
+/* ── NEWSLETTER ── */
+.newsletter{
+  background:var(--gold);padding:60px 20px;text-align:center;
+}
+.newsletter h2{font-size:clamp(24px,4vw,36px);font-weight:800;color:var(--navy);letter-spacing:-1px;margin-bottom:10px}
+.newsletter p{font-size:16px;color:var(--navy);opacity:.8;margin-bottom:28px}
+.newsletter-form{
+  display:flex;gap:0;max-width:480px;margin:0 auto;border-radius:8px;overflow:hidden;
+  box-shadow:0 4px 24px rgba(0,0,0,.15);
+}
+.newsletter-form input{
+  flex:1;padding:14px 18px;border:none;outline:none;font-size:15px;
+  font-family:var(--font);
+}
+.newsletter-form button{
+  background:var(--navy);color:#fff;border:none;cursor:pointer;
+  padding:14px 24px;font-size:14px;font-weight:700;font-family:var(--font);
+  white-space:nowrap;transition:background .2s;
+}
+.newsletter-form button:hover{background:#162d56}
+
+/* ── FOOTER ── */
+footer{background:var(--navy);color:rgba(255,255,255,.7);padding:56px 20px 24px}
+.footer-inner{max-width:1280px;margin:0 auto}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:48px;padding-bottom:40px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:32px}
+.footer-brand p{font-size:13px;line-height:1.8;margin-top:12px;max-width:260px}
+.footer-col h4{font-size:13px;font-weight:700;color:#fff;margin-bottom:16px;letter-spacing:.5px;text-transform:uppercase}
+.footer-col ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.footer-col a{font-size:13px;transition:color .15s}
+.footer-col a:hover{color:#fff}
+.footer-bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.footer-copy{font-size:12px}
+.payment-icons{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.payment-icon{
+  background:rgba(255,255,255,.08);border-radius:4px;
+  padding:5px 10px;font-size:11px;font-weight:700;color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+}
+.footer-logo{font-size:24px;font-weight:900;color:#fff;letter-spacing:-1px}
+.footer-logo span{color:var(--gold)}
+.social-links{display:flex;gap:10px;margin-top:16px}
+.social-link{
+  width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;transition:background .2s;
+}
+.social-link:hover{background:var(--gold)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1024px){
+  .collections-grid{grid-template-columns:repeat(2,1fr)}
+  .footer-top{grid-template-columns:1fr 1fr}
+}
+@media(max-width:768px){
+  nav{display:none}
+  .search-box{display:none}
+  .mobile-menu-btn{display:block}
+  .hero{height:460px}
+  .hero-badge{display:none}
+  .hero-content{padding:0 20px}
+  .trust-item{border-right:none;border-bottom:1px solid rgba(255,255,255,.08)}
+  .trust-item:last-child{border-bottom:none}
+  .collections-grid{grid-template-columns:repeat(2,1fr)}
+  .footer-top{grid-template-columns:1fr 1fr}
+  .hero-title{letter-spacing:-1px}
+}
+@media(max-width:480px){
+  .announce{font-size:12px;gap:10px}
+  .header-inner{height:56px}
+  .logo{font-size:18px}
+  .collections-grid{grid-template-columns:1fr 1fr}
+  .footer-top{grid-template-columns:1fr}
+}
+
+/* ── MOBILE MENU ── */
+.mobile-nav{
+  display:none;position:fixed;inset:0;z-index:300;
+  background:var(--navy);padding:24px;
+  flex-direction:column;gap:0;
+  overflow-y:auto;
+}
+.mobile-nav.open{display:flex}
+.mobile-nav-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px}
+.mobile-nav ul{list-style:none}
+.mobile-nav a{
+  display:block;font-size:20px;font-weight:700;color:#fff;
+  padding:16px 0;border-bottom:1px solid rgba(255,255,255,.08);
+  transition:color .15s;
+}
+.mobile-nav a:hover{color:var(--gold)}
+.close-btn{background:none;border:none;cursor:pointer;color:#fff;font-size:24px;padding:4px}
+</style>
+</head>
+<body>
+
+<!-- ── ANNOUNCEMENT BAR ── -->
+<div class="announce">
+  <span>🌍 Envío gratuito a partir de 5 camisetas</span>
+  <span>⚡ Sin mínimo de pedido</span>
+  <span>🏆 Fotos reales del producto incluidas</span>
+  <span>✂️ Personalización disponible</span>
+</div>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="header-inner">
+    <a href="index.html" class="logo">KIT<span>PRO</span></a>
+    <nav>
+      <ul>
+        <li><a href="index.html" class="active">Inicio</a></li>
+        <li><a href="index.html#mundial">Mundial 2026</a></li>
+        <li><a href="index.html#europa">Europa</a></li>
+        <li><a href="index.html#retro">Retro</a></li>
+        <li><a href="index.html#ninos">Niños</a></li>
+        <li><a href="index.html#todos">Todos</a></li>
+        <li><a href="index.html#contacto">Contacto</a></li>
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <div class="search-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input type="text" placeholder="Buscar camisetas..."/>
+      </div>
+      <button class="cart-btn" onclick="window.location='pago.html'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 01-8 0"/>
+        </svg>
+        Carrito
+        <span class="cart-count" id="cartCount">0</span>
+      </button>
+      <button class="mobile-menu-btn" onclick="document.getElementById('mobileNav').classList.toggle('open')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ── MOBILE NAV ── -->
+<div class="mobile-nav" id="mobileNav">
+  <div class="mobile-nav-header">
+    <span class="logo">KIT<span style="color:var(--gold)">PRO</span></span>
+    <button class="close-btn" onclick="document.getElementById('mobileNav').classList.remove('open')">✕</button>
+  </div>
+  <ul>
+    <li><a href="index.html">Inicio</a></li>
+    <li><a href="#">Mundial 2026</a></li>
+    <li><a href="#">Europa</a></li>
+    <li><a href="#">Retro</a></li>
+    <li><a href="#">Niños</a></li>
+    <li><a href="#">Todos los productos</a></li>
+    <li><a href="#">Contacto</a></li>
+  </ul>
+</div>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <!-- Slide 1 -->
+  <div class="hero-slide active">
+    <img src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1400&q=80" alt="Hero" loading="eager"/>
+    <div class="hero-content">
+      <p class="hero-eyebrow">Proveedor Nº1 · Mundial 2026</p>
+      <h1 class="hero-title">Camisetas de fútbol<br><em>al precio de fábrica</em></h1>
+      <p class="hero-sub">Sin mínimo de pedido. Fotos reales incluidas. Envío mundial con seguimiento.</p>
+      <div class="hero-btns">
+        <a href="#todos" class="btn-gold">Ver todos los productos</a>
+        <a href="#como-funciona" class="btn-outline">Cómo funciona</a>
+      </div>
+    </div>
+    <div class="hero-badge">
+      <span class="from">Desde</span>
+      <span class="price">14€</span>
+      <span>por unidad</span>
+    </div>
+  </div>
+  <!-- Slide 2 -->
+  <div class="hero-slide">
+    <img src="https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=1400&q=80" alt="Hero 2" loading="lazy"/>
+    <div class="hero-content">
+      <p class="hero-eyebrow">Mundial 2026 · USA · México · Canadá</p>
+      <h1 class="hero-title">Las camisetas<br><em>del mayor Mundial</em><br>de la historia</h1>
+      <p class="hero-sub">48 selecciones. Fan version y Player version. Personalización con nombre y número.</p>
+      <div class="hero-btns">
+        <a href="#mundial" class="btn-gold">Camisetas Mundial 2026</a>
+        <a href="#" class="btn-outline">Player Version</a>
+      </div>
+    </div>
+    <div class="hero-badge">
+      <span class="from">Desde</span>
+      <span class="price">14€</span>
+      <span>Fan Version</span>
+    </div>
+  </div>
+  <!-- Slide 3 -->
+  <div class="hero-slide">
+    <img src="https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1400&q=80" alt="Hero 3" loading="lazy"/>
+    <div class="hero-content">
+      <p class="hero-eyebrow">Modelo Dropshipping · Sin stock</p>
+      <h1 class="hero-title">Vende camisetas<br><em>sin invertir</em><br>en stock</h1>
+      <p class="hero-sub">Nosotros enviamos directamente a tu cliente. Tú te quedas con el margen.</p>
+      <div class="hero-btns">
+        <a href="#promo" class="btn-gold">Empezar a vender</a>
+        <a href="#contacto" class="btn-outline">Hablar con un agente</a>
+      </div>
+    </div>
+  </div>
+  <div class="hero-arrows">
+    <div class="hero-dot active" onclick="goSlide(0)"></div>
+    <div class="hero-dot" onclick="goSlide(1)"></div>
+    <div class="hero-dot" onclick="goSlide(2)"></div>
+  </div>
+</div>
+
+<!-- ── TRUST BAR ── -->
+<div class="trust-bar">
+  <div class="trust-item">
+    <span class="trust-icon">🚫</span>
+    <div class="trust-text">
+      <strong>Sin mínimo de pedido</strong>
+      <span>Pide desde 1 unidad</span>
+    </div>
+  </div>
+  <div class="trust-item">
+    <span class="trust-icon">🌍</span>
+    <div class="trust-text">
+      <strong>Envío mundial</strong>
+      <span>Con número de seguimiento</span>
+    </div>
+  </div>
+  <div class="trust-item">
+    <span class="trust-icon">📦</span>
+    <div class="trust-text">
+      <strong>Envío gratis +5 camisetas</strong>
+      <span>O pedidos superiores a 60€</span>
+    </div>
+  </div>
+  <div class="trust-item">
+    <span class="trust-icon">📸</span>
+    <div class="trust-text">
+      <strong>Fotos reales incluidas</strong>
+      <span>Para tus anuncios y publicaciones</span>
+    </div>
+  </div>
+  <div class="trust-item">
+    <span class="trust-icon">✂️</span>
+    <div class="trust-text">
+      <strong>Personalización</strong>
+      <span>Nombre, número y parches</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── FEATURED: MUNDIAL 2026 ── -->
+<section class="section" id="mundial" style="background:var(--off)">
+  <div class="section-inner">
+    <div class="section-header">
+      <p class="section-eyebrow">Colección Estrella</p>
+      <h2 class="section-title">Camisetas Mundial 2026</h2>
+      <p class="section-sub">Las camisetas oficiales de las principales selecciones del mundo</p>
+    </div>
+    <div class="product-grid" id="worldcupGrid"></div>
+    <div style="text-align:center;margin-top:36px">
+      <a href="#todos" class="btn-gold" style="display:inline-block;padding:14px 36px">Ver todas las camisetas →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── COLLECTIONS GRID ── -->
+<section class="section" id="europa">
+  <div class="section-inner">
+    <div class="section-header">
+      <p class="section-eyebrow">Navegar por colección</p>
+      <h2 class="section-title">Encuentra tu camiseta</h2>
+    </div>
+    <div class="collections-grid">
+      <div class="collection-card">
+        <img src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&q=80" alt="Mundial 2026" loading="lazy"/>
+        <div class="collection-card-overlay"></div>
+        <div class="collection-card-content">
+          <span>48 equipos</span>
+          <h3>Mundial 2026</h3>
+          <span class="collection-arrow">Explorar →</span>
+        </div>
+      </div>
+      <div class="collection-card">
+        <img src="https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=600&q=80" alt="Europa" loading="lazy"/>
+        <div class="collection-card-overlay"></div>
+        <div class="collection-card-content">
+          <span>Top 5 ligas</span>
+          <h3>Clubes Europa</h3>
+          <span class="collection-arrow">Explorar →</span>
+        </div>
+      </div>
+      <div class="collection-card">
+        <img src="https://images.unsplash.com/photo-1493279349096-b99ca5d46f89?w=600&q=80" alt="Retro" loading="lazy"/>
+        <div class="collection-card-overlay"></div>
+        <div class="collection-card-content">
+          <span>Ediciones especiales</span>
+          <h3>Retro & Clásicas</h3>
+          <span class="collection-arrow">Explorar →</span>
+        </div>
+      </div>
+      <div class="collection-card">
+        <img src="https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=600&q=80" alt="Niños" loading="lazy"/>
+        <div class="collection-card-overlay"></div>
+        <div class="collection-card-content">
+          <span>Tallas 2–14 años</span>
+          <h3>Niños & Kids</h3>
+          <span class="collection-arrow">Explorar →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ALL PRODUCTS ── -->
+<section class="section" id="todos" style="background:var(--off)">
+  <div class="section-inner">
+    <div class="section-header">
+      <p class="section-eyebrow">Catálogo completo</p>
+      <h2 class="section-title">Todos los productos</h2>
+      <p class="section-sub">Más de 200 referencias disponibles</p>
+    </div>
+    <!-- Filter pills -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;justify-content:center">
+      <button class="filter-btn active" onclick="filterProducts('all',this)">Todos</button>
+      <button class="filter-btn" onclick="filterProducts('mundial',this)">Mundial 2026</button>
+      <button class="filter-btn" onclick="filterProducts('europa',this)">Europa</button>
+      <button class="filter-btn" onclick="filterProducts('retro',this)">Retro</button>
+      <button class="filter-btn" onclick="filterProducts('ninos',this)">Niños</button>
+      <button class="filter-btn" onclick="filterProducts('player',this)">Player Version</button>
+    </div>
+    <div class="product-grid" id="allProductsGrid"></div>
+  </div>
+</section>
+
+<style>
+.filter-btn{
+  padding:8px 18px;border-radius:20px;border:1.5px solid var(--border);
+  background:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;
+  font-family:var(--font);
+}
+.filter-btn:hover,.filter-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+</style>
+
+<!-- ── PROMO BANNER ── -->
+<div class="promo-banner" id="promo">
+  <div class="promo-inner">
+    <div class="promo-text">
+      <p class="eyebrow">Modelo de negocio</p>
+      <h2>Vende camisetas.<br>Gana dinero.<br>Sin complicaciones.</h2>
+      <p>KITPRO está diseñado para revendedores: Shopify, TikTok, Instagram, Vinted, eBay. Nosotros fabricamos y enviamos. Tú vendes y te quedas el margen.</p>
+      <div class="promo-steps">
+        <div class="promo-step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <strong>Elige los productos</strong>
+            <span>Descarga las fotos reales de producto para tus listados</span>
+          </div>
+        </div>
+        <div class="promo-step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <strong>Pública y vende</strong>
+            <span>En tu tienda online, redes sociales o marketplaces</span>
+          </div>
+        </div>
+        <div class="promo-step">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <strong>Nosotros enviamos</strong>
+            <span>Directamente a tu cliente con código de seguimiento</span>
+          </div>
+        </div>
+      </div>
+      <a href="#contacto" class="btn-gold" style="display:inline-block;padding:14px 32px">Empezar ahora →</a>
+    </div>
+    <div class="promo-visual">
+      <h3>¿Por qué KITPRO?</h3>
+      <ul class="benefit-list">
+        <li>Sin stock ni inversión inicial</li>
+        <li>Calidad premium, muy cercana al original</li>
+        <li>Fotos reales de producto incluidas</li>
+        <li>Nombre y número personalizables</li>
+        <li>Parches de competición disponibles</li>
+        <li>Envío express disponible (7–14 días)</li>
+        <li>Seguimiento de pedido en tiempo real</li>
+        <li>Soporte por WhatsApp y email</li>
+        <li>Sin mínimo de pedido (sin MOQ)</li>
+        <li>Descuentos por volumen desde 5 unidades</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="section" id="como-funciona" style="background:var(--off)">
+  <div class="section-inner">
+    <div class="section-header">
+      <p class="section-eyebrow">Proceso</p>
+      <h2 class="section-title">¿Cómo funciona?</h2>
+    </div>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-icon">🛒</div>
+        <h3>1. Haz tu pedido</h3>
+        <p>Selecciona los productos, talla y personalización. Paga de forma segura con tarjeta, PayPal o transferencia.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon">✅</div>
+        <h3>2. Confirmación</h3>
+        <p>Recibirás un email con el resumen del pedido y las fotos de producto para usar en tus anuncios.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon">📦</div>
+        <h3>3. Preparación</h3>
+        <p>En 3–5 días laborables tu pedido está listo. Revisión de calidad incluida antes del envío.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon">🚀</div>
+        <h3>4. Envío con seguimiento</h3>
+        <p>Envío estándar: 12–18 días. Express: 7–14 días. Tracking en tiempo real por email y WhatsApp.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── REVIEWS ── -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-header">
+      <p class="section-eyebrow">Opiniones verificadas</p>
+      <h2 class="section-title">Lo que dicen nuestros clientes</h2>
+      <p class="section-sub">+1.200 revendedores activos en toda Europa</p>
+    </div>
+    <div class="reviews-grid">
+      <div class="review-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"Llevo 6 meses trabajando con KITPRO y la calidad es increíble. Mis clientes no notan la diferencia con las oficiales. El tejido, los escudos, los detalles... todo está al nivel."</p>
+        <div class="reviewer">
+          <div class="reviewer-avatar">CR</div>
+          <div>
+            <div class="reviewer-name">Carlos R.</div>
+            <div class="reviewer-sub">Revendedor en Instagram · Madrid</div>
+          </div>
+        </div>
+        <p class="review-product">Producto: 2026 España Home Jersey</p>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"Tengo una tienda en Shopify y dropshipping desde aquí. El proceso es rapidísimo, las fotos de producto que incluyen son perfectas para los anuncios. Margen brutal."</p>
+        <div class="reviewer">
+          <div class="reviewer-avatar">LM</div>
+          <div>
+            <div class="reviewer-name">Laura M.</div>
+            <div class="reviewer-sub">Shopify seller · Barcelona</div>
+          </div>
+        </div>
+        <p class="review-product">Producto: Varios · Pedidos semanales</p>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"Pedí la Player Version de Argentina y Portugal. La calidad es brutalmente buena, el tejido es ligero y el escudo bordado es perfecto. Mis clientes repiten."</p>
+        <div class="reviewer">
+          <div class="reviewer-avatar">JF</div>
+          <div>
+            <div class="reviewer-name">João F.</div>
+            <div class="reviewer-sub">Vinted & eBay seller · Portugal</div>
+          </div>
+        </div>
+        <p class="review-product">Producto: Player Version Portugal 2026</p>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">"El Mundial es una mina de oro. Pedí 50 camisetas de 10 países distintos y las vendí todas en 2 semanas en Instagram. La personalización es un plus que no tiene nadie."</p>
+        <div class="reviewer">
+          <div class="reviewer-avatar">MG</div>
+          <div>
+            <div class="reviewer-name">Marta G.</div>
+            <div class="reviewer-sub">TikTok Shop · Valencia</div>
+          </div>
+        </div>
+        <p class="review-product">Producto: 10 camisetas mundialistas</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── NEWSLETTER ── -->
+<div class="newsletter" id="contacto">
+  <h2>Únete a más de 1.200 revendedores</h2>
+  <p>Recibe alertas de nuevos productos, ofertas exclusivas y consejos para maximizar tus ventas.</p>
+  <form class="newsletter-form" onsubmit="return false">
+    <input type="email" placeholder="tu@email.com"/>
+    <button type="submit">Suscribirme →</button>
+  </form>
+  <p style="font-size:13px;color:var(--navy);opacity:.6;margin-top:12px">O escríbenos directamente a <strong>hola@kitprosupplier.com</strong> · WhatsApp disponible</p>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="footer-logo">KIT<span>PRO</span></div>
+        <p>El proveedor de camisetas de fútbol de referencia para revendedores de toda Europa. Sin mínimos. Sin stock. Sin complicaciones.</p>
+        <div class="social-links">
+          <a class="social-link" href="#">📘</a>
+          <a class="social-link" href="#">📷</a>
+          <a class="social-link" href="#">🎵</a>
+          <a class="social-link" href="#">▶️</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Productos</h4>
+        <ul>
+          <li><a href="#">Mundial 2026</a></li>
+          <li><a href="#">Clubes Europa</a></li>
+          <li><a href="#">Retro & Clásicas</a></li>
+          <li><a href="#">Niños & Kids</a></li>
+          <li><a href="#">Player Version</a></li>
+          <li><a href="#">Personalización</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Información</h4>
+        <ul>
+          <li><a href="#">Cómo funciona</a></li>
+          <li><a href="#">Envíos y plazos</a></li>
+          <li><a href="#">Política de devoluciones</a></li>
+          <li><a href="#">Guía de tallas</a></li>
+          <li><a href="#">Preguntas frecuentes</a></li>
+          <li><a href="#">Blog</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contacto</h4>
+        <ul>
+          <li><a href="#">hola@kitprosupplier.com</a></li>
+          <li><a href="#">WhatsApp</a></li>
+          <li><a href="#">Instagram DM</a></li>
+          <li><a href="#">Sobre nosotros</a></li>
+          <li><a href="#">Aviso legal</a></li>
+          <li><a href="#">Privacidad</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="footer-copy">© 2026 KITPRO Supplier. Todos los derechos reservados. Este sitio no tiene afiliación con la FIFA ni con las federaciones nacionales.</p>
+      <div class="payment-icons">
+        <span class="payment-icon">VISA</span>
+        <span class="payment-icon">MC</span>
+        <span class="payment-icon">AMEX</span>
+        <span class="payment-icon">PayPal</span>
+        <span class="payment-icon">Klarna</span>
+        <span class="payment-icon">SEPA</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── PRODUCT DATA ──
+const products = [
+  {id:1,slug:'espana-2026-local',team:'España',name:'2026 Camiseta España Local',type:'mundial',price:14,oldPrice:19,badge:'sale',rating:4.9,reviews:214,image:'https://loremflickr.com/640/800/soccer,jersey,red,spain?random=201',images:['https://loremflickr.com/640/800/soccer,jersey,red,spain?random=201','https://loremflickr.com/640/800/soccer,jersey,red?random=202','https://loremflickr.com/640/800/soccer,shirt,red?random=203','https://loremflickr.com/640/800/football,jersey,spain?random=204']},
+  {id:2,slug:'brasil-2026-local',team:'Brasil',name:'2026 Camiseta Brasil Local',type:'mundial',price:14,oldPrice:19,badge:'sale',rating:4.8,reviews:198,image:'https://loremflickr.com/640/800/soccer,jersey,yellow,brazil?random=211',images:['https://loremflickr.com/640/800/soccer,jersey,yellow,brazil?random=211','https://loremflickr.com/640/800/soccer,jersey,yellow?random=212','https://loremflickr.com/640/800/football,jersey,yellow?random=213','https://loremflickr.com/640/800/soccer,shirt,yellow?random=214']},
+  {id:3,slug:'argentina-2026-local',team:'Argentina',name:'2026 Camiseta Argentina Local',type:'mundial',price:14,oldPrice:19,badge:'sale',rating:5.0,reviews:267,image:'https://loremflickr.com/640/800/soccer,jersey,blue,argentina?random=221',images:['https://loremflickr.com/640/800/soccer,jersey,blue,argentina?random=221','https://loremflickr.com/640/800/soccer,jersey,celeste?random=222','https://loremflickr.com/640/800/football,jersey,argentina?random=223','https://loremflickr.com/640/800/soccer,shirt,blue?random=224']},
+  {id:4,slug:'portugal-2026-player',team:'Portugal',name:'Player Version 2026 Portugal Local',type:'mundial',price:19,badge:'popular',rating:4.9,reviews:156,image:'https://loremflickr.com/640/800/soccer,jersey,red,portugal?random=231',images:['https://loremflickr.com/640/800/soccer,jersey,red,portugal?random=231','https://loremflickr.com/640/800/soccer,jersey,darkred?random=232','https://loremflickr.com/640/800/football,jersey,red?random=233','https://loremflickr.com/640/800/soccer,shirt,portugal?random=234']},
+  {id:5,slug:'mexico-2026',team:'México',name:'2026 Camiseta México Local',type:'mundial',price:14,badge:'new',rating:4.7,reviews:89,image:'https://loremflickr.com/640/800/soccer,jersey,green,mexico?random=241',images:['https://loremflickr.com/640/800/soccer,jersey,green,mexico?random=241','https://loremflickr.com/640/800/soccer,jersey,green?random=242','https://loremflickr.com/640/800/football,jersey,green?random=243','https://loremflickr.com/640/800/soccer,shirt,green?random=244']},
+  {id:6,slug:'francia-2026',team:'Francia',name:'2026 Camiseta Francia Local',type:'mundial',price:14,badge:'new',rating:4.8,reviews:134,image:'https://loremflickr.com/640/800/soccer,jersey,blue,france?random=251',images:['https://loremflickr.com/640/800/soccer,jersey,blue,france?random=251','https://loremflickr.com/640/800/soccer,jersey,darkblue?random=252','https://loremflickr.com/640/800/football,jersey,france?random=253','https://loremflickr.com/640/800/soccer,shirt,dark?random=254']},
+  {id:7,slug:'alemania-2026',team:'Alemania',name:'2026 Camiseta Alemania Local',type:'mundial',price:14,badge:'new',rating:4.7,reviews:102,image:'https://loremflickr.com/640/800/soccer,jersey,white,germany?random=261',images:['https://loremflickr.com/640/800/soccer,jersey,white,germany?random=261','https://loremflickr.com/640/800/soccer,jersey,white?random=262','https://loremflickr.com/640/800/football,jersey,white?random=263','https://loremflickr.com/640/800/soccer,shirt,white?random=264']},
+  {id:8,slug:'inglaterra-2026',team:'Inglaterra',name:'2026 Camiseta Inglaterra Local',type:'mundial',price:14,badge:'',rating:4.6,reviews:87,image:'https://loremflickr.com/640/800/soccer,jersey,white,england?random=271',images:['https://loremflickr.com/640/800/soccer,jersey,white,england?random=271','https://loremflickr.com/640/800/soccer,jersey,england?random=272','https://loremflickr.com/640/800/football,jersey,england?random=273','https://loremflickr.com/640/800/soccer,shirt,england?random=274']},
+  {id:9,slug:'retro-barca-0708',team:'FC Barcelona',name:'Retro 07/08 Barcelona Local',type:'retro',price:19,badge:'',rating:4.9,reviews:178,image:'https://loremflickr.com/640/800/soccer,jersey,barcelona,classic?random=301',images:['https://loremflickr.com/640/800/soccer,jersey,barcelona,classic?random=301','https://loremflickr.com/640/800/soccer,jersey,barcelona?random=302','https://loremflickr.com/640/800/football,jersey,classic?random=303','https://loremflickr.com/640/800/soccer,shirt,classic?random=304']},
+  {id:10,slug:'retro-argentina-maradona',team:'Argentina',name:'Retro 2021 Argentina x Maradona',type:'retro',price:19,badge:'popular',rating:5.0,reviews:234,image:'https://loremflickr.com/640/800/soccer,jersey,argentina,maradona?random=311',images:['https://loremflickr.com/640/800/soccer,jersey,argentina,maradona?random=311','https://loremflickr.com/640/800/soccer,jersey,argentina?random=312','https://loremflickr.com/640/800/football,jersey,maradona?random=313','https://loremflickr.com/640/800/soccer,shirt,argentina?random=314']},
+  {id:11,slug:'retro-portugal-2015',team:'Portugal',name:'Retro 2015 Portugal Visita Negra',type:'retro',price:19,badge:'',rating:4.8,reviews:92,image:'https://loremflickr.com/640/800/soccer,jersey,black,portugal?random=321',images:['https://loremflickr.com/640/800/soccer,jersey,black,portugal?random=321','https://loremflickr.com/640/800/soccer,jersey,black?random=322','https://loremflickr.com/640/800/football,jersey,black?random=323','https://loremflickr.com/640/800/soccer,shirt,black?random=324']},
+  {id:12,slug:'japan-y3-onepiece',team:'Japón',name:'2024 Japan Y3 x One Piece Concept',type:'europa',price:23,badge:'new',rating:4.9,reviews:145,image:'https://loremflickr.com/640/800/soccer,jersey,japan,blue?random=331',images:['https://loremflickr.com/640/800/soccer,jersey,japan,blue?random=331','https://loremflickr.com/640/800/soccer,jersey,japan?random=332','https://loremflickr.com/640/800/football,jersey,japan?random=333','https://loremflickr.com/640/800/soccer,shirt,navy?random=334']},
+  {id:13,slug:'retro-flamengo-1994',team:'Flamengo',name:'Retro 1994 Flamengo 100th Anniversary',type:'retro',price:19,badge:'',rating:4.7,reviews:67,image:'https://loremflickr.com/640/800/soccer,jersey,red,black?random=341',images:['https://loremflickr.com/640/800/soccer,jersey,red,black?random=341','https://loremflickr.com/640/800/soccer,jersey,flamengo?random=342','https://loremflickr.com/640/800/football,jersey,classic?random=343','https://loremflickr.com/640/800/soccer,shirt,redblack?random=344']},
+  {id:14,slug:'espana-2026-visita',team:'España',name:'2026 Camiseta España Visita',type:'mundial',price:14,oldPrice:19,badge:'sale',rating:4.8,reviews:156,image:'https://loremflickr.com/640/800/soccer,jersey,white,spain?random=351',images:['https://loremflickr.com/640/800/soccer,jersey,white,spain?random=351','https://loremflickr.com/640/800/soccer,jersey,spain?random=352','https://loremflickr.com/640/800/football,jersey,spain?random=353','https://loremflickr.com/640/800/soccer,shirt,spain?random=354']},
+  {id:15,slug:'marruecos-2026',team:'Marruecos',name:'2026 Camiseta Marruecos Local',type:'mundial',price:14,badge:'new',rating:4.6,reviews:78,image:'https://loremflickr.com/640/800/soccer,jersey,red,morocco?random=361',images:['https://loremflickr.com/640/800/soccer,jersey,red,morocco?random=361','https://loremflickr.com/640/800/soccer,jersey,morocco?random=362','https://loremflickr.com/640/800/football,jersey,africa?random=363','https://loremflickr.com/640/800/soccer,shirt,red?random=364']},
+  {id:16,slug:'barca-kids',team:'FC Barcelona',name:'Kids 07/08 Barcelona Local',type:'ninos',price:16,badge:'',rating:4.8,reviews:89,image:'https://loremflickr.com/640/800/soccer,jersey,kids,barcelona?random=371',images:['https://loremflickr.com/640/800/soccer,jersey,kids,barcelona?random=371','https://loremflickr.com/640/800/soccer,jersey,kids?random=372','https://loremflickr.com/640/800/football,jersey,children?random=373','https://loremflickr.com/640/800/soccer,shirt,kids?random=374']},
+];
+
+// Render product card
+function renderCard(p){
+  const badgeHtml = p.badge ? `<span class="badge badge-${p.badge}">${p.badge==='sale'?'OFERTA':p.badge==='new'?'NUEVO':'POPULAR'}</span>` : '';
+  const oldPriceHtml = p.oldPrice ? `<span class="price-old">${p.oldPrice}€</span>` : '';
+  const stars = '★'.repeat(Math.round(p.rating)) + '☆'.repeat(5-Math.round(p.rating));
+  return `
+  <div class="product-card" onclick="window.location='producto.html?id=${p.id}'">
+    <div class="product-card-img">
+      <img src="${p.image}" alt="${p.name}" loading="lazy"/>
+      ${badgeHtml}
+    </div>
+    <div class="product-card-body">
+      <p class="product-team">${p.team}</p>
+      <p class="product-name">${p.name}</p>
+      <div class="product-rating">
+        <span class="stars">${stars}</span>
+        <span class="rating-count">(${p.reviews})</span>
+      </div>
+      <div class="product-pricing">
+        <span class="price-now">${p.price}€</span>
+        ${oldPriceHtml}
+      </div>
+    </div>
+    <div class="product-card-footer">
+      <button class="add-to-cart-mini" onclick="event.stopPropagation();addToCart(${p.id})">+ Añadir al carrito</button>
+    </div>
+  </div>`;
+}
+
+// Populate grids
+const worldcupGrid = document.getElementById('worldcupGrid');
+const worldcup = products.filter(p=>p.type==='mundial').slice(0,8);
+worldcupGrid.innerHTML = worldcup.map(renderCard).join('');
+
+const allGrid = document.getElementById('allProductsGrid');
+allGrid.innerHTML = products.map(renderCard).join('');
+
+// Filter
+function filterProducts(type, btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = type==='all' ? products : products.filter(p=>p.type===type);
+  allGrid.innerHTML = filtered.map(renderCard).join('');
+}
+
+// Cart
+let cart = JSON.parse(localStorage.getItem('kitpro_cart')||'[]');
+function updateCartCount(){document.getElementById('cartCount').textContent=cart.reduce((a,c)=>a+c.qty,0)}
+updateCartCount();
+function addToCart(id){
+  const p = products.find(x=>x.id===id);
+  const existing = cart.find(x=>x.id===id);
+  if(existing) existing.qty++;
+  else cart.push({id,name:p.name,price:p.price,image:p.image,qty:1,size:'M'});
+  localStorage.setItem('kitpro_cart',JSON.stringify(cart));
+  updateCartCount();
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent='✓ Añadido';btn.style.background='var(--gold)';btn.style.color='var(--navy)';
+  setTimeout(()=>{btn.textContent=orig;btn.style.background='';btn.style.color=''},1500);
+}
+
+// Hero slider
+let currentSlide=0;
+const slides=document.querySelectorAll('.hero-slide');
+const dots=document.querySelectorAll('.hero-dot');
+function goSlide(n){
+  slides[currentSlide].classList.remove('active');
+  dots[currentSlide].classList.remove('active');
+  currentSlide=n;
+  slides[currentSlide].classList.add('active');
+  dots[currentSlide].classList.add('active');
+}
+setInterval(()=>goSlide((currentSlide+1)%slides.length),5000);
+
+// Store products globally for other pages
+window.KITPRO_PRODUCTS = products;
+localStorage.setItem('kitpro_products', JSON.stringify(products));
+</script>
+</body>
+</html>
