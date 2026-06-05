@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mundial 2026 — Camisetas Oficiales</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --nav-h: 44px;
+      --bg: #fff;
+      --fg: #1d1d1f;
+      --muted: #6e6e73;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --border: rgba(0,0,0,.08);
+      --glass: rgba(255,255,255,.72);
+      --card-bg: #f5f5f7;
+      --radius: 18px;
+      --font: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--fg);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      height: var(--nav-h);
+      background: var(--glass);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-inner {
+      width: 100%; max-width: 980px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 22px;
+    }
+    .nav-logo {
+      font-size: 15px; font-weight: 700; letter-spacing: -.4px;
+      text-decoration: none; color: var(--fg);
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links {
+      display: flex; gap: 28px; list-style: none;
+    }
+    .nav-links a {
+      font-size: 13px; color: var(--fg); text-decoration: none;
+      opacity: .8; transition: opacity .15s;
+    }
+    .nav-links a:hover { opacity: 1; }
+    .nav-cta {
+      font-size: 13px; color: var(--accent);
+      text-decoration: none; font-weight: 500;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: calc(100vh - var(--nav-h));
+      background: #000;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 80px 22px;
+      position: relative; overflow: hidden;
+    }
+    .hero-eyebrow {
+      font-size: 17px; font-weight: 600; letter-spacing: .5px;
+      color: #f5a623; text-transform: uppercase; margin-bottom: 16px;
+    }
+    .hero-title {
+      font-size: clamp(48px, 8vw, 96px);
+      font-weight: 800; line-height: 1.02;
+      letter-spacing: -3px; color: #f5f5f7;
+      margin-bottom: 20px;
+    }
+    .hero-title em { font-style: normal; color: #f5a623; }
+    .hero-sub {
+      font-size: clamp(18px, 2.5vw, 24px);
+      font-weight: 300; color: #a1a1a6;
+      max-width: 560px; line-height: 1.5; margin-bottom: 44px;
+    }
+    .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 14px 28px; border-radius: 980px;
+      font-size: 17px; font-weight: 500; text-decoration: none;
+      transition: all .2s; cursor: pointer; border: none;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); transform: scale(1.02); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--accent);
+      border: 1.5px solid rgba(0,113,227,.4);
+    }
+    .btn-ghost:hover { background: rgba(0,113,227,.08); }
+
+    /* Hero shirt SVGs grid */
+    .hero-shirts {
+      margin-top: 64px;
+      display: flex; gap: 32px; flex-wrap: wrap; justify-content: center;
+      opacity: .9;
+    }
+    .hero-shirt { transition: transform .3s; }
+    .hero-shirt:hover { transform: translateY(-8px) scale(1.05); }
+
+    /* ─── TICKER ─── */
+    .ticker-wrap {
+      overflow: hidden; background: #f5a623; padding: 10px 0;
+    }
+    .ticker {
+      display: flex; gap: 60px; white-space: nowrap;
+      animation: ticker 22s linear infinite;
+    }
+    .ticker span {
+      font-size: 13px; font-weight: 600; letter-spacing: 1px;
+      text-transform: uppercase; color: #000;
+    }
+    @keyframes ticker {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* ─── SECTION HEADER ─── */
+    .section { padding: 100px 22px; }
+    .section-center { text-align: center; }
+    .eyebrow {
+      font-size: 14px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+    }
+    .h2 {
+      font-size: clamp(32px, 5vw, 56px);
+      font-weight: 700; letter-spacing: -1.5px; line-height: 1.07;
+      margin-bottom: 14px;
+    }
+    .lead {
+      font-size: 19px; font-weight: 300; color: var(--muted);
+      max-width: 580px; margin: 0 auto; line-height: 1.6;
+    }
+
+    /* ─── FEATURED CARD (dark) ─── */
+    .featured {
+      background: #000; color: #f5f5f7;
+      padding: 100px 22px;
+      text-align: center;
+    }
+    .featured .eyebrow { color: #f5a623; }
+    .featured .lead { color: #a1a1a6; }
+    .featured-card {
+      margin: 60px auto 0;
+      max-width: 860px;
+      background: #1c1c1e;
+      border-radius: 28px;
+      padding: 60px 40px;
+      display: flex; align-items: center; gap: 60px;
+      flex-wrap: wrap; justify-content: center;
+    }
+    .featured-info { flex: 1; min-width: 240px; text-align: left; }
+    .featured-info .eyebrow { color: #f5a623; }
+    .featured-info h3 {
+      font-size: 40px; font-weight: 800;
+      letter-spacing: -1.5px; margin: 8px 0 14px;
+    }
+    .featured-info p { font-size: 17px; color: #a1a1a6; line-height: 1.6; margin-bottom: 32px; }
+    .price-tag {
+      font-size: 28px; font-weight: 700; color: #f5f5f7; margin-bottom: 28px;
+    }
+    .price-tag sup { font-size: 16px; vertical-align: super; }
+    .featured-shirt { flex-shrink: 0; }
+
+    /* ─── PRODUCT GRID ─── */
+    .grid-container { max-width: 1200px; margin: 0 auto; }
+    .grid-title { text-align: center; margin-bottom: 48px; }
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .product-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: transform .3s, box-shadow .3s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex; flex-direction: column;
+    }
+    .product-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,.12);
+    }
+    .product-img {
+      padding: 36px 28px 20px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(160deg, var(--card-bg) 60%, rgba(0,0,0,.04));
+      min-height: 220px;
+    }
+    .product-img svg { transition: transform .3s; }
+    .product-card:hover .product-img svg { transform: scale(1.06) rotate(-2deg); }
+    .product-info { padding: 0 20px 24px; flex: 1; display: flex; flex-direction: column; }
+    .product-flag { font-size: 22px; margin-bottom: 6px; }
+    .product-name { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+    .product-type { font-size: 13px; color: var(--muted); margin-bottom: 14px; flex: 1; }
+    .product-price { font-size: 15px; font-weight: 500; }
+    .add-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--accent); font-size: 13px; font-weight: 500;
+      margin-top: 10px; text-decoration: none;
+    }
+    .add-btn svg { transition: transform .2s; }
+    .add-btn:hover svg { transform: translateX(3px); }
+
+    /* ─── SPLIT SECTIONS ─── */
+    .split {
+      display: flex; align-items: center; gap: 80px;
+      max-width: 1100px; margin: 0 auto;
+      flex-wrap: wrap;
+    }
+    .split-text { flex: 1; min-width: 280px; }
+    .split-text h2 { font-size: clamp(28px,4vw,48px); font-weight: 700; letter-spacing: -1.2px; margin-bottom: 16px; }
+    .split-text p { font-size: 17px; color: var(--muted); line-height: 1.7; margin-bottom: 24px; }
+    .split-visual { flex: 1; min-width: 280px; display: flex; justify-content: center; }
+    .split.reverse { flex-direction: row-reverse; }
+
+    /* ─── DARK SPLIT ─── */
+    .dark-section {
+      background: #000; color: #f5f5f7;
+      padding: 100px 22px;
+    }
+    .dark-section .muted { color: #a1a1a6; }
+    .dark-section .btn-ghost { color: #2997ff; border-color: rgba(41,151,255,.4); }
+    .dark-section .btn-ghost:hover { background: rgba(41,151,255,.1); }
+
+    /* ─── STATS BAR ─── */
+    .stats-bar {
+      background: #f5f5f7; padding: 60px 22px;
+      display: flex; justify-content: center; flex-wrap: wrap; gap: 0;
+    }
+    .stat-item {
+      flex: 1; min-width: 180px; max-width: 260px;
+      text-align: center; padding: 20px;
+      border-right: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-num {
+      font-size: 48px; font-weight: 700; letter-spacing: -2px;
+      color: var(--fg); margin-bottom: 6px;
+    }
+    .stat-num span { font-size: 24px; font-weight: 500; }
+    .stat-label { font-size: 14px; color: var(--muted); }
+
+    /* ─── COUNTRIES STRIP ─── */
+    .countries-strip {
+      background: #000; padding: 80px 22px; text-align: center;
+    }
+    .countries-strip h2 { color: #f5f5f7; font-size: clamp(28px,4vw,44px); font-weight: 700; letter-spacing: -1.2px; margin-bottom: 50px; }
+    .countries-grid {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 16px; max-width: 900px; margin: 0 auto;
+    }
+    .country-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: #1c1c1e; color: #f5f5f7;
+      padding: 10px 18px; border-radius: 980px;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: background .2s;
+    }
+    .country-pill:hover { background: #2c2c2e; }
+
+    /* ─── PROCESS STEPS ─── */
+    .steps-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 24px; max-width: 1000px; margin: 50px auto 0;
+    }
+    .step-card {
+      background: var(--card-bg); border-radius: var(--radius); padding: 36px 28px;
+    }
+    .step-num {
+      width: 40px; height: 40px; border-radius: 12px;
+      background: var(--accent); color: #fff;
+      font-size: 17px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+    }
+    .step-card h3 { font-size: 19px; font-weight: 600; margin-bottom: 10px; }
+    .step-card p { font-size: 15px; color: var(--muted); line-height: 1.6; }
+
+    /* ─── TESTIMONIALS ─── */
+    .testimonials { background: #f5f5f7; padding: 100px 22px; text-align: center; }
+    .reviews-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px; max-width: 1000px; margin: 50px auto 0;
+    }
+    .review-card {
+      background: #fff; border-radius: var(--radius); padding: 32px 28px; text-align: left;
+      box-shadow: 0 4px 24px rgba(0,0,0,.06);
+    }
+    .stars { color: #f5a623; font-size: 15px; letter-spacing: 2px; margin-bottom: 14px; }
+    .review-text { font-size: 15px; line-height: 1.65; color: var(--fg); margin-bottom: 20px; }
+    .reviewer { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .reviewer-name { font-size: 13px; font-weight: 600; }
+    .reviewer-sub { font-size: 12px; color: var(--muted); }
+
+    /* ─── CTA FULL ─── */
+    .cta-full {
+      background: linear-gradient(135deg, #0071e3 0%, #005bb5 100%);
+      color: #fff; padding: 100px 22px; text-align: center;
+    }
+    .cta-full h2 { font-size: clamp(36px,5vw,64px); font-weight: 800; letter-spacing: -2px; margin-bottom: 18px; }
+    .cta-full p { font-size: 19px; opacity: .8; max-width: 500px; margin: 0 auto 44px; line-height: 1.6; }
+    .btn-white { background: #fff; color: var(--accent); }
+    .btn-white:hover { background: rgba(255,255,255,.9); transform: scale(1.02); }
+    .btn-outline-white { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.5); }
+    .btn-outline-white:hover { background: rgba(255,255,255,.1); }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: #f5f5f7; border-top: 1px solid var(--border);
+      padding: 40px 22px 24px; font-size: 13px; color: var(--muted);
+    }
+    .footer-inner { max-width: 980px; margin: 0 auto; }
+    .footer-disclaimer { padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px; line-height: 1.6; }
+    .footer-cols {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 24px; margin-bottom: 32px;
+    }
+    .footer-col h4 { font-size: 12px; font-weight: 600; color: var(--fg); margin-bottom: 14px; text-transform: uppercase; letter-spacing: .5px; }
+    .footer-col ul { list-style: none; }
+    .footer-col li { margin-bottom: 8px; }
+    .footer-col a { color: var(--muted); text-decoration: none; transition: color .15s; }
+    .footer-col a:hover { color: var(--fg); }
+    .footer-bottom { display: flex; gap: 20px; flex-wrap: wrap; justify-content: space-between; align-items: center; }
+    .footer-copy { font-size: 12px; }
+    .footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 12px; }
+    .footer-links a:hover { color: var(--fg); }
+
+    /* ─── SCROLL ANIMATIONS ─── */
+    .fade-up {
+      opacity: 0; transform: translateY(30px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 700px) {
+      .nav-links { display: none; }
+      .split, .split.reverse { flex-direction: column; }
+      .featured-card { flex-direction: column; text-align: center; }
+      .featured-info { text-align: center; }
+      .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+      .stat-item:last-child { border-bottom: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="#"><span>⚽</span> Mundial 2026</a>
+    <ul class="nav-links">
+      <li><a href="#selecciones">Selecciones</a></li>
+      <li><a href="#featured">Destacadas</a></li>
+      <li><a href="#local">Local</a></li>
+      <li><a href="#visita">Visita</a></li>
+      <li><a href="#nosotros">Nosotros</a></li>
+    </ul>
+    <a class="nav-cta" href="#selecciones">Comprar →</a>
+  </div>
+</nav>
+
+<!-- ═══ TICKER ═══ -->
+<div class="ticker-wrap" aria-hidden="true">
+  <div class="ticker">
+    <span>🇪🇸 ESPAÑA</span><span>🇧🇷 BRASIL</span><span>🇦🇷 ARGENTINA</span>
+    <span>🇫🇷 FRANCIA</span><span>🇩🇪 ALEMANIA</span><span>🇵🇹 PORTUGAL</span>
+    <span>🏴󠁧󠁢󠁥󠁮󠁧󠁿 INGLATERRA</span><span>🇺🇸 EE.UU.</span><span>🇲🇽 MÉXICO</span>
+    <span>🇲🇦 MARRUECOS</span><span>🇯🇵 JAPÓN</span><span>🇸🇳 SENEGAL</span>
+    <!-- duplicate for seamless loop -->
+    <span>🇪🇸 ESPAÑA</span><span>🇧🇷 BRASIL</span><span>🇦🇷 ARGENTINA</span>
+    <span>🇫🇷 FRANCIA</span><span>🇩🇪 ALEMANIA</span><span>🇵🇹 PORTUGAL</span>
+    <span>🏴󠁧󠁢󠁥󠁮󠁧󠁿 INGLATERRA</span><span>🇺🇸 EE.UU.</span><span>🇲🇽 MÉXICO</span>
+    <span>🇲🇦 MARRUECOS</span><span>🇯🇵 JAPÓN</span><span>🇸🇳 SENEGAL</span>
+  </div>
+</div>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <p class="hero-eyebrow">FIFA World Cup 2026™</p>
+  <h1 class="hero-title">La camiseta<br>que <em>cuenta</em><br>la historia.</h1>
+  <p class="hero-sub">Las camisetas oficiales del Mundial 2026. Diseñadas para los hinchas que viven el fútbol.</p>
+  <div class="hero-btns">
+    <a href="#selecciones" class="btn btn-primary">Ver colección</a>
+    <a href="#featured" class="btn btn-ghost" style="color:#2997ff;border-color:rgba(41,151,255,.4)">Camiseta destacada</a>
+  </div>
+
+  <!-- Mini shirt showcase -->
+  <div class="hero-shirts">
+    <!-- Spain -->
+    <svg class="hero-shirt" width="90" height="100" viewBox="0 0 90 100" fill="none">
+      <path d="M20 10 L10 30 L20 32 L20 90 L70 90 L70 32 L80 30 L70 10 L55 18 L45 16 L35 18 Z" fill="#C60B1E"/>
+      <path d="M20 10 L10 30 L20 32 L20 50 L70 50 L70 32 L80 30 L70 10 L55 18 L45 16 L35 18 Z" fill="#C60B1E"/>
+      <path d="M20 50 L20 70 L70 70 L70 50 Z" fill="#F1B300"/>
+      <path d="M20 70 L20 90 L70 90 L70 70 Z" fill="#C60B1E"/>
+      <circle cx="45" cy="40" r="6" fill="#F1B300" opacity=".6"/>
+    </svg>
+    <!-- Brazil -->
+    <svg class="hero-shirt" width="90" height="100" viewBox="0 0 90 100" fill="none">
+      <path d="M20 10 L10 30 L20 32 L20 90 L70 90 L70 32 L80 30 L70 10 L55 18 L45 16 L35 18 Z" fill="#009C3B"/>
+      <path d="M28 48 L45 35 L62 48 L55 68 L35 68 Z" fill="#FFDF00"/>
+      <circle cx="45" cy="52" r="8" fill="#002776"/>
+      <path d="M38 52 Q45 47 52 52" stroke="#fff" stroke-width="1.5" fill="none"/>
+    </svg>
+    <!-- Argentina -->
+    <svg class="hero-shirt" width="90" height="100" viewBox="0 0 90 100" fill="none">
+      <path d="M20 10 L10 30 L20 32 L20 90 L70 90 L70 32 L80 30 L70 10 L55 18 L45 16 L35 18 Z" fill="#75AADB"/>
+      <rect x="20" y="38" width="50" height="12" fill="#fff"/>
+      <rect x="20" y="58" width="50" height="12" fill="#fff"/>
+      <circle cx="45" cy="32" r="5" fill="#F6B40E"/>
+    </svg>
+    <!-- France -->
+    <svg class="hero-shirt" width="90" height="100" viewBox="0 0 90 100" fill="none">
+      <path d="M20 10 L10 30 L20 32 L20 90 L70 90 L70 32 L80 30 L70 10 L55 18 L45 16 L35 18 Z" fill="#002395"/>
+      <circle cx="45" cy="42" r="9" fill="#fff" opacity=".15"/>
+      <text x="45" y="47" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="serif">FFF</text>
+    </svg>
+    <!-- Germany -->
+    <svg class="hero-shirt" width="90" height="100" viewBox="0 0 90 100" fill="none">
+      <path d="M20 10 L10 30 L20 32 L20 90 L70 90 L70 32 L80 30 L70 10 L55 18 L45 16 L35 18 Z" fill="#fff" stroke="#ddd" stroke-width="1"/>
+      <rect x="20" y="10" width="50" height="16" fill="#000" rx="2"/>
+      <rect x="20" y="74" width="50" height="16" fill="#DD0000"/>
+      <circle cx="45" cy="48" r="7" fill="#000" opacity=".08"/>
+    </svg>
+    <!-- Portugal -->
+    <svg class="hero-shirt" width="90" height="100" viewBox="0 0 90 100" fill="none">
+      <path d="M20 10 L10 30 L20 32 L20 90 L70 90 L70 32 L80 30 L70 10 L55 18 L45 16 L35 18 Z" fill="#D80000"/>
+      <rect x="20" y="10" width="20" height="80" fill="#006600"/>
+      <circle cx="32" cy="48" r="8" fill="#FFD700" stroke="#fff" stroke-width="1"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ═══ STATS ═══ -->
+<div class="stats-bar">
+  <div class="stat-item fade-up">
+    <div class="stat-num">48<span>eq.</span></div>
+    <div class="stat-label">Selecciones participantes</div>
+  </div>
+  <div class="stat-item fade-up">
+    <div class="stat-num">104<span>+</span></div>
+    <div class="stat-label">Partidos en el torneo</div>
+  </div>
+  <div class="stat-item fade-up">
+    <div class="stat-num">3<span>países</span></div>
+    <div class="stat-label">EE.UU., México y Canadá</div>
+  </div>
+  <div class="stat-item fade-up">
+    <div class="stat-num">16<span>sedes</span></div>
+    <div class="stat-label">Estadios oficiales</div>
+  </div>
+</div>
+
+<!-- ═══ FEATURED DARK ═══ -->
+<section class="featured" id="featured">
+  <p class="eyebrow fade-up">Camiseta de la temporada</p>
+  <h2 class="h2 fade-up" style="color:#f5f5f7">España.<br>La Roja que nunca muere.</h2>
+  <p class="lead fade-up">Portada doble del Mundial. Tejido transpirable DryTech™, escudo bordado y número de dorsal personalizable.</p>
+
+  <div class="featured-card fade-up">
+    <div class="featured-shirt">
+      <svg width="200" height="220" viewBox="0 0 200 220" fill="none">
+        <path d="M45 22 L20 65 L42 70 L42 200 L158 200 L158 70 L180 65 L155 22 L122 38 L100 34 L78 38 Z" fill="#C60B1E"/>
+        <path d="M45 22 L20 65 L42 70 L42 110 L158 110 L158 70 L180 65 L155 22 L122 38 L100 34 L78 38 Z" fill="#C60B1E"/>
+        <path d="M42 110 L42 145 L158 145 L158 110 Z" fill="#F1B300"/>
+        <path d="M42 145 L42 200 L158 200 L158 145 Z" fill="#C60B1E"/>
+        <!-- collar -->
+        <path d="M78 38 Q100 50 122 38" stroke="#000" stroke-width="2" fill="none"/>
+        <!-- badge -->
+        <circle cx="82" cy="78" r="16" fill="#F1B300"/>
+        <text x="82" y="83" text-anchor="middle" fill="#C60B1E" font-size="10" font-weight="bold" font-family="serif">RFEF</text>
+        <!-- stripes -->
+        <rect x="42" y="110" width="116" height="4" fill="#F1B300" opacity=".4"/>
+        <rect x="42" y="141" width="116" height="4" fill="#F1B300" opacity=".4"/>
+      </svg>
+    </div>
+    <div class="featured-info">
+      <p class="eyebrow">Local · 2026</p>
+      <h3>España Oficial</h3>
+      <p>Camiseta local de la selección española para el Mundial 2026. Fabricada con tejido reciclado de alta tecnología.</p>
+      <div class="price-tag"><sup>€</sup>119<span style="font-size:16px;color:#a1a1a6;font-weight:400"> / unidad</span></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <a href="#" class="btn btn-primary" style="font-size:15px;padding:12px 22px;">Comprar</a>
+        <a href="#" class="btn btn-ghost" style="font-size:15px;padding:12px 22px;">Más información</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PRODUCT GRID ═══ -->
+<section class="section" id="selecciones">
+  <div class="grid-container">
+    <div class="grid-title fade-up">
+      <p class="eyebrow">Colección completa</p>
+      <h2 class="h2">Elige tu selección.</h2>
+      <p class="lead">Camisetas oficiales de las principales selecciones del Mundial 2026.</p>
+    </div>
+
+    <div class="product-grid">
+
+      <!-- Spain -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#fff2f2,#ffe0e0);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#C60B1E"/>
+            <path d="M26 68L26 86L94 86L94 68Z" fill="#F1B300"/>
+            <path d="M26 86L26 120L94 120L94 86Z" fill="#C60B1E"/>
+            <path d="M46 22Q60 30 74 22" stroke="#8B0000" stroke-width="2" fill="none"/>
+            <circle cx="50" cy="50" r="10" fill="#F1B300"/><text x="50" y="55" text-anchor="middle" fill="#C60B1E" font-size="7" font-weight="bold">RFEF</text>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇪🇸</div>
+          <div class="product-name">España — Local</div>
+          <div class="product-type">Camiseta oficial · Roja · DryTech™</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Brazil -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#f0fff4,#d4f5e0);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#009C3B"/>
+            <path d="M34 62L60 46L86 62L78 88L42 88Z" fill="#FFDF00"/>
+            <circle cx="60" cy="68" r="12" fill="#002776"/>
+            <path d="M50 68Q60 62 70 68" stroke="#fff" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇧🇷</div>
+          <div class="product-name">Brasil — Local</div>
+          <div class="product-type">Camiseta oficial · Amarilla · Canarinha</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Argentina -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#f0f8ff,#daeeff);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#75AADB"/>
+            <rect x="26" y="55" width="68" height="16" fill="#fff"/>
+            <rect x="26" y="80" width="68" height="16" fill="#fff"/>
+            <circle cx="60" cy="43" r="7" fill="#F6B40E"/>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇦🇷</div>
+          <div class="product-name">Argentina — Local</div>
+          <div class="product-type">Camiseta oficial · Celeste · Campeones</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- France -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#f0f0ff,#dde0ff);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#002395"/>
+            <path d="M46 22Q60 30 74 22" stroke="#001a70" stroke-width="2" fill="none"/>
+            <circle cx="50" cy="55" r="12" fill="#fff" opacity=".1"/>
+            <text x="50" y="59" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold" font-family="serif">FFF</text>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇫🇷</div>
+          <div class="product-name">Francia — Local</div>
+          <div class="product-type">Camiseta oficial · Azul · Les Bleus</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Germany -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#f8f8f8,#efefef);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#fff" stroke="#ddd" stroke-width="1"/>
+            <rect x="26" y="14" width="68" height="22" fill="#000"/>
+            <rect x="26" y="98" width="68" height="22" fill="#DD0000"/>
+            <circle cx="50" cy="58" r="10" fill="#000" opacity=".06"/>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇩🇪</div>
+          <div class="product-name">Alemania — Local</div>
+          <div class="product-type">Camiseta oficial · Blanca · Die Mannschaft</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Portugal -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#fff5f5,#ffe0e0);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#D80000"/>
+            <rect x="26" y="14" width="28" height="106" fill="#006600"/>
+            <circle cx="42" cy="68" r="12" fill="#FFD700" stroke="#fff" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇵🇹</div>
+          <div class="product-name">Portugal — Local</div>
+          <div class="product-type">Camiseta oficial · Roja · Seleção</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- England -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#f5f5ff,#e8e8f8);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#fff" stroke="#ddd"/>
+            <rect x="55" y="14" width="10" height="106" fill="#C8102E"/>
+            <rect x="26" y="63" width="68" height="10" fill="#C8102E"/>
+            <circle cx="50" cy="52" r="8" fill="#C8102E" opacity=".1"/>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🏴󠁧󠁢󠁥󠁮󠁧󠁿</div>
+          <div class="product-name">Inglaterra — Local</div>
+          <div class="product-type">Camiseta oficial · Blanca · Three Lions</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- USA -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#f5f5ff,#dde8ff);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#fff" stroke="#ddd"/>
+            <rect x="26" y="14" width="68" height="15" fill="#B22234"/>
+            <rect x="26" y="43" width="68" height="15" fill="#B22234"/>
+            <rect x="26" y="72" width="68" height="15" fill="#B22234"/>
+            <rect x="26" y="101" width="68" height="19" fill="#B22234"/>
+            <rect x="26" y="14" width="30" height="44" fill="#3C3B6E"/>
+            <text x="41" y="40" text-anchor="middle" fill="#fff" font-size="14">★</text>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇺🇸</div>
+          <div class="product-name">Estados Unidos — Local</div>
+          <div class="product-type">Camiseta oficial · Blanca · USMNT</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Mexico -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#f0fff4,#d4f5e0);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#006847"/>
+            <rect x="52" y="14" width="24" height="106" fill="#fff"/>
+            <rect x="70" y="14" width="24" height="106" fill="#CE1126"/>
+            <circle cx="60" cy="70" r="9" fill="#8B4513" opacity=".6"/>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇲🇽</div>
+          <div class="product-name">México — Local</div>
+          <div class="product-type">Camiseta oficial · Verde · El Tri</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Morocco -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#fff8f8,#ffe8e8);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#C1272D"/>
+            <path d="M60 48 L64 60 L76 60 L67 67 L70 79 L60 72 L50 79 L53 67 L44 60 L56 60 Z" fill="none" stroke="#006233" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇲🇦</div>
+          <div class="product-name">Marruecos — Local</div>
+          <div class="product-type">Camiseta oficial · Roja · Atlas Lions</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Japan -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#f0f0ff,#dde4ff);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#003087"/>
+            <circle cx="60" cy="70" r="16" fill="#BC002D" opacity=".15"/>
+            <text x="60" y="56" text-anchor="middle" fill="#fff" font-size="11" font-family="sans-serif">日本</text>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇯🇵</div>
+          <div class="product-name">Japón — Local</div>
+          <div class="product-type">Camiseta oficial · Azul · Samurai Blue</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Senegal -->
+      <a class="product-card fade-up" href="#">
+        <div class="product-img" style="background:linear-gradient(135deg,#f5fff5,#e0f5e0);">
+          <svg width="120" height="130" viewBox="0 0 120 130" fill="none">
+            <path d="M28 14L12 40L26 43L26 120L94 120L94 43L108 40L92 14L74 22L60 20L46 22Z" fill="#00853F"/>
+            <rect x="50" y="14" width="24" height="106" fill="#FDEF42"/>
+            <rect x="68" y="14" width="26" height="106" fill="#E31B23"/>
+            <path d="M60 55 L63 64 L72 64 L65 69 L68 78 L60 73 L52 78 L55 69 L48 64 L57 64 Z" fill="#00853F"/>
+          </svg>
+        </div>
+        <div class="product-info">
+          <div class="product-flag">🇸🇳</div>
+          <div class="product-name">Senegal — Local</div>
+          <div class="product-type">Camiseta oficial · Verde · Lions de Téranga</div>
+          <div class="product-price">119 €</div>
+          <span class="add-btn">Comprar <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>
+        </div>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SPLIT: LOCAL vs VISITA ═══ -->
+<section class="section" style="background:#f5f5f7;" id="local">
+  <div class="split fade-up">
+    <div class="split-text">
+      <p class="eyebrow">Local vs Visita</p>
+      <h2>Dos looks.<br>Un solo campeón.</h2>
+      <p>Cada selección tiene su camiseta local y su alternativa de visita. Elige la que más te identifique o lleva las dos al estadio.</p>
+      <a href="#selecciones" class="btn btn-primary" style="font-size:15px;padding:12px 24px;">Ver todas</a>
+    </div>
+    <div class="split-visual">
+      <div style="display:flex;gap:24px;align-items:flex-end;">
+        <!-- Local Argentina -->
+        <div style="text-align:center;">
+          <svg width="130" height="145" viewBox="0 0 130 145" fill="none">
+            <path d="M30 16L14 44L28 47L28 132L102 132L102 47L116 44L100 16L82 24L65 22L48 24Z" fill="#75AADB"/>
+            <rect x="28" y="62" width="74" height="18" fill="#fff"/>
+            <rect x="28" y="90" width="74" height="18" fill="#fff"/>
+            <circle cx="55" cy="48" r="8" fill="#F6B40E"/>
+          </svg>
+          <p style="font-size:12px;color:var(--muted);margin-top:8px;">Local</p>
+        </div>
+        <!-- Visita Argentina -->
+        <div style="text-align:center;">
+          <svg width="130" height="145" viewBox="0 0 130 145" fill="none">
+            <path d="M30 16L14 44L28 47L28 132L102 132L102 47L116 44L100 16L82 24L65 22L48 24Z" fill="#1a1a2e"/>
+            <rect x="28" y="62" width="74" height="18" fill="#75AADB" opacity=".6"/>
+            <rect x="28" y="90" width="74" height="18" fill="#75AADB" opacity=".6"/>
+            <circle cx="55" cy="48" r="8" fill="#F6B40E"/>
+          </svg>
+          <p style="font-size:12px;color:var(--muted);margin-top:8px;">Visita</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ DARK: PERSONALIZACIÓN ═══ -->
+<section class="dark-section" id="visita">
+  <div class="split fade-up">
+    <div class="split-text">
+      <p class="eyebrow" style="color:#f5a623;">Personalización</p>
+      <h2 style="color:#f5f5f7;">Tu nombre.<br>Tu número.<br>Tu historia.</h2>
+      <p class="muted">Añade el nombre y el dorsal que quieras. Impresión oficial termoadhesiva, resistente a más de 60 lavados.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;">
+        <a href="#" class="btn btn-primary" style="font-size:15px;padding:12px 24px;">Personalizar ahora</a>
+        <a href="#" class="btn btn-ghost" style="font-size:15px;padding:12px 24px;">Ver ejemplos</a>
+      </div>
+    </div>
+    <div class="split-visual">
+      <svg width="200" height="220" viewBox="0 0 200 220" fill="none">
+        <path d="M45 22L20 65L42 70L42 200L158 200L158 70L180 65L155 22L122 38L100 34L78 38Z" fill="#002395"/>
+        <path d="M78 38Q100 50 122 38" stroke="#001a70" stroke-width="2.5" fill="none"/>
+        <!-- name -->
+        <text x="100" y="110" text-anchor="middle" fill="#fff" font-size="13" font-weight="700" font-family="Inter, sans-serif" letter-spacing="4">MBAPPÉ</text>
+        <!-- number -->
+        <text x="100" y="165" text-anchor="middle" fill="#fff" font-size="52" font-weight="800" font-family="Inter, sans-serif">10</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HOW IT WORKS ═══ -->
+<section class="section section-center" id="nosotros">
+  <p class="eyebrow fade-up">Cómo funciona</p>
+  <h2 class="h2 fade-up">Del estadio<br>a tu puerta.</h2>
+  <p class="lead fade-up">Pedido fácil, envío rápido, devolución sin complicaciones.</p>
+  <div class="steps-grid">
+    <div class="step-card fade-up">
+      <div class="step-num">1</div>
+      <h3>Elige tu camiseta</h3>
+      <p>Selecciona la selección, la talla y si quieres añadir nombre y número personalizado.</p>
+    </div>
+    <div class="step-card fade-up">
+      <div class="step-num">2</div>
+      <h3>Personaliza</h3>
+      <p>Añade tu nombre o el de tu jugador favorito con la tipografía oficial de la FIFA.</p>
+    </div>
+    <div class="step-card fade-up">
+      <div class="step-num">3</div>
+      <h3>Confirmación</h3>
+      <p>Recibirás un email con la confirmación y el número de seguimiento en menos de 24 h.</p>
+    </div>
+    <div class="step-card fade-up">
+      <div class="step-num">4</div>
+      <h3>A tu puerta</h3>
+      <p>Entrega en 3–5 días laborables a toda España. Envío gratuito en pedidos mayores de 80 €.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ COUNTRIES STRIP ═══ -->
+<div class="countries-strip">
+  <h2 class="fade-up">48 selecciones.<br>Un solo torneo.</h2>
+  <div class="countries-grid fade-up">
+    <span class="country-pill">🇪🇸 España</span>
+    <span class="country-pill">🇧🇷 Brasil</span>
+    <span class="country-pill">🇦🇷 Argentina</span>
+    <span class="country-pill">🇫🇷 Francia</span>
+    <span class="country-pill">🇩🇪 Alemania</span>
+    <span class="country-pill">🇵🇹 Portugal</span>
+    <span class="country-pill">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</span>
+    <span class="country-pill">🇺🇸 EE.UU.</span>
+    <span class="country-pill">🇲🇽 México</span>
+    <span class="country-pill">🇨🇦 Canadá</span>
+    <span class="country-pill">🇲🇦 Marruecos</span>
+    <span class="country-pill">🇯🇵 Japón</span>
+    <span class="country-pill">🇸🇳 Senegal</span>
+    <span class="country-pill">🇳🇱 Países Bajos</span>
+    <span class="country-pill">🇧🇪 Bélgica</span>
+    <span class="country-pill">🇺🇾 Uruguay</span>
+    <span class="country-pill">🇨🇴 Colombia</span>
+    <span class="country-pill">🇰🇷 Corea del Sur</span>
+    <span class="country-pill">🇦🇺 Australia</span>
+    <span class="country-pill">🇨🇭 Suiza</span>
+    <span class="country-pill">🇭🇷 Croacia</span>
+    <span class="country-pill">🇩🇰 Dinamarca</span>
+  </div>
+</div>
+
+<!-- ═══ TESTIMONIALS ═══ -->
+<section class="testimonials">
+  <p class="eyebrow fade-up">Opiniones</p>
+  <h2 class="h2 fade-up">Lo que dicen<br>los hinchas.</h2>
+  <div class="reviews-grid">
+    <div class="review-card fade-up">
+      <div class="stars">★★★★★</div>
+      <p class="review-text">"La calidad es increíble. El tejido es exactamente igual al que usan los jugadores. La compré para el partido inaugural y me encantó."</p>
+      <div class="reviewer">
+        <div class="avatar">CR</div>
+        <div>
+          <div class="reviewer-name">Carlos R.</div>
+          <div class="reviewer-sub">Madrid · Camiseta España</div>
+        </div>
+      </div>
+    </div>
+    <div class="review-card fade-up">
+      <div class="stars">★★★★★</div>
+      <p class="review-text">"Pedí la de Argentina con el nombre de mi hijo. Llegó en 4 días y el estampado es perfecto. Será un regalo que recordará siempre."</p>
+      <div class="reviewer">
+        <div class="avatar">LM</div>
+        <div>
+          <div class="reviewer-name">Laura M.</div>
+          <div class="reviewer-sub">Barcelona · Camiseta Argentina</div>
+        </div>
+      </div>
+    </div>
+    <div class="review-card fade-up">
+      <div class="stars">★★★★☆</div>
+      <p class="review-text">"La de Brasil es espectacular. El tejido no se arruga, mantiene el color tras varios lavados y luce igual que el día que llegó."</p>
+      <div class="reviewer">
+        <div class="avatar">JF</div>
+        <div>
+          <div class="reviewer-name">João F.</div>
+          <div class="reviewer-sub">Valencia · Camiseta Brasil</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA FULL ═══ -->
+<section class="cta-full">
+  <h2 class="fade-up">¿Listo para<br>el Mundial?</h2>
+  <p class="fade-up">Consigue la camiseta oficial de tu selección antes de que se agoten. Envío gratuito en pedidos superiores a 80 €.</p>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;" class="fade-up">
+    <a href="#selecciones" class="btn btn-white">Ver todas las camisetas</a>
+    <a href="#" class="btn btn-outline-white">Personalizar la mía</a>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="footer-inner">
+    <p class="footer-disclaimer">
+      Las camisetas mostradas son recreaciones con fines ilustrativos. Los diseños oficiales pueden variar respecto a los mostrados aquí.
+      Los nombres FIFA World Cup™ y Mundial 2026™ son marcas registradas de la FIFA. Este sitio no tiene afiliación oficial con la FIFA ni con las federaciones nacionales.
+    </p>
+    <div class="footer-cols">
+      <div class="footer-col">
+        <h4>Tienda</h4>
+        <ul>
+          <li><a href="#">Todas las camisetas</a></li>
+          <li><a href="#">Camiseta local</a></li>
+          <li><a href="#">Camiseta visita</a></li>
+          <li><a href="#">Personalización</a></li>
+          <li><a href="#">Novedades</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Selecciones</h4>
+        <ul>
+          <li><a href="#">España</a></li>
+          <li><a href="#">Brasil</a></li>
+          <li><a href="#">Argentina</a></li>
+          <li><a href="#">Francia</a></li>
+          <li><a href="#">Alemania</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Pedidos</h4>
+        <ul>
+          <li><a href="#">Mi pedido</a></li>
+          <li><a href="#">Envíos</a></li>
+          <li><a href="#">Devoluciones</a></li>
+          <li><a href="#">Tallas</a></li>
+          <li><a href="#">Preguntas frecuentes</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="#">Sobre nosotros</a></li>
+          <li><a href="#">Contacto</a></li>
+          <li><a href="#">Sostenibilidad</a></li>
+          <li><a href="#">Prensa</a></li>
+          <li><a href="#">Trabaja con nosotros</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="footer-copy">Copyright &copy; 2026 Mundial 2026 Camisetas. Todos los derechos reservados.</p>
+      <div class="footer-links">
+        <a href="#">Privacidad</a>
+        <a href="#">Términos de uso</a>
+        <a href="#">Ventas</a>
+        <a href="#">Legal</a>
+        <a href="#">Mapa del sitio</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ═══ SCROLL ANIMATION JS ═══ -->
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
