@@ -1,0 +1,130 @@
+{
+  "name": "XAU/USD - Workflow 3: Cierre 21:00 → Guardar historial",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 21 * * 1-5"
+            }
+          ]
+        },
+        "timezone": "Europe/Madrid"
+      },
+      "id": "w3-cron",
+      "name": "Scheduler 21:00 L-V",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/analisis_actual?id=eq.1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_ANON_KEY}}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w3-fetch",
+      "name": "Leer analisis_actual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=1h&outputsize=8&apikey={{$env.TWELVE_DATA_APIKEY}}",
+        "options": {}
+      },
+      "id": "w3-fetch-velas",
+      "name": "Obtener Velas 1H Twelve Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "const analisis = $('Leer analisis_actual').first().json;\nconst priceData = $('Obtener Velas 1H Twelve Data').first().json;\n\nif (!analisis || !analisis.tipo_zona || analisis.precio_zona_suelo === 0) {\n  throw new Error('No hay zona activa para registrar hoy');\n}\n\nconst values = priceData?.values || [];\nconst precio_suelo = parseFloat(analisis.precio_zona_suelo);\nconst precio_techo = parseFloat(analisis.precio_zona_techo);\n\n// Evaluar qué pasó con la zona durante la sesión\nlet resultado = 'sin_reaccion';\nlet toco_zona = false;\nlet rompio_zona = false;\n\nfor (const vela of values) {\n  const low = parseFloat(vela.low);\n  const high = parseFloat(vela.high);\n  const close = parseFloat(vela.close);\n\n  // ¿Tocó la zona?\n  if (high >= precio_suelo && low <= precio_techo) {\n    toco_zona = true;\n    // ¿Rompió? Cierre fuera de zona con holgura\n    if (analisis.direccion_precio === 'alcista' && close > precio_techo * 1.002) {\n      rompio_zona = true;\n    } else if (analisis.direccion_precio === 'bajista' && close < precio_suelo * 0.998) {\n      rompio_zona = true;\n    }\n  }\n}\n\nif (!toco_zona) {\n  resultado = 'sin_reaccion';\n} else if (rompio_zona) {\n  resultado = 'rompio';\n} else {\n  // Distinguir respeto fuerte vs débil por magnitud de rebote\n  const rebote_velas = values.filter(v => {\n    const h = parseFloat(v.high); const l = parseFloat(v.low);\n    return h >= precio_suelo && l <= precio_techo;\n  });\n  const max_rebote = Math.max(...rebote_velas.map(v => Math.abs(parseFloat(v.close) - parseFloat(v.open))));\n  resultado = max_rebote > (precio_techo - precio_suelo) * 1.5 ? 'respeto_fuerte' : 'respeto_debil';\n}\n\n// Determinar sesión actual\nconst hora = new Date().getUTCHours();\nlet sesion = 'new_york';\nif (hora >= 22 || hora < 8) sesion = 'asia';\nelse if (hora >= 8 && hora < 13) sesion = 'london';\nelse if (hora >= 13 && hora < 16) sesion = 'overlap';\n\nconst hoy = new Date().toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    zonas_historial: {\n      fecha: hoy,\n      activo: 'XAUUSD',\n      timeframe: '1H',\n      tipo_zona: analisis.tipo_zona,\n      precio_zona_suelo: precio_suelo,\n      precio_zona_techo: precio_techo,\n      direccion_precio: analisis.direccion_precio,\n      resultado,\n      sesion\n    },\n    resultado\n  }\n}];"
+      },
+      "id": "w3-evaluar",
+      "name": "Evaluar Resultado del Día",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 380]
+    },
+    {
+      "parameters": {
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/zonas_historial",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.zonas_historial) }}",
+        "options": {}
+      },
+      "id": "w3-insert-zona",
+      "name": "Insertar en zonas_historial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 260]
+    },
+    {
+      "parameters": {
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/analisis_actual?id=eq.1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "method": "PATCH",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"fase\": \"LEJOS\", \"updated_at\": \"{{ new Date().toISOString() }}\" }",
+        "options": {}
+      },
+      "id": "w3-reset",
+      "name": "Resetear fase a LEJOS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 440]
+    }
+  ],
+  "connections": {
+    "Scheduler 21:00 L-V": {
+      "main": [[
+        { "node": "Leer analisis_actual", "type": "main", "index": 0 },
+        { "node": "Obtener Velas 1H Twelve Data", "type": "main", "index": 0 }
+      ]]
+    },
+    "Leer analisis_actual": { "main": [[{ "node": "Evaluar Resultado del Día", "type": "main", "index": 0 }]] },
+    "Obtener Velas 1H Twelve Data": { "main": [[{ "node": "Evaluar Resultado del Día", "type": "main", "index": 0 }]] },
+    "Evaluar Resultado del Día": {
+      "main": [[
+        { "node": "Insertar en zonas_historial", "type": "main", "index": 0 },
+        { "node": "Resetear fase a LEJOS", "type": "main", "index": 0 }
+      ]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": ["xauusd", "trading"],
+  "pinData": {}
+}

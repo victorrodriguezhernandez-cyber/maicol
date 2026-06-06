@@ -1,0 +1,330 @@
+// ============================================================
+// XAU/USD — Sistema de Análisis Estadístico de Zonas Intradiario
+// Pine Script v5 — TradingView Essential
+// ============================================================
+//@version=5
+indicator("XAU/USD Zonas Estadísticas", overlay=true, max_boxes_count=10, max_lines_count=20, max_labels_count=30)
+
+// ─── INPUTS ─────────────────────────────────────────────────
+string N8N_WEBHOOK = input.string("https://TU_N8N/webhook/xauusd-zona", "URL Webhook n8n")
+string SUPABASE_URL = input.string("https://pyiukqeuaxonsrrgbfzq.supabase.co", "Supabase URL")
+string SUPABASE_KEY = input.string("TU_ANON_KEY", "Supabase anon key")
+int    ATR_PERIODO  = input.int(14, "Período ATR", minval=5, maxval=30)
+bool   SHOW_LABELS  = input.bool(true, "Mostrar etiquetas HH/HL/LH/LL")
+bool   SHOW_PANEL   = input.bool(true, "Mostrar panel estadísticas")
+
+// ─── ATR ────────────────────────────────────────────────────
+float atr = ta.atr(ATR_PERIODO)
+
+// ─── DETECCIÓN ORDER BLOCK ───────────────────────────────────
+// Última vela bajista/alcista antes de impulso > 1.5×ATR
+bool impulsoBajista = (close[1] - close[2]) > 1.5 * atr[1] and close[2] < open[2]
+bool impulsoAlcista = (close[1] - close[2]) > 1.5 * atr[1] and close[2] > open[2]
+
+float ob_suelo = impulsoBajista ? low[1]  : impulsoAlcista ? low[1]  : na
+float ob_techo = impulsoBajista ? high[1] : impulsoAlcista ? high[1] : na
+bool  es_ob    = not na(ob_suelo)
+string ob_dir  = impulsoBajista ? "bajista" : "alcista"
+
+// ─── DETECCIÓN FVG ───────────────────────────────────────────
+float fvg_gap   = low[0] - high[2]
+bool  es_fvg    = fvg_gap > 0.3 * atr and low[0] > high[2]
+float fvg_suelo = es_fvg ? high[2] : na
+float fvg_techo = es_fvg ? low[0]  : na
+
+// ─── DETECCIÓN ACUMULACIÓN ───────────────────────────────────
+var float acum_suelo = na
+var float acum_techo = na
+var int   acum_count = 0
+var bool  es_acum    = false
+
+if (high - low) < 0.8 * atr
+    acum_count := acum_count + 1
+    acum_suelo := na(acum_suelo) ? low  : math.min(acum_suelo, low)
+    acum_techo := na(acum_techo) ? high : math.max(acum_techo, high)
+else
+    acum_count := 0
+    acum_suelo := na
+    acum_techo := na
+
+es_acum := acum_count >= 6
+
+// ─── DETECCIÓN PIVOTS HH/HL/LH/LL ───────────────────────────
+int PIVOT_LB = 5
+
+float ph = ta.pivothigh(high, PIVOT_LB, PIVOT_LB)
+float pl = ta.pivotlow(low,  PIVOT_LB, PIVOT_LB)
+
+var float ultimo_ph = na
+var float penultimo_ph = na
+var float ultimo_pl = na
+var float penultimo_pl = na
+
+if not na(ph)
+    penultimo_ph := ultimo_ph
+    ultimo_ph    := ph
+
+if not na(pl)
+    penultimo_pl := ultimo_pl
+    ultimo_pl    := pl
+
+// Clasificar pivots
+string tipo_ph = na(penultimo_ph) ? na : (ultimo_ph > penultimo_ph ? "HH" : "LH")
+string tipo_pl = na(penultimo_pl) ? na : (ultimo_pl > penultimo_pl ? "HL" : "LL")
+
+float nivel_arriba_precio = na
+float nivel_abajo_precio  = na
+string nivel_arriba_tipo  = na
+string nivel_abajo_tipo   = na
+
+if not na(ultimo_ph) and ultimo_ph > close
+    nivel_arriba_precio := ultimo_ph
+    nivel_arriba_tipo   := tipo_ph
+
+if not na(penultimo_ph) and na(nivel_arriba_precio) and penultimo_ph > close
+    nivel_arriba_precio := penultimo_ph
+    nivel_arriba_tipo   := tipo_ph
+
+if not na(ultimo_pl) and ultimo_pl < close
+    nivel_abajo_precio := ultimo_pl
+    nivel_abajo_tipo   := tipo_pl
+
+if not na(penultimo_pl) and na(nivel_abajo_precio) and penultimo_pl < close
+    nivel_abajo_precio := penultimo_pl
+    nivel_abajo_tipo   := tipo_pl
+
+// ─── SELECCIÓN ZONA MÁS RELEVANTE ────────────────────────────
+// Relevancia = (1/distancia%) × (1 + testeos×0.3)
+// Aquí simplificado: prioridad OB > FVG > ACUM
+string zona_tipo   = na
+float  zona_suelo  = na
+float  zona_techo  = na
+string zona_dir    = na
+
+if es_ob
+    zona_tipo  := "order_block"
+    zona_suelo := ob_suelo
+    zona_techo := ob_techo
+    zona_dir   := ob_dir
+else if es_fvg
+    zona_tipo  := "fvg"
+    zona_suelo := fvg_suelo
+    zona_techo := fvg_techo
+    zona_dir   := close > open ? "alcista" : "bajista"
+else if es_acum
+    zona_tipo  := "acumulacion"
+    zona_suelo := acum_suelo
+    zona_techo := acum_techo
+    zona_dir   := "lateral"
+
+// ─── SCORES POR TIMEFRAME (simulados en 1 chart) ─────────────
+// En TradingView Essential no hay multi-timeframe directo en webhooks,
+// se calcula en el mismo timeframe y se envía como score base.
+// n8n puede refinar con datos adicionales de Twelve Data.
+float score_calc = 50.0  // base; n8n calcula el real con 1H/15M/5M
+
+// ─── DISTANCIA Y FASE ────────────────────────────────────────
+float zona_mid     = na(zona_suelo) ? na : (zona_suelo + zona_techo) / 2
+float dist_pct     = na(zona_mid)   ? na : math.abs(close - zona_mid) / zona_mid * 100
+string fase_local  = na(dist_pct)   ? "LEJOS" :
+                     (close >= zona_suelo and close <= zona_techo) ? "EN_ZONA" :
+                     dist_pct < 0.3 ? "ACERCANDO" : "LEJOS"
+
+// ─── ENVIAR WEBHOOK A N8N (solo en vela de 14:00 y cada 30min) ──
+// Pine Script Essential no tiene request.security() con POST,
+// se usa request.send() a través de alertas con formato JSON.
+// Alternativa: usar alertcondition + alert() con JSON en mensaje.
+
+bool hora_inicio  = (hour == 14 and minute == 0)
+bool cada_30min   = (minute == 0 or minute == 30) and hour >= 14 and hour < 21
+bool es_laborable = dayofweek >= 2 and dayofweek <= 6  // L-V
+
+bool disparar_webhook = cada_30min and es_laborable and not na(zona_tipo)
+
+string payload_json = '{"tipo_zona":"' + zona_tipo + '",' +
+                      '"precio_zona_suelo":' + str.tostring(zona_suelo, "#.##") + ',' +
+                      '"precio_zona_techo":' + str.tostring(zona_techo, "#.##") + ',' +
+                      '"direccion_precio":"' + zona_dir + '",' +
+                      '"precio_actual":' + str.tostring(close, "#.##") + ',' +
+                      '"score_1h":' + str.tostring(score_calc, "#.#") + ',' +
+                      '"score_15m":' + str.tostring(score_calc, "#.#") + ',' +
+                      '"score_5m":' + str.tostring(score_calc, "#.#") + ',' +
+                      '"nivel_arriba_tipo":"' + (na(nivel_arriba_tipo) ? "" : nivel_arriba_tipo) + '",' +
+                      '"nivel_arriba_precio":' + (na(nivel_arriba_precio) ? "null" : str.tostring(nivel_arriba_precio, "#.##")) + ',' +
+                      '"nivel_abajo_tipo":"' + (na(nivel_abajo_tipo) ? "" : nivel_abajo_tipo) + '",' +
+                      '"nivel_abajo_precio":' + (na(nivel_abajo_precio) ? "null" : str.tostring(nivel_abajo_precio, "#.##")) + '}'
+
+alertcondition(disparar_webhook, title="Webhook n8n XAU/USD", message=payload_json)
+
+// ─── LEER analisis_actual DE SUPABASE ────────────────────────
+// Pine Script Essential: request.security_lower_tf no disponible para HTTP.
+// Usamos request.security() para leer datos; para Supabase REST usamos
+// una URL pública con select y parseamos el JSON.
+
+string supabase_endpoint = SUPABASE_URL + "/rest/v1/analisis_actual?id=eq.1&select=*"
+
+// request() solo funciona con fuentes de datos de TradingView.
+// Para integración real con Supabase REST desde Pine Script se necesita
+// un intermediario. La solución recomendada:
+// 1. n8n actualiza analisis_actual
+// 2. n8n también actualiza una fuente custom en TradingView (via API)
+//    O Pine Script lee los datos via una variable global de alerta.
+//
+// SOLUCIÓN PRÁCTICA IMPLEMENTADA:
+// Pine Script usa inputs para recibir los valores calculados por n8n.
+// n8n escribe en Supabase Y también puede enviar los valores via
+// TradingView Webhook Response (el valor llega en el siguiente tick
+// cuando Pine Script vuelve a ejecutarse).
+
+// Para TradingView con plan que soporte request.security() externo,
+// descomentar y configurar la URL del proxy:
+// [Requiere plan Premium o usar una Cloud Function intermedia]
+
+// ─── PANEL DE ESTADÍSTICAS (leído de inputs o defaults) ──────
+// En producción estos valores vienen de n8n → Supabase → inputs manuales
+// o via una integración de datos custom de TradingView.
+
+// Inputs para recibir valores calculados por n8n (actualizar manualmente
+// o via script de automatización que edite el indicador):
+float i_prob_fuerte = input.float(0.0,  "% Respeto Fuerte",  group="Probabilidades n8n")
+float i_prob_debil  = input.float(0.0,  "% Respeto Débil",   group="Probabilidades n8n")
+float i_prob_rompio = input.float(0.0,  "% Rompió",          group="Probabilidades n8n")
+int   i_casos       = input.int(0,      "Casos totales",      group="Probabilidades n8n")
+float i_score       = input.float(0.0,  "Score confluencia",  group="Probabilidades n8n")
+string i_fase       = input.string("LEJOS", "Fase",           group="Probabilidades n8n",
+                                   options=["LEJOS","ACERCANDO","EN_ZONA"])
+float i_zona_s      = input.float(0.0, "Zona suelo (n8n)",   group="Probabilidades n8n")
+float i_zona_t      = input.float(0.0, "Zona techo (n8n)",   group="Probabilidades n8n")
+string i_zona_tipo  = input.string("order_block", "Tipo zona (n8n)", group="Probabilidades n8n",
+                                   options=["order_block","acumulacion","fvg","nivel_hh","nivel_hl","nivel_lh","nivel_ll"])
+
+// Usar valores de n8n si están disponibles (precio > 0)
+float disp_suelo = i_zona_s > 0 ? i_zona_s : zona_suelo
+float disp_techo = i_zona_t > 0 ? i_zona_t : zona_techo
+string disp_tipo = i_zona_s > 0 ? i_zona_tipo : zona_tipo
+float disp_score = i_score > 0 ? i_score : score_calc
+string disp_fase = i_zona_s > 0 ? i_fase : fase_local
+
+// ─── PINTAR CAJA ZONA ─────────────────────────────────────────
+color color_zona = switch disp_tipo
+    "order_block" => color.new(color.orange, 80)
+    "acumulacion" => color.new(color.blue,   80)
+    "fvg"         => color.new(color.green,  80)
+    => color.new(color.gray, 80)
+
+color color_zona_borde = switch disp_tipo
+    "order_block" => color.orange
+    "acumulacion" => color.blue
+    "fvg"         => color.green
+    => color.gray
+
+var box caja_zona = na
+
+if not na(disp_suelo) and not na(disp_techo) and disp_suelo > 0
+    if not na(caja_zona)
+        box.delete(caja_zona)
+    caja_zona := box.new(
+         left   = bar_index - 20,
+         top    = disp_techo,
+         right  = bar_index + 30,
+         bottom = disp_suelo,
+         bgcolor     = color_zona,
+         border_color= color_zona_borde,
+         border_width= 2,
+         text        = disp_tipo == "order_block" ? "OB" :
+                       disp_tipo == "acumulacion" ? "ACUM" :
+                       disp_tipo == "fvg"         ? "FVG" : "ZONA",
+         text_color  = color_zona_borde,
+         text_size   = size.small
+         )
+
+// ─── PINTAR NIVELES HH/HL/LH/LL ──────────────────────────────
+var line linea_arriba = na
+var line linea_abajo  = na
+var label lbl_arriba  = na
+var label lbl_abajo   = na
+
+if SHOW_LABELS and barstate.islast
+    if not na(linea_arriba) then line.delete(linea_arriba)
+    if not na(linea_abajo)  then line.delete(linea_abajo)
+    if not na(lbl_arriba)   then label.delete(lbl_arriba)
+    if not na(lbl_abajo)    then label.delete(lbl_abajo)
+
+    if not na(nivel_arriba_precio)
+        linea_arriba := line.new(
+             x1=bar_index-30, y1=nivel_arriba_precio,
+             x2=bar_index+10, y2=nivel_arriba_precio,
+             color=color.new(color.red, 30), width=1,
+             style=line.style_dashed)
+        lbl_arriba := label.new(
+             x=bar_index+10, y=nivel_arriba_precio,
+             text=na(nivel_arriba_tipo) ? "?" : nivel_arriba_tipo,
+             color=color.new(color.red, 70),
+             textcolor=color.red,
+             style=label.style_label_left,
+             size=size.small)
+
+    if not na(nivel_abajo_precio)
+        linea_abajo := line.new(
+             x1=bar_index-30, y1=nivel_abajo_precio,
+             x2=bar_index+10, y2=nivel_abajo_precio,
+             color=color.new(color.green, 30), width=1,
+             style=line.style_dashed)
+        lbl_abajo := label.new(
+             x=bar_index+10, y=nivel_abajo_precio,
+             text=na(nivel_abajo_tipo) ? "?" : nivel_abajo_tipo,
+             color=color.new(color.green, 70),
+             textcolor=color.green,
+             style=label.style_label_left,
+             size=size.small)
+
+// ─── PANEL ESQUINA SUPERIOR DERECHA ──────────────────────────
+if SHOW_PANEL and barstate.islast
+    bool muestra_ok = i_casos >= 15
+
+    color fase_col = switch disp_fase
+        "EN_ZONA"   => color.green
+        "ACERCANDO" => color.orange
+        => color.gray
+
+    string aviso_muestra = not muestra_ok and i_casos > 0 ?
+         "\n⚠ Muestra insuf. (" + str.tostring(i_casos) + " casos)" : ""
+
+    string nivel_arr_txt = not na(nivel_arriba_tipo) and not na(nivel_arriba_precio) ?
+         "\n▲ " + nivel_arriba_tipo + " " + str.tostring(nivel_arriba_precio, "#.##") : ""
+
+    string nivel_abj_txt = not na(nivel_abajo_tipo) and not na(nivel_abajo_precio) ?
+         "\n▼ " + nivel_abajo_tipo + " " + str.tostring(nivel_abajo_precio, "#.##") : ""
+
+    string prob_txt = i_casos > 0 ?
+         "\n✅ Fuerte: "  + str.tostring(i_prob_fuerte, "#.#") + "%" +
+         "\n〰 Débil: "   + str.tostring(i_prob_debil,  "#.#") + "%" +
+         "\n❌ Rompió: "  + str.tostring(i_prob_rompio, "#.#") + "%" +
+         " [" + str.tostring(i_casos) + " casos]" : "\nSin historial aún"
+
+    string panel_txt =
+         "━━ XAU/USD ZONAS ━━" +
+         "\nZona: " + (na(disp_tipo) ? "Sin zona" : disp_tipo) +
+         "\nPrecio: " + (na(disp_suelo) ? "—" :
+              str.tostring(disp_suelo, "#.##") + " – " + str.tostring(disp_techo, "#.##")) +
+         prob_txt +
+         aviso_muestra +
+         nivel_arr_txt +
+         nivel_abj_txt +
+         "\nScore: " + str.tostring(disp_score, "#.#") + "/100" +
+         "\nFase: " + disp_fase
+
+    var table panel = table.new(position.top_right, 1, 1,
+         bgcolor=color.new(color.black, 20),
+         border_color=color.gray, border_width=1)
+
+    table.cell(panel, 0, 0,
+         text       = panel_txt,
+         text_color = color.white,
+         text_size  = size.small,
+         bgcolor    = color.new(color.black, 30))
+
+// ─── ALERTAS ─────────────────────────────────────────────────
+// Configurar en TradingView → Alertas → Condición: "Webhook n8n XAU/USD"
+// URL del webhook: pegar la URL de n8n
+// Mensaje: dejar en blanco (usa el mensaje del alertcondition)
