@@ -4,7 +4,7 @@ indicator("SENSEI VISUAL ZONES v0.6.1 + n8n Stats", overlay=true, max_boxes_coun
 // ══════════════════════════════════════════════════════
 //  AJUSTES ORIGINALES
 // ══════════════════════════════════════════════════════
-pivotLen        = input.int(5,    "Sensibilidad pivotes",           minval=2,  maxval=20)
+pivotLen        = input.int(5,    "Sensibilidad pivotes",            minval=2,  maxval=20)
 levelLookback   = input.int(80,   "Buscar niveles en ultimas velas", minval=20, maxval=300)
 extendBars      = input.int(90,   "Extension lineas/zonas",          minval=20, maxval=300)
 labelOffset     = input.int(18,   "Distancia etiquetas",             minval=5,  maxval=80)
@@ -26,26 +26,23 @@ hideInvalidated = input.bool(true,  "Ocultar zonas invalidadas")
 // ══════════════════════════════════════════════════════
 //  AJUSTES n8n / ESTADÍSTICAS
 // ══════════════════════════════════════════════════════
-var string GRP = "Estadísticas n8n (actualizar tras ejecución)"
-bool   showPanel  = input.bool(true, "Mostrar panel estadísticas", group=GRP)
-
-float  n_sz_resp_f = input.float(0, "Supply: % Respeto fuerte",  group=GRP)
-float  n_sz_resp_d = input.float(0, "Supply: % Respeto débil",   group=GRP)
-float  n_sz_rompio = input.float(0, "Supply: % Rompió",          group=GRP)
-int    n_sz_casos  = input.int(0,   "Supply: Casos totales",      group=GRP)
-
-float  n_dz_resp_f = input.float(0, "Demand: % Respeto fuerte",  group=GRP)
-float  n_dz_resp_d = input.float(0, "Demand: % Respeto débil",   group=GRP)
-float  n_dz_rompio = input.float(0, "Demand: % Rompió",          group=GRP)
-int    n_dz_casos  = input.int(0,   "Demand: Casos totales",      group=GRP)
-
-float  n_h_ruptura = input.float(0, "Nivel H: % Ruptura",        group=GRP)
-float  n_l_soporte = input.float(0, "Nivel L: % Soporte",        group=GRP)
-float  n_score     = input.float(0, "Score confluencia",          group=GRP)
+var string GRP = "Estadisticas n8n (actualizar tras ejecucion)"
+bool   showPanel   = input.bool(true,  "Mostrar panel estadisticas",  group=GRP)
+float  n_sz_resp_f = input.float(0,    "Supply: % Respeto fuerte",    group=GRP)
+float  n_sz_resp_d = input.float(0,    "Supply: % Respeto debil",     group=GRP)
+float  n_sz_rompio = input.float(0,    "Supply: % Rompio",            group=GRP)
+int    n_sz_casos  = input.int(0,      "Supply: Casos totales",       group=GRP)
+float  n_dz_resp_f = input.float(0,    "Demand: % Respeto fuerte",    group=GRP)
+float  n_dz_resp_d = input.float(0,    "Demand: % Respeto debil",     group=GRP)
+float  n_dz_rompio = input.float(0,    "Demand: % Rompio",            group=GRP)
+int    n_dz_casos  = input.int(0,      "Demand: Casos totales",       group=GRP)
+float  n_h_ruptura = input.float(0,    "Nivel H: % Ruptura",          group=GRP)
+float  n_l_soporte = input.float(0,    "Nivel L: % Soporte",          group=GRP)
+float  n_score     = input.float(0,    "Score confluencia",            group=GRP)
 string n_fase      = input.string("LEJOS", "Fase", group=GRP, options=["LEJOS","ACERCANDO","EN_ZONA"])
 
 // ══════════════════════════════════════════════════════
-//  COLORES ORIGINALES
+//  COLORES
 // ══════════════════════════════════════════════════════
 zoneBg      = color.new(color.gray, 80)
 zoneBorder  = color.new(color.gray, 25)
@@ -183,10 +180,10 @@ for i = zoneBars to zoneLookback
     for j = 0 to zoneBars - 1
         bHigh := math.max(bHigh, high[i - j])
         bLow  := math.min(bLow,  low[i - j])
-    height    = bHigh - bLow
-    moveDown  = bLow - low
-    compact   = height   <= atr * maxZoneATR
-    impulse   = moveDown >= atr * minMoveATR
+    height     = bHigh - bLow
+    moveDown   = bLow - low
+    compact    = height   <= atr * maxZoneATR
+    impulse    = moveDown >= atr * minMoveATR
     priceBelow = close < bLow
     if na(sLeft) and compact and impulse and priceBelow
         sTop  := bHigh
@@ -206,10 +203,10 @@ for i = zoneBars to zoneLookback
     for j = 0 to zoneBars - 1
         bHigh := math.max(bHigh, high[i - j])
         bLow  := math.min(bLow,  low[i - j])
-    height   = bHigh - bLow
-    moveUp   = high - bHigh
-    compact  = height  <= atr * maxZoneATR
-    impulse  = moveUp  >= atr * minMoveATR
+    height     = bHigh - bLow
+    moveUp     = high - bHigh
+    compact    = height <= atr * maxZoneATR
+    impulse    = moveUp >= atr * minMoveATR
     priceAbove = close > bHigh
     if na(dLeft) and compact and impulse and priceAbove
         dTop  := bHigh
@@ -260,14 +257,18 @@ bosUp = showBOS and not na(nearestHigh) and close > nearestHigh + atr * 0.10
 bosDn = showBOS and not na(nearestLow)  and close < nearestLow  - atr * 0.10
 
 if bosUp
-    if not na(bosLine)  then line.delete(bosLine)
-    if not na(bosLabel) then label.delete(bosLabel)
+    if not na(bosLine)
+        line.delete(bosLine)
+    if not na(bosLabel)
+        label.delete(bosLabel)
     bosLine  := line.new(bar_index - 3, nearestHigh, bar_index, nearestHigh, xloc=xloc.bar_index, color=bosGreen, style=line.style_solid, width=1)
     bosLabel := label.new(bar_index, nearestHigh, "BOS", xloc=xloc.bar_index, style=label.style_label_up, textcolor=color.white, color=bosGreen, size=size.tiny)
 
 if bosDn
-    if not na(bosLine)  then line.delete(bosLine)
-    if not na(bosLabel) then label.delete(bosLabel)
+    if not na(bosLine)
+        line.delete(bosLine)
+    if not na(bosLabel)
+        label.delete(bosLabel)
     bosLine  := line.new(bar_index - 3, nearestLow, bar_index, nearestLow, xloc=xloc.bar_index, color=bosRed, style=line.style_solid, width=1)
     bosLabel := label.new(bar_index, nearestLow, "BOS", xloc=xloc.bar_index, style=label.style_label_down, textcolor=color.white, color=bosRed, size=size.tiny)
 
@@ -280,35 +281,34 @@ bool cada_30min   = minute == 0 or minute == 30
 bool hay_zona     = not na(sTop) or not na(dTop)
 bool disparar     = es_laborable and en_sesion and cada_30min and hay_zona
 
-string p_sz_top = na(sTop) ? "null" : str.tostring(sTop, "#.##")
-string p_sz_bot = na(sBot) ? "null" : str.tostring(sBot, "#.##")
-string p_dz_top = na(dTop) ? "null" : str.tostring(dTop, "#.##")
-string p_dz_bot = na(dBot) ? "null" : str.tostring(dBot, "#.##")
+string p_sz_top = na(sTop)        ? "null" : str.tostring(sTop,        "#.##")
+string p_sz_bot = na(sBot)        ? "null" : str.tostring(sBot,        "#.##")
+string p_dz_top = na(dTop)        ? "null" : str.tostring(dTop,        "#.##")
+string p_dz_bot = na(dBot)        ? "null" : str.tostring(dBot,        "#.##")
 string p_h      = na(nearestHigh) ? "null" : str.tostring(nearestHigh, "#.##")
 string p_l      = na(nearestLow)  ? "null" : str.tostring(nearestLow,  "#.##")
 string p_close  = str.tostring(close, "#.##")
-string p_atr    = str.tostring(atr, "#.####")
+string p_atr    = str.tostring(atr,   "#.####")
 
 string payload = '{"activo":"XAUUSD","precio_actual":' + p_close + ',"atr":' + p_atr + ',"supply_zone_top":' + p_sz_top + ',"supply_zone_bot":' + p_sz_bot + ',"demand_zone_top":' + p_dz_top + ',"demand_zone_bot":' + p_dz_bot + ',"nivel_h":' + p_h + ',"nivel_l":' + p_l + '}'
 
-alertcondition(disparar, title="Sensei → n8n XAU/USD", message="{payload}")
+alertcondition(disparar, title="Sensei n8n XAU/USD", message="{payload}")
 
 // ══════════════════════════════════════════════════════
-//  PANEL ESTADÍSTICAS n8n (esquina superior derecha)
+//  PANEL ESTADÍSTICAS n8n
 // ══════════════════════════════════════════════════════
 if showPanel and barstate.islast
-    string fase_emoji = n_fase == "EN_ZONA" ? "🟢" : n_fase == "ACERCANDO" ? "🟡" : "⚪"
+    string fase_dot = n_fase == "EN_ZONA" ? "● " : n_fase == "ACERCANDO" ? "◑ " : "○ "
 
-    string sz_txt = not na(sTop) ? "\n── SUPPLY  " + str.tostring(sBot,"#.##") + "–" + str.tostring(sTop,"#.##") + (n_sz_casos > 0 ? "\n  ✅ " + str.tostring(n_sz_resp_f,"#.#") + "%  〰 " + str.tostring(n_sz_resp_d,"#.#") + "%  ❌ " + str.tostring(n_sz_rompio,"#.#") + "% [" + str.tostring(n_sz_casos) + "]" + (n_sz_casos < 15 ? "\n  ⚠ muestra insuf." : "") : "\n  Sin historial") : ""
+    string sz_txt = not na(sTop) ? "\n── SUPPLY  " + str.tostring(sBot, "#.##") + " - " + str.tostring(sTop, "#.##") + (n_sz_casos > 0 ? "\n   R.Fuerte " + str.tostring(n_sz_resp_f, "#.#") + "%  R.Debil " + str.tostring(n_sz_resp_d, "#.#") + "%  Rompio " + str.tostring(n_sz_rompio, "#.#") + "% [" + str.tostring(n_sz_casos) + "]" + (n_sz_casos < 15 ? "\n   ! muestra insuficiente" : "") : "\n   Sin historial aun") : ""
 
-    string dz_txt = not na(dTop) ? "\n── DEMAND  " + str.tostring(dBot,"#.##") + "–" + str.tostring(dTop,"#.##") + (n_dz_casos > 0 ? "\n  ✅ " + str.tostring(n_dz_resp_f,"#.#") + "%  〰 " + str.tostring(n_dz_resp_d,"#.#") + "%  ❌ " + str.tostring(n_dz_rompio,"#.#") + "% [" + str.tostring(n_dz_casos) + "]" + (n_dz_casos < 15 ? "\n  ⚠ muestra insuf." : "") : "\n  Sin historial") : ""
+    string dz_txt = not na(dTop) ? "\n── DEMAND  " + str.tostring(dBot, "#.##") + " - " + str.tostring(dTop, "#.##") + (n_dz_casos > 0 ? "\n   R.Fuerte " + str.tostring(n_dz_resp_f, "#.#") + "%  R.Debil " + str.tostring(n_dz_resp_d, "#.#") + "%  Rompio " + str.tostring(n_dz_rompio, "#.#") + "% [" + str.tostring(n_dz_casos) + "]" + (n_dz_casos < 15 ? "\n   ! muestra insuficiente" : "") : "\n   Sin historial aun") : ""
 
-    string h_txt = not na(nearestHigh) ? "\n── H  " + str.tostring(nearestHigh,"#.##") + (n_h_ruptura > 0 ? "  rpt:" + str.tostring(n_h_ruptura,"#.#") + "%" : "") : ""
-    string l_txt = not na(nearestLow)  ? "\n── L  " + str.tostring(nearestLow, "#.##") + (n_l_soporte > 0 ? "  sop:" + str.tostring(n_l_soporte,"#.#") + "%" : "") : ""
+    string h_txt = not na(nearestHigh) ? "\n── H  " + str.tostring(nearestHigh, "#.##") + (n_h_ruptura > 0 ? "   ruptura " + str.tostring(n_h_ruptura, "#.#") + "%" : "") : ""
+    string l_txt = not na(nearestLow)  ? "\n── L  " + str.tostring(nearestLow,  "#.##") + (n_l_soporte > 0 ? "   soporte " + str.tostring(n_l_soporte, "#.#") + "%" : "") : ""
+    string score_txt = n_score > 0 ? "\nScore " + str.tostring(n_score, "#.#") + "/100" : ""
 
-    string score_txt = n_score > 0 ? "\nScore: " + str.tostring(n_score,"#.#") + "/100" : ""
-
-    string txt = "SENSEI ZONES\n" + fase_emoji + " " + n_fase + sz_txt + dz_txt + h_txt + l_txt + score_txt
+    string txt = "SENSEI ZONES\n" + fase_dot + n_fase + sz_txt + dz_txt + h_txt + l_txt + score_txt
 
     var table pnl = table.new(position.top_right, 1, 1, bgcolor=color.new(color.black, 15), border_color=color.new(color.gray, 40), border_width=1)
     table.cell(pnl, 0, 0, text=txt, text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 25))
