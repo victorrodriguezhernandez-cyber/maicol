@@ -1,0 +1,141 @@
+{
+  "name": "Sensei Zones — WF1: Webhook → Probabilidades → Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "xauusd-zona",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook Sensei",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [180, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear payload de Pine Script\nconst b = $input.first().json.body || $input.first().json;\n\nconst precio_actual    = parseFloat(b.precio_actual) || 0;\nconst atr              = parseFloat(b.atr) || 1;\nconst supply_zone_top  = b.supply_zone_top !== 'null' ? parseFloat(b.supply_zone_top) : null;\nconst supply_zone_bot  = b.supply_zone_bot !== 'null' ? parseFloat(b.supply_zone_bot) : null;\nconst demand_zone_top  = b.demand_zone_top !== 'null' ? parseFloat(b.demand_zone_top) : null;\nconst demand_zone_bot  = b.demand_zone_bot !== 'null' ? parseFloat(b.demand_zone_bot) : null;\nconst nivel_h          = b.nivel_h !== 'null' ? parseFloat(b.nivel_h) : null;\nconst nivel_l          = b.nivel_l !== 'null' ? parseFloat(b.nivel_l) : null;\n\n// Detectar zona activa (la más cercana al precio)\nlet zona_activa = null;\nlet zona_tipo = null;\nlet dist_supply = Infinity, dist_demand = Infinity;\n\nif (supply_zone_top !== null) {\n  const mid_s = (supply_zone_top + supply_zone_bot) / 2;\n  dist_supply = Math.abs(precio_actual - mid_s) / precio_actual * 100;\n}\nif (demand_zone_top !== null) {\n  const mid_d = (demand_zone_top + demand_zone_bot) / 2;\n  dist_demand = Math.abs(precio_actual - mid_d) / precio_actual * 100;\n}\n\nif (supply_zone_top !== null && dist_supply <= dist_demand) {\n  zona_activa = { top: supply_zone_top, bot: supply_zone_bot };\n  zona_tipo = 'supply';\n} else if (demand_zone_top !== null) {\n  zona_activa = { top: demand_zone_top, bot: demand_zone_bot };\n  zona_tipo = 'demand';\n}\n\n// Calcular fase\nlet fase = 'LEJOS';\nif (zona_activa) {\n  const dist_pct = zona_tipo === 'supply'\n    ? Math.abs(precio_actual - zona_activa.bot) / precio_actual * 100\n    : Math.abs(precio_actual - zona_activa.top) / precio_actual * 100;\n  if (precio_actual <= zona_activa.top && precio_actual >= zona_activa.bot) {\n    fase = 'EN_ZONA';\n  } else if (dist_pct < 0.3) {\n    fase = 'ACERCANDO';\n  }\n}\n\nreturn [{ json: {\n  precio_actual, atr,\n  supply_zone_top, supply_zone_bot,\n  demand_zone_top, demand_zone_bot,\n  nivel_h, nivel_l,\n  zona_tipo, zona_activa,\n  fase\n}}];"
+      },
+      "id": "node-parse",
+      "name": "Parsear y Detectar Zona",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/zonas_historial?activo=eq.XAUUSD&tipo_zona=eq.supply&select=resultado",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-hist-supply",
+      "name": "Historial Supply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [620, 160]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/zonas_historial?activo=eq.XAUUSD&tipo_zona=eq.demand&select=resultado",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-hist-demand",
+      "name": "Historial Demand",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [620, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/niveles_historial?activo=eq.XAUUSD&select=tipo_nivel,fue_roto",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-hist-niveles",
+      "name": "Historial Niveles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [620, 440]
+    },
+    {
+      "parameters": {
+        "jsCode": "const datos   = $('Parsear y Detectar Zona').first().json;\nconst hSupply = $('Historial Supply').all().map(i => i.json);\nconst hDemand = $('Historial Demand').all().map(i => i.json);\nconst hNivel  = $('Historial Niveles').all().map(i => i.json);\n\nfunction calcProbs(arr) {\n  const t = arr.length;\n  if (t === 0) return { resp_f: 0, resp_d: 0, rompio: 0, casos: 0, suficiente: false };\n  const rf = arr.filter(r => r.resultado === 'respeto_fuerte').length;\n  const rd = arr.filter(r => r.resultado === 'respeto_debil').length;\n  const ro = arr.filter(r => r.resultado === 'rompio').length;\n  return {\n    resp_f: parseFloat((rf / t * 100).toFixed(2)),\n    resp_d: parseFloat((rd / t * 100).toFixed(2)),\n    rompio: parseFloat((ro / t * 100).toFixed(2)),\n    casos: t,\n    suficiente: t >= 15\n  };\n}\n\nfunction calcNivel(tipo) {\n  const arr = hNivel.filter(n => n.tipo_nivel === tipo);\n  const rotos = arr.filter(n => n.fue_roto).length;\n  return {\n    pct: arr.length > 0 ? parseFloat((rotos / arr.length * 100).toFixed(2)) : 0,\n    casos: arr.length\n  };\n}\n\nconst sz = calcProbs(hSupply);\nconst dz = calcProbs(hDemand);\nconst nh = calcNivel('H');\nconst nl = calcNivel('L');\n\n// Score confluencia: zonas 50%, niveles 50%\nconst zona_score = datos.zona_tipo === 'supply' ? sz.resp_f : dz.resp_f;\nconst nivel_score = datos.nivel_h ? (100 - nh.pct) : (nl.pct ? nl.pct : 0);\nconst score = Math.round(zona_score * 0.60 + nivel_score * 0.40);\n\nconst zona_activa = datos.zona_activa || {};\n\nreturn [{ json: {\n  id: 1,\n  activo: 'XAUUSD',\n  tipo_zona: datos.zona_tipo || 'supply',\n  precio_zona_suelo: zona_activa.bot || datos.supply_zone_bot || 0,\n  precio_zona_techo: zona_activa.top || datos.supply_zone_top || 0,\n  direccion_precio: datos.zona_tipo === 'supply' ? 'bajista' : 'alcista',\n  prob_respeto_fuerte: datos.zona_tipo === 'supply' ? sz.resp_f : dz.resp_f,\n  prob_respeto_debil:  datos.zona_tipo === 'supply' ? sz.resp_d : dz.resp_d,\n  prob_rompio:         datos.zona_tipo === 'supply' ? sz.rompio : dz.rompio,\n  casos_totales:       datos.zona_tipo === 'supply' ? sz.casos  : dz.casos,\n  muestra_suficiente:  datos.zona_tipo === 'supply' ? sz.suficiente : dz.suficiente,\n  // supply stats\n  sz_resp_f: sz.resp_f, sz_resp_d: sz.resp_d, sz_rompio: sz.rompio, sz_casos: sz.casos,\n  // demand stats\n  dz_resp_f: dz.resp_f, dz_resp_d: dz.resp_d, dz_rompio: dz.rompio, dz_casos: dz.casos,\n  // niveles\n  nivel_arriba_tipo: 'H',\n  nivel_arriba_precio: datos.nivel_h,\n  nivel_arriba_prob_ruptura: nh.pct,\n  nivel_arriba_casos: nh.casos,\n  nivel_abajo_tipo: 'L',\n  nivel_abajo_precio: datos.nivel_l,\n  nivel_abajo_prob_soporte: 100 - nl.pct,\n  nivel_abajo_casos: nl.casos,\n  score_confluencia: score,\n  fase: datos.fase,\n  updated_at: new Date().toISOString()\n}}];"
+      },
+      "id": "node-calcular",
+      "name": "Calcular Probabilidades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/analisis_actual",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "resolution=merge-duplicates,return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "node-upsert",
+      "name": "Guardar en Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, fase: $('Calcular Probabilidades').first().json.fase, score: $('Calcular Probabilidades').first().json.score_confluencia, zona: $('Calcular Probabilidades').first().json.tipo_zona }) }}"
+      },
+      "id": "node-response",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1280, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Sensei": { "main": [[{ "node": "Parsear y Detectar Zona", "type": "main", "index": 0 }]] },
+    "Parsear y Detectar Zona": { "main": [[{ "node": "Historial Supply", "type": "main", "index": 0 }, { "node": "Historial Demand", "type": "main", "index": 0 }, { "node": "Historial Niveles", "type": "main", "index": 0 }]] },
+    "Historial Supply":  { "main": [[{ "node": "Calcular Probabilidades", "type": "main", "index": 0 }]] },
+    "Historial Demand":  { "main": [[{ "node": "Calcular Probabilidades", "type": "main", "index": 0 }]] },
+    "Historial Niveles": { "main": [[{ "node": "Calcular Probabilidades", "type": "main", "index": 0 }]] },
+    "Calcular Probabilidades": { "main": [[{ "node": "Guardar en Supabase", "type": "main", "index": 0 }]] },
+    "Guardar en Supabase": { "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

@@ -1,0 +1,185 @@
+//@version=6
+indicator("XAU/USD Zonas Estadísticas", overlay=true, max_boxes_count=10, max_lines_count=20, max_labels_count=30)
+
+// ════════════════════════════════════════════════
+//  INPUTS
+// ════════════════════════════════════════════════
+var string GRP_N8N  = "Configuración n8n"
+var string GRP_PROB = "Probabilidades (rellena tras cada ejecución de n8n)"
+
+int    ATR_PER  = input.int(14, "Período ATR", minval=5, maxval=30)
+bool   VER_LBL  = input.bool(true,  "Mostrar etiquetas HH/HL/LH/LL")
+bool   VER_PNL  = input.bool(true,  "Mostrar panel estadísticas")
+
+float  i_suelo  = input.float(0,    "Zona suelo",          group=GRP_PROB)
+float  i_techo  = input.float(0,    "Zona techo",          group=GRP_PROB)
+string i_tipo   = input.string("order_block", "Tipo zona", group=GRP_PROB, options=["order_block","acumulacion","fvg","nivel_hh","nivel_hl","nivel_lh","nivel_ll"])
+float  i_fuerte = input.float(0,    "% Respeto fuerte",    group=GRP_PROB)
+float  i_debil  = input.float(0,    "% Respeto débil",     group=GRP_PROB)
+float  i_rompio = input.float(0,    "% Rompió",            group=GRP_PROB)
+int    i_casos  = input.int(0,      "Casos totales",       group=GRP_PROB)
+float  i_score  = input.float(0,    "Score confluencia",   group=GRP_PROB)
+string i_fase   = input.string("LEJOS", "Fase",            group=GRP_PROB, options=["LEJOS","ACERCANDO","EN_ZONA"])
+
+// ════════════════════════════════════════════════
+//  ATR
+// ════════════════════════════════════════════════
+float atr = ta.atr(ATR_PER)
+
+// ════════════════════════════════════════════════
+//  DETECCIÓN ORDER BLOCK
+// ════════════════════════════════════════════════
+bool impulso_baj = (close[1] - close[2]) > 1.5 * atr[1] and close[2] < open[2]
+bool impulso_alc = (close[1] - close[2]) > 1.5 * atr[1] and close[2] > open[2]
+bool es_ob       = impulso_baj or impulso_alc
+float ob_suelo   = es_ob ? low[1]  : na
+float ob_techo   = es_ob ? high[1] : na
+string ob_dir    = impulso_baj ? "bajista" : "alcista"
+
+// ════════════════════════════════════════════════
+//  DETECCIÓN FVG
+// ════════════════════════════════════════════════
+bool  es_fvg    = (low - high[2]) > 0.3 * atr and low > high[2]
+float fvg_suelo = es_fvg ? high[2] : na
+float fvg_techo = es_fvg ? low     : na
+
+// ════════════════════════════════════════════════
+//  DETECCIÓN ACUMULACIÓN
+// ════════════════════════════════════════════════
+var float acum_s = na
+var float acum_t = na
+var int   acum_n = 0
+
+if (high - low) < 0.8 * atr
+    acum_n := acum_n + 1
+    acum_s  := na(acum_s) ? low  : math.min(acum_s, low)
+    acum_t  := na(acum_t) ? high : math.max(acum_t, high)
+else
+    acum_n := 0
+    acum_s  := na
+    acum_t  := na
+
+bool es_acum = acum_n >= 6
+
+// ════════════════════════════════════════════════
+//  ZONA MÁS RELEVANTE
+// ════════════════════════════════════════════════
+string zona_tipo  = es_ob ? "order_block" : es_fvg ? "fvg" : es_acum ? "acumulacion" : na
+float  zona_suelo = es_ob ? ob_suelo : es_fvg ? fvg_suelo : es_acum ? acum_s : na
+float  zona_techo = es_ob ? ob_techo : es_fvg ? fvg_techo : es_acum ? acum_t : na
+string zona_dir   = es_ob ? ob_dir : close > open ? "alcista" : "bajista"
+
+// ════════════════════════════════════════════════
+//  PIVOTS HH / HL / LH / LL
+// ════════════════════════════════════════════════
+int PL = 5
+float ph = ta.pivothigh(high, PL, PL)
+float pl = ta.pivotlow(low, PL, PL)
+
+var float ult_ph = na
+var float pen_ph = na
+var float ult_pl = na
+var float pen_pl = na
+
+if not na(ph)
+    pen_ph := ult_ph
+    ult_ph  := ph
+if not na(pl)
+    pen_pl := ult_pl
+    ult_pl  := pl
+
+string tipo_ph = na(pen_ph) ? na : ult_ph > pen_ph ? "HH" : "LH"
+string tipo_pl = na(pen_pl) ? na : ult_pl > pen_pl ? "HL" : "LL"
+
+float  niv_arr_p = na(ult_ph) or ult_ph <= close ? na : ult_ph
+string niv_arr_t = not na(niv_arr_p) ? tipo_ph : na
+float  niv_abj_p = na(ult_pl) or ult_pl >= close ? na : ult_pl
+string niv_abj_t = not na(niv_abj_p) ? tipo_pl : na
+
+// ════════════════════════════════════════════════
+//  ZONA Y FASE A MOSTRAR
+// ════════════════════════════════════════════════
+float  loc_suelo = i_suelo > 0 ? i_suelo : zona_suelo
+float  loc_techo = i_techo > 0 ? i_techo : zona_techo
+string loc_tipo  = i_suelo > 0 ? i_tipo  : zona_tipo
+
+float  mid      = na(loc_suelo) ? na : (loc_suelo + loc_techo) / 2
+float  dist_pct = na(mid) ? na : math.abs(close - mid) / mid * 100
+string fase_auto = na(dist_pct) ? "LEJOS" : close >= loc_suelo and close <= loc_techo ? "EN_ZONA" : dist_pct < 0.3 ? "ACERCANDO" : "LEJOS"
+string fase_show = i_suelo > 0 ? i_fase : fase_auto
+
+// ════════════════════════════════════════════════
+//  ALERT PAYLOAD PARA N8N
+// ════════════════════════════════════════════════
+bool es_laborable = dayofweek >= 2 and dayofweek <= 6
+bool en_sesion    = hour >= 14 and hour < 21
+bool cada_30min   = minute == 0 or minute == 30
+bool disparar     = es_laborable and en_sesion and cada_30min and not na(zona_tipo)
+
+string s_tipo   = na(zona_tipo)  ? ""    : zona_tipo
+string s_suelo  = na(zona_suelo) ? "0"   : str.tostring(zona_suelo, "#.##")
+string s_techo  = na(zona_techo) ? "0"   : str.tostring(zona_techo, "#.##")
+string s_dir    = na(zona_dir)   ? "lateral" : zona_dir
+string s_close  = str.tostring(close, "#.##")
+string s_arr_t  = na(niv_arr_t)  ? ""    : niv_arr_t
+string s_arr_p  = na(niv_arr_p)  ? "null" : str.tostring(niv_arr_p, "#.##")
+string s_abj_t  = na(niv_abj_t)  ? ""    : niv_abj_t
+string s_abj_p  = na(niv_abj_p)  ? "null" : str.tostring(niv_abj_p, "#.##")
+
+string payload = '{"tipo_zona":"' + s_tipo + '","precio_zona_suelo":' + s_suelo + ',"precio_zona_techo":' + s_techo + ',"direccion_precio":"' + s_dir + '","precio_actual":' + s_close + ',"score_1h":50,"score_15m":50,"score_5m":50,"nivel_arriba_tipo":"' + s_arr_t + '","nivel_arriba_precio":' + s_arr_p + ',"nivel_abajo_tipo":"' + s_abj_t + '","nivel_abajo_precio":' + s_abj_p + '}'
+
+alertcondition(disparar, title="n8n XAU/USD Zona", message="{payload}")
+
+// ════════════════════════════════════════════════
+//  CAJA DE ZONA
+// ════════════════════════════════════════════════
+color col_bg = loc_tipo == "order_block" ? color.new(color.orange, 80) : loc_tipo == "acumulacion" ? color.new(color.blue, 80) : loc_tipo == "fvg" ? color.new(color.green, 80) : color.new(color.gray, 80)
+color col_bd = loc_tipo == "order_block" ? color.orange : loc_tipo == "acumulacion" ? color.blue : loc_tipo == "fvg" ? color.green : color.gray
+string etq   = loc_tipo == "order_block" ? "OB" : loc_tipo == "acumulacion" ? "ACUM" : loc_tipo == "fvg" ? "FVG" : "ZONA"
+
+var box caja = na
+
+if not na(loc_suelo) and loc_suelo > 0 and barstate.islast
+    if not na(caja)
+        box.delete(caja)
+    caja := box.new(left=bar_index - 20, top=loc_techo, right=bar_index + 30, bottom=loc_suelo, bgcolor=col_bg, border_color=col_bd, border_width=2, text=etq, text_color=col_bd, text_size=size.small)
+
+// ════════════════════════════════════════════════
+//  NIVELES HH / HL / LH / LL
+// ════════════════════════════════════════════════
+var line ln_arr = na
+var label lb_arr = na
+var line ln_abj = na
+var label lb_abj = na
+
+if VER_LBL and barstate.islast
+    if not na(ln_arr)
+        line.delete(ln_arr)
+    if not na(lb_arr)
+        label.delete(lb_arr)
+    if not na(ln_abj)
+        line.delete(ln_abj)
+    if not na(lb_abj)
+        label.delete(lb_abj)
+
+    if not na(niv_arr_p)
+        ln_arr := line.new(bar_index - 30, niv_arr_p, bar_index + 10, niv_arr_p, color=color.new(color.red, 30), width=1, style=line.style_dashed)
+        lb_arr := label.new(bar_index + 10, niv_arr_p, text=na(niv_arr_t) ? "?" : niv_arr_t, color=color.new(color.red, 70), textcolor=color.red, style=label.style_label_left, size=size.small)
+
+    if not na(niv_abj_p)
+        ln_abj := line.new(bar_index - 30, niv_abj_p, bar_index + 10, niv_abj_p, color=color.new(color.green, 30), width=1, style=line.style_dashed)
+        lb_abj := label.new(bar_index + 10, niv_abj_p, text=na(niv_abj_t) ? "?" : niv_abj_t, color=color.new(color.green, 70), textcolor=color.green, style=label.style_label_left, size=size.small)
+
+// ════════════════════════════════════════════════
+//  PANEL ESTADÍSTICAS
+// ════════════════════════════════════════════════
+if VER_PNL and barstate.islast
+    string aviso = i_casos > 0 and i_casos < 15 ? "\n⚠ Muestra insuf. (" + str.tostring(i_casos) + " casos)" : ""
+    string probs = i_casos > 0 ? "\n✅ Fuerte : " + str.tostring(i_fuerte, "#.#") + "%\n〰 Débil  : " + str.tostring(i_debil, "#.#") + "%\n❌ Rompió : " + str.tostring(i_rompio, "#.#") + "% [" + str.tostring(i_casos) + " casos]" : "\nSin historial aún"
+    string niv_a = not na(niv_arr_t) and not na(niv_arr_p) ? "\n▲ " + niv_arr_t + "  " + str.tostring(niv_arr_p, "#.##") : ""
+    string niv_b = not na(niv_abj_t) and not na(niv_abj_p) ? "\n▼ " + niv_abj_t + "  " + str.tostring(niv_abj_p, "#.##") : ""
+    string rango = loc_suelo > 0 ? str.tostring(loc_suelo, "#.##") + " – " + str.tostring(loc_techo, "#.##") : "—"
+    string txt = "━━ XAU/USD ZONAS ━━\nZona : " + (na(loc_tipo) ? "Sin zona" : loc_tipo) + "\nRango: " + rango + probs + aviso + niv_a + niv_b + "\nScore: " + str.tostring(i_score, "#.#") + " / 100\nFase : " + fase_show
+
+    var table pnl = table.new(position.top_right, 1, 1, bgcolor=color.new(color.black, 15), border_color=color.gray, border_width=1)
+    table.cell(pnl, 0, 0, text=txt, text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 25))

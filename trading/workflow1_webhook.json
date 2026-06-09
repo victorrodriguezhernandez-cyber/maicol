@@ -1,0 +1,144 @@
+{
+  "name": "XAU/USD - Workflow 1: Webhook Pine Script → Calcular → Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "xauusd-zona",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "w1-webhook",
+      "name": "Webhook Pine Script",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "xauusd-zona-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer y validar datos del webhook de Pine Script\nconst body = $input.first().json.body || $input.first().json;\n\nconst tipo_zona = body.tipo_zona;\nconst precio_zona_suelo = parseFloat(body.precio_zona_suelo);\nconst precio_zona_techo = parseFloat(body.precio_zona_techo);\nconst direccion_precio = body.direccion_precio;\nconst precio_actual = parseFloat(body.precio_actual);\nconst score_1h = parseFloat(body.score_1h || 0);\nconst score_15m = parseFloat(body.score_15m || 0);\nconst score_5m = parseFloat(body.score_5m || 0);\nconst nivel_arriba_tipo = body.nivel_arriba_tipo || null;\nconst nivel_arriba_precio = body.nivel_arriba_precio ? parseFloat(body.nivel_arriba_precio) : null;\nconst nivel_abajo_tipo = body.nivel_abajo_tipo || null;\nconst nivel_abajo_precio = body.nivel_abajo_precio ? parseFloat(body.nivel_abajo_precio) : null;\n\n// Calcular score confluencia ponderado\nconst score_confluencia = Math.round(score_1h * 0.50 + score_15m * 0.30 + score_5m * 0.20);\n\n// Calcular fase según distancia al precio\nconst zona_mid = (precio_zona_suelo + precio_zona_techo) / 2;\nconst distancia_pct = Math.abs(precio_actual - zona_mid) / zona_mid * 100;\nlet fase = 'LEJOS';\nif (precio_actual >= precio_zona_suelo && precio_actual <= precio_zona_techo) {\n  fase = 'EN_ZONA';\n} else if (distancia_pct < 0.3) {\n  fase = 'ACERCANDO';\n}\n\nreturn [{\n  json: {\n    tipo_zona,\n    precio_zona_suelo,\n    precio_zona_techo,\n    direccion_precio,\n    precio_actual,\n    score_confluencia,\n    fase,\n    nivel_arriba_tipo,\n    nivel_arriba_precio,\n    nivel_abajo_tipo,\n    nivel_abajo_precio,\n    activo: 'XAUUSD'\n  }\n}];"
+      },
+      "id": "w1-parse",
+      "name": "Parsear y Calcular Fase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/zonas_historial",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "tipo_zona", "value": "=eq.{{$json.tipo_zona}}" },
+            { "name": "direccion_precio", "value": "=eq.{{$json.direccion_precio}}" },
+            { "name": "select", "value": "resultado,count" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w1-fetch-zona",
+      "name": "Consultar Historial Zona",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 180]
+    },
+    {
+      "parameters": {
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/niveles_historial",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "activo", "value": "eq.XAUUSD" },
+            { "name": "select", "value": "tipo_nivel,fue_roto" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w1-fetch-niveles",
+      "name": "Consultar Historial Niveles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcular probabilidades desde historial\nconst datosFase = $('Parsear y Calcular Fase').first().json;\nconst historialZona = $('Consultar Historial Zona').first().json;\nconst historialNiveles = $('Consultar Historial Niveles').first().json;\n\n// Probabilities zona\nconst registros = Array.isArray(historialZona) ? historialZona : [];\nconst total = registros.length;\n\nlet respeto_fuerte = 0, respeto_debil = 0, rompio = 0, sin_reaccion = 0;\nfor (const r of registros) {\n  if (r.resultado === 'respeto_fuerte') respeto_fuerte++;\n  else if (r.resultado === 'respeto_debil') respeto_debil++;\n  else if (r.resultado === 'rompio') rompio++;\n  else sin_reaccion++;\n}\n\nconst prob_respeto_fuerte = total > 0 ? parseFloat(((respeto_fuerte / total) * 100).toFixed(2)) : 0;\nconst prob_respeto_debil = total > 0 ? parseFloat(((respeto_debil / total) * 100).toFixed(2)) : 0;\nconst prob_rompio = total > 0 ? parseFloat(((rompio / total) * 100).toFixed(2)) : 0;\nconst muestra_suficiente = total >= 15;\n\n// Probabilidades niveles\nconst nivelesArr = Array.isArray(historialNiveles) ? historialNiveles : [];\n\nfunction calcProbNivel(tipo) {\n  const del_tipo = nivelesArr.filter(n => n.tipo_nivel === tipo);\n  const rotos = del_tipo.filter(n => n.fue_roto).length;\n  return { prob: del_tipo.length > 0 ? parseFloat(((rotos / del_tipo.length) * 100).toFixed(2)) : 0, casos: del_tipo.length };\n}\n\nconst arriba_stats = datosFase.nivel_arriba_tipo ? calcProbNivel(datosFase.nivel_arriba_tipo) : { prob: 0, casos: 0 };\nconst abajo_stats = datosFase.nivel_abajo_tipo ? calcProbNivel(datosFase.nivel_abajo_tipo) : { prob: 0, casos: 0 };\n\nreturn [{\n  json: {\n    activo: 'XAUUSD',\n    tipo_zona: datosFase.tipo_zona,\n    precio_zona_suelo: datosFase.precio_zona_suelo,\n    precio_zona_techo: datosFase.precio_zona_techo,\n    direccion_precio: datosFase.direccion_precio,\n    prob_respeto_fuerte,\n    prob_respeto_debil,\n    prob_rompio,\n    casos_totales: total,\n    muestra_suficiente,\n    nivel_arriba_tipo: datosFase.nivel_arriba_tipo,\n    nivel_arriba_precio: datosFase.nivel_arriba_precio,\n    nivel_arriba_prob_ruptura: arriba_stats.prob,\n    nivel_arriba_casos: arriba_stats.casos,\n    nivel_abajo_tipo: datosFase.nivel_abajo_tipo,\n    nivel_abajo_precio: datosFase.nivel_abajo_precio,\n    nivel_abajo_prob_soporte: 100 - abajo_stats.prob,\n    nivel_abajo_casos: abajo_stats.casos,\n    score_confluencia: datosFase.score_confluencia,\n    fase: datosFase.fase,\n    updated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "w1-calcular",
+      "name": "Calcular Probabilidades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/analisis_actual?id=eq.1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "resolution=merge-duplicates,return=minimal" }
+          ]
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({id: 1, ...$json}) }}",
+        "options": {}
+      },
+      "id": "w1-upsert",
+      "name": "Upsert analisis_actual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1140, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"fase\": \"{{ $('Calcular Probabilidades').first().json.fase }}\", \"score\": {{ $('Calcular Probabilidades').first().json.score_confluencia }} }"
+      },
+      "id": "w1-response",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1360, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Pine Script": { "main": [[{ "node": "Parsear y Calcular Fase", "type": "main", "index": 0 }]] },
+    "Parsear y Calcular Fase": {
+      "main": [[
+        { "node": "Consultar Historial Zona", "type": "main", "index": 0 },
+        { "node": "Consultar Historial Niveles", "type": "main", "index": 0 }
+      ]]
+    },
+    "Consultar Historial Zona": { "main": [[{ "node": "Calcular Probabilidades", "type": "main", "index": 0 }]] },
+    "Consultar Historial Niveles": { "main": [[{ "node": "Calcular Probabilidades", "type": "main", "index": 0 }]] },
+    "Calcular Probabilidades": { "main": [[{ "node": "Upsert analisis_actual", "type": "main", "index": 0 }]] },
+    "Upsert analisis_actual": { "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": ["xauusd", "trading"],
+  "pinData": {}
+}

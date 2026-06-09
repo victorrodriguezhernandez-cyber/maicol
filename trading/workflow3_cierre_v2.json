@@ -1,0 +1,129 @@
+{
+  "name": "XAU/USD — Workflow 3: Cierre 21h → Historial",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 21 * * 1-5" }]
+        },
+        "timezone": "Europe/Madrid"
+      },
+      "id": "node-cron",
+      "name": "21:00 L-V",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/analisis_actual?id=eq.1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-fetch",
+      "name": "Leer Zona del Día",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=1h&outputsize=8&apikey=PON_AQUI_TU_TWELVE_DATA_KEY",
+        "options": {}
+      },
+      "id": "node-velas",
+      "name": "Velas 1H del Día",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "const analisis = $('Leer Zona del Día').first().json;\nconst priceData = $('Velas 1H del Día').first().json;\n\nif (!analisis.tipo_zona || parseFloat(analisis.precio_zona_suelo) === 0) {\n  throw new Error('No hay zona activa hoy');\n}\n\nconst suelo = parseFloat(analisis.precio_zona_suelo);\nconst techo = parseFloat(analisis.precio_zona_techo);\nconst values = priceData?.values || [];\n\nlet toco = false, rompio = false;\nlet max_rebote = 0;\n\nfor (const v of values) {\n  const h = parseFloat(v.high), l = parseFloat(v.low), c = parseFloat(v.close), o = parseFloat(v.open);\n  if (h >= suelo && l <= techo) {\n    toco = true;\n    const rebote = Math.abs(c - o);\n    if (rebote > max_rebote) max_rebote = rebote;\n    if (analisis.direccion_precio === 'alcista' && c > techo * 1.002) rompio = true;\n    if (analisis.direccion_precio === 'bajista' && c < suelo * 0.998) rompio = true;\n  }\n}\n\nlet resultado = 'sin_reaccion';\nif (toco) {\n  if (rompio) resultado = 'rompio';\n  else resultado = max_rebote > (techo - suelo) * 1.5 ? 'respeto_fuerte' : 'respeto_debil';\n}\n\nconst h = new Date().getUTCHours();\nlet sesion = 'new_york';\nif (h >= 22 || h < 8) sesion = 'asia';\nelse if (h >= 8 && h < 13) sesion = 'london';\nelse if (h >= 13 && h < 16) sesion = 'overlap';\n\nconst hoy = new Date().toISOString().split('T')[0];\n\nreturn [{ json: {\n  registro: {\n    fecha: hoy, activo: 'XAUUSD', timeframe: '1H',\n    tipo_zona: analisis.tipo_zona,\n    precio_zona_suelo: suelo, precio_zona_techo: techo,\n    direccion_precio: analisis.direccion_precio,\n    resultado, sesion\n  }\n}}];"
+      },
+      "id": "node-evaluar",
+      "name": "Evaluar Resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/zonas_historial",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.registro) }}",
+        "options": {}
+      },
+      "id": "node-insert",
+      "name": "Guardar en Historial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/analisis_actual?id=eq.1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"fase\": \"LEJOS\", \"updated_at\": \"={{ new Date().toISOString() }}\"}",
+        "options": {}
+      },
+      "id": "node-reset",
+      "name": "Resetear Fase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 420]
+    }
+  ],
+  "connections": {
+    "21:00 L-V": {
+      "main": [[
+        { "node": "Leer Zona del Día", "type": "main", "index": 0 },
+        { "node": "Velas 1H del Día", "type": "main", "index": 0 }
+      ]]
+    },
+    "Leer Zona del Día": {
+      "main": [[{ "node": "Evaluar Resultado", "type": "main", "index": 0 }]]
+    },
+    "Velas 1H del Día": {
+      "main": [[{ "node": "Evaluar Resultado", "type": "main", "index": 0 }]]
+    },
+    "Evaluar Resultado": {
+      "main": [[
+        { "node": "Guardar en Historial", "type": "main", "index": 0 },
+        { "node": "Resetear Fase", "type": "main", "index": 0 }
+      ]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

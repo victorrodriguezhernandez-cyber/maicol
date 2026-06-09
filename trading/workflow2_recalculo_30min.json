@@ -1,0 +1,101 @@
+{
+  "name": "XAU/USD - Workflow 2: Recálculo cada 30 min (14:00-21:00 L-V)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0,30 14-20 * * 1-5"
+            }
+          ]
+        },
+        "timezone": "Europe/Madrid"
+      },
+      "id": "w2-cron",
+      "name": "Scheduler 30min L-V 14-21h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/analisis_actual?id=eq.1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_ANON_KEY}}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w2-fetch-actual",
+      "name": "Leer analisis_actual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=5min&outputsize=5&apikey={{$env.TWELVE_DATA_APIKEY}}",
+        "options": {}
+      },
+      "id": "w2-fetch-price",
+      "name": "Obtener Precio Actual (Twelve Data)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "const analisis = $('Leer analisis_actual').first().json;\nconst priceData = $('Obtener Precio Actual (Twelve Data)').first().json;\n\n// Extraer precio actual\nconst values = priceData?.values || [];\nconst precio_actual = values.length > 0 ? parseFloat(values[0].close) : null;\n\nif (!precio_actual) throw new Error('No se pudo obtener precio actual de Twelve Data');\nif (!analisis || !analisis.tipo_zona) throw new Error('analisis_actual vacío o sin zona definida');\n\n// Recalcular fase\nconst zona_mid = (parseFloat(analisis.precio_zona_suelo) + parseFloat(analisis.precio_zona_techo)) / 2;\nconst distancia_pct = Math.abs(precio_actual - zona_mid) / zona_mid * 100;\nlet fase = 'LEJOS';\nif (precio_actual >= parseFloat(analisis.precio_zona_suelo) && precio_actual <= parseFloat(analisis.precio_zona_techo)) {\n  fase = 'EN_ZONA';\n} else if (distancia_pct < 0.3) {\n  fase = 'ACERCANDO';\n}\n\nreturn [{\n  json: {\n    id: 1,\n    fase,\n    precio_actual,\n    updated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "w2-recalc-fase",
+      "name": "Recalcular Fase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 380]
+    },
+    {
+      "parameters": {
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/analisis_actual?id=eq.1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_ANON_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "method": "PATCH",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fase: $json.fase, updated_at: $json.updated_at }) }}",
+        "options": {}
+      },
+      "id": "w2-update",
+      "name": "Actualizar Fase en Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 380]
+    }
+  ],
+  "connections": {
+    "Scheduler 30min L-V 14-21h": {
+      "main": [[
+        { "node": "Leer analisis_actual", "type": "main", "index": 0 },
+        { "node": "Obtener Precio Actual (Twelve Data)", "type": "main", "index": 0 }
+      ]]
+    },
+    "Leer analisis_actual": { "main": [[{ "node": "Recalcular Fase", "type": "main", "index": 0 }]] },
+    "Obtener Precio Actual (Twelve Data)": { "main": [[{ "node": "Recalcular Fase", "type": "main", "index": 0 }]] },
+    "Recalcular Fase": { "main": [[{ "node": "Actualizar Fase en Supabase", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": ["xauusd", "trading"],
+  "pinData": {}
+}

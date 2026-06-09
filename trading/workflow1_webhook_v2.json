@@ -1,0 +1,151 @@
+{
+  "name": "XAU/USD — Workflow 1: Webhook → Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "xauusd-zona",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook Pine Script",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst tipo_zona = body.tipo_zona || 'order_block';\nconst precio_zona_suelo = parseFloat(body.precio_zona_suelo) || 0;\nconst precio_zona_techo = parseFloat(body.precio_zona_techo) || 0;\nconst direccion_precio = body.direccion_precio || 'lateral';\nconst precio_actual = parseFloat(body.precio_actual) || 0;\nconst score_1h = parseFloat(body.score_1h) || 50;\nconst score_15m = parseFloat(body.score_15m) || 50;\nconst score_5m = parseFloat(body.score_5m) || 50;\nconst nivel_arriba_tipo = body.nivel_arriba_tipo || null;\nconst nivel_arriba_precio = body.nivel_arriba_precio ? parseFloat(body.nivel_arriba_precio) : null;\nconst nivel_abajo_tipo = body.nivel_abajo_tipo || null;\nconst nivel_abajo_precio = body.nivel_abajo_precio ? parseFloat(body.nivel_abajo_precio) : null;\n\nconst score_confluencia = Math.round(score_1h * 0.50 + score_15m * 0.30 + score_5m * 0.20);\n\nconst zona_mid = (precio_zona_suelo + precio_zona_techo) / 2;\nconst distancia_pct = zona_mid > 0 ? Math.abs(precio_actual - zona_mid) / zona_mid * 100 : 99;\nlet fase = 'LEJOS';\nif (precio_actual >= precio_zona_suelo && precio_actual <= precio_zona_techo) {\n  fase = 'EN_ZONA';\n} else if (distancia_pct < 0.3) {\n  fase = 'ACERCANDO';\n}\n\nreturn [{ json: {\n  tipo_zona, precio_zona_suelo, precio_zona_techo,\n  direccion_precio, precio_actual, score_confluencia, fase,\n  nivel_arriba_tipo, nivel_arriba_precio,\n  nivel_abajo_tipo, nivel_abajo_precio\n}}];"
+      },
+      "id": "node-parse",
+      "name": "Parsear Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/zonas_historial",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "tipo_zona", "value": "={{ 'eq.' + $json.tipo_zona }}" },
+            { "name": "direccion_precio", "value": "={{ 'eq.' + $json.direccion_precio }}" },
+            { "name": "select", "value": "resultado" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-fetch-zona",
+      "name": "Historial Zona Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 180]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/niveles_historial",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "activo", "value": "eq.XAUUSD" },
+            { "name": "select", "value": "tipo_nivel,fue_roto" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-fetch-niveles",
+      "name": "Historial Niveles Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "const datosFase = $('Parsear Datos').first().json;\nconst historialZona = $('Historial Zona Supabase').all().map(i => i.json);\nconst historialNiveles = $('Historial Niveles Supabase').all().map(i => i.json);\n\nconst total = historialZona.length;\nlet respeto_fuerte = 0, respeto_debil = 0, rompio = 0;\nfor (const r of historialZona) {\n  if (r.resultado === 'respeto_fuerte') respeto_fuerte++;\n  else if (r.resultado === 'respeto_debil') respeto_debil++;\n  else if (r.resultado === 'rompio') rompio++;\n}\n\nconst prob_respeto_fuerte = total > 0 ? parseFloat(((respeto_fuerte / total) * 100).toFixed(2)) : 0;\nconst prob_respeto_debil  = total > 0 ? parseFloat(((respeto_debil  / total) * 100).toFixed(2)) : 0;\nconst prob_rompio         = total > 0 ? parseFloat(((rompio         / total) * 100).toFixed(2)) : 0;\nconst muestra_suficiente  = total >= 15;\n\nfunction calcNivel(tipo) {\n  const arr = historialNiveles.filter(n => n.tipo_nivel === tipo);\n  const rotos = arr.filter(n => n.fue_roto).length;\n  return { prob: arr.length > 0 ? parseFloat(((rotos / arr.length) * 100).toFixed(2)) : 0, casos: arr.length };\n}\n\nconst arriba = datosFase.nivel_arriba_tipo ? calcNivel(datosFase.nivel_arriba_tipo) : { prob: 0, casos: 0 };\nconst abajo  = datosFase.nivel_abajo_tipo  ? calcNivel(datosFase.nivel_abajo_tipo)  : { prob: 0, casos: 0 };\n\nreturn [{ json: {\n  id: 1,\n  activo: 'XAUUSD',\n  tipo_zona: datosFase.tipo_zona,\n  precio_zona_suelo: datosFase.precio_zona_suelo,\n  precio_zona_techo: datosFase.precio_zona_techo,\n  direccion_precio: datosFase.direccion_precio,\n  prob_respeto_fuerte, prob_respeto_debil, prob_rompio,\n  casos_totales: total,\n  muestra_suficiente,\n  nivel_arriba_tipo: datosFase.nivel_arriba_tipo,\n  nivel_arriba_precio: datosFase.nivel_arriba_precio,\n  nivel_arriba_prob_ruptura: arriba.prob,\n  nivel_arriba_casos: arriba.casos,\n  nivel_abajo_tipo: datosFase.nivel_abajo_tipo,\n  nivel_abajo_precio: datosFase.nivel_abajo_precio,\n  nivel_abajo_prob_soporte: 100 - abajo.prob,\n  nivel_abajo_casos: abajo.casos,\n  score_confluencia: datosFase.score_confluencia,\n  fase: datosFase.fase,\n  updated_at: new Date().toISOString()\n}}];"
+      },
+      "id": "node-calcular",
+      "name": "Calcular Probabilidades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://pyiukqeuaxonsrrgbfzq.supabase.co/rest/v1/analisis_actual",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXVrcWV1YXhvbnNycmdiZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQ2MjIsImV4cCI6MjA5NTkzMDYyMn0.bdGYK59jrIj_8E5ySDmzc7WdRL7e6GQaugq4-dvRoM4" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "resolution=merge-duplicates,return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "node-upsert",
+      "name": "Guardar en Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, fase: $('Calcular Probabilidades').first().json.fase, score: $('Calcular Probabilidades').first().json.score_confluencia }) }}"
+      },
+      "id": "node-response",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Pine Script": {
+      "main": [[{ "node": "Parsear Datos", "type": "main", "index": 0 }]]
+    },
+    "Parsear Datos": {
+      "main": [[
+        { "node": "Historial Zona Supabase", "type": "main", "index": 0 },
+        { "node": "Historial Niveles Supabase", "type": "main", "index": 0 }
+      ]]
+    },
+    "Historial Zona Supabase": {
+      "main": [[{ "node": "Calcular Probabilidades", "type": "main", "index": 0 }]]
+    },
+    "Historial Niveles Supabase": {
+      "main": [[{ "node": "Calcular Probabilidades", "type": "main", "index": 0 }]]
+    },
+    "Calcular Probabilidades": {
+      "main": [[{ "node": "Guardar en Supabase", "type": "main", "index": 0 }]]
+    },
+    "Guardar en Supabase": {
+      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
