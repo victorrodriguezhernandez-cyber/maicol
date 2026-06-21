@@ -1,0 +1,438 @@
+//@version=6
+indicator("Sensei Pro · Escáner OB", shorttitle="SenseiOB",
+     overlay=true,
+     max_boxes_count=50,
+     max_lines_count=100,
+     max_labels_count=50,
+     max_bars_back=1500)
+
+// ══════════════════════════════════════════════════════════════
+// §1  INPUTS
+// ══════════════════════════════════════════════════════════════
+grp_struct  = "⚙ Estructura"
+grp_ob      = "📦 Order Blocks"
+grp_fvg     = "⚡ Fair Value Gaps"
+grp_panel   = "📊 Panel"
+grp_retests = "🔁 Retests"
+
+swing_len     = input.int   (10,  "Longitud swing",               minval=3,  maxval=50,  group=grp_struct)
+atr_len       = input.int   (14,  "ATR período",                  minval=5,  maxval=50,  group=grp_struct)
+consol_thresh = input.float (0.4, "Umbral consolidación (× ATR)", minval=0.1,maxval=2.0, step=0.1, group=grp_struct)
+consol_bars   = input.int   (5,   "Ventana consolidación",        minval=2,  maxval=20,  group=grp_struct)
+show_bos_lines= input.bool  (true,"Líneas BOS / CHoCH",           group=grp_struct)
+
+show_obs      = input.bool  (true,   "Mostrar OBs",               group=grp_ob)
+ob_extend     = input.int   (40,     "Extensión OB (velas)",      minval=5, maxval=200,  group=grp_ob)
+ob_mitigation = input.string("Close","Mitigación al:",            options=["Close","Wick"], group=grp_ob)
+col_ob_bull   = input.color (color.new(#26C6DA, 85), "Color demanda",  group=grp_ob)
+col_ob_bear   = input.color (color.new(#EF5350, 85), "Color oferta",   group=grp_ob)
+col_ob_mit    = input.color (color.new(#607D8B, 92), "Color mitigado", group=grp_ob)
+
+show_fvg      = input.bool  (false, "Mostrar FVGs",               group=grp_fvg)
+fvg_min_atr   = input.float (0.8,   "Tamaño mínimo FVG (× ATR)", minval=0.1,maxval=5.0, step=0.1, group=grp_fvg)
+
+show_panel    = input.bool  (true,          "Mostrar panel",      group=grp_panel)
+panel_pos     = input.string("Bottom Right","Posición",           options=["Bottom Right","Bottom Left","Top Right","Top Left"], group=grp_panel)
+
+retest_lb     = input.int   (300, "Lookback retests (barras)",    minval=50, maxval=1000, group=grp_retests)
+bounce_atr    = input.float (1.0, "Bounce mínimo (× ATR)",       minval=0.3,maxval=5.0,  step=0.1, group=grp_retests)
+touch_atr     = input.float (0.5, "Tolerancia toque (× ATR)",    minval=0.1,maxval=2.0,  step=0.1, group=grp_retests)
+
+// ══════════════════════════════════════════════════════════════
+// §2  BASE
+// ══════════════════════════════════════════════════════════════
+atr_val = ta.atr(atr_len)
+vol_ma  = ta.sma(volume, 20)
+vol_rel = nz(volume / vol_ma, 1.0)
+
+ph = ta.pivothigh(high, swing_len, swing_len)
+pl = ta.pivotlow (low,  swing_len, swing_len)
+
+// ══════════════════════════════════════════════════════════════
+// §3  ESTRUCTURA
+// ══════════════════════════════════════════════════════════════
+var float last_ph   = na
+var float prev_ph   = na
+var float last_pl   = na
+var float prev_pl   = na
+var float hh_val    = na
+var float hl_val    = na
+var float ll_val    = na
+var float lh_val    = na
+var int   trend     = 0
+var int   bos_dir   = 0
+var bool  was_choch = false
+
+if not na(ph)
+    prev_ph := last_ph
+    last_ph := ph
+if not na(pl)
+    prev_pl := last_pl
+    last_pl := pl
+
+bool new_hh = not na(ph) and not na(prev_ph) and last_ph > prev_ph
+bool new_lh = not na(ph) and not na(prev_ph) and last_ph < prev_ph
+bool new_hl = not na(pl) and not na(prev_pl) and last_pl > prev_pl
+bool new_ll = not na(pl) and not na(prev_pl) and last_pl < prev_pl
+
+if (new_hh or new_hl) and not (new_ll or new_lh)
+    was_choch := trend == -1
+    bos_dir   := 1
+    trend     := 1
+    hh_val    := last_ph
+    hl_val    := last_pl
+
+if (new_ll or new_lh) and not (new_hh or new_hl)
+    was_choch := trend == 1
+    bos_dir   := -1
+    trend     := -1
+    ll_val    := last_pl
+    lh_val    := last_ph
+
+var int racha      = 0
+var int prev_trend = 0
+bool pivot_seen = not na(ph) or not na(pl)
+if trend != prev_trend and trend != 0
+    racha      := 1
+    prev_trend := trend
+else if pivot_seen and trend != 0
+    racha += 1
+
+// — Líneas BOS / CHoCH (solo la más reciente, finas y discretas)
+var line bos_line   = na
+var line choch_line = na
+
+if show_bos_lines
+    if new_hh and not was_choch
+        if not na(bos_line)
+            line.delete(bos_line)
+        bos_line := line.new(bar_index - swing_len, hh_val, bar_index, hh_val,
+             color=color.new(color.green, 50), width=1, style=line.style_dashed)
+    if new_ll and not was_choch
+        if not na(bos_line)
+            line.delete(bos_line)
+        bos_line := line.new(bar_index - swing_len, ll_val, bar_index, ll_val,
+             color=color.new(color.red, 50), width=1, style=line.style_dashed)
+    if was_choch and new_hh
+        if not na(choch_line)
+            line.delete(choch_line)
+        choch_line := line.new(bar_index - swing_len, hh_val, bar_index, hh_val,
+             color=color.new(color.teal, 30), width=1, style=line.style_dotted)
+    if was_choch and new_ll
+        if not na(choch_line)
+            line.delete(choch_line)
+        choch_line := line.new(bar_index - swing_len, ll_val, bar_index, ll_val,
+             color=color.new(color.purple, 30), width=1, style=line.style_dotted)
+
+// ══════════════════════════════════════════════════════════════
+// §4  ORDER BLOCKS (un activo por dirección, igual que el original)
+// ══════════════════════════════════════════════════════════════
+var float ob_bull_top = na
+var float ob_bull_bot = na
+var box   ob_bull_box = na
+
+var float ob_bear_top = na
+var float ob_bear_bot = na
+var box   ob_bear_box = na
+
+if new_hh
+    for i = swing_len to swing_len + 15
+        if close[i] < open[i]
+            ob_bull_top := math.max(open[i], close[i])
+            ob_bull_bot := math.min(open[i], close[i])
+            if show_obs
+                if not na(ob_bull_box)
+                    box.delete(ob_bull_box)
+                ob_bull_box := box.new(
+                     left        = bar_index - i,
+                     top         = ob_bull_top,
+                     right       = bar_index + ob_extend,
+                     bottom      = ob_bull_bot,
+                     bgcolor     = col_ob_bull,
+                     border_color= color.new(#26C6DA, 60),
+                     border_width= 1)
+            break
+
+if new_ll
+    for i = swing_len to swing_len + 15
+        if close[i] > open[i]
+            ob_bear_top := math.max(open[i], close[i])
+            ob_bear_bot := math.min(open[i], close[i])
+            if show_obs
+                if not na(ob_bear_box)
+                    box.delete(ob_bear_box)
+                ob_bear_box := box.new(
+                     left        = bar_index - i,
+                     top         = ob_bear_top,
+                     right       = bar_index + ob_extend,
+                     bottom      = ob_bear_bot,
+                     bgcolor     = col_ob_bear,
+                     border_color= color.new(#EF5350, 60),
+                     border_width= 1)
+            break
+
+if barstate.isconfirmed
+    if not na(ob_bull_box)
+        box.set_right(ob_bull_box, bar_index + ob_extend)
+    if not na(ob_bear_box)
+        box.set_right(ob_bear_box, bar_index + ob_extend)
+
+    if not na(ob_bull_top)
+        bool mit_b = ob_mitigation == "Close" ? close < ob_bull_bot : low < ob_bull_bot
+        if mit_b
+            if not na(ob_bull_box)
+                box.set_bgcolor(ob_bull_box, col_ob_mit)
+                box.set_border_color(ob_bull_box, color.new(#607D8B, 70))
+            ob_bull_top := na
+            ob_bull_bot := na
+
+    if not na(ob_bear_top)
+        bool mit_r = ob_mitigation == "Close" ? close > ob_bear_top : high > ob_bear_top
+        if mit_r
+            if not na(ob_bear_box)
+                box.set_bgcolor(ob_bear_box, col_ob_mit)
+                box.set_border_color(ob_bear_box, color.new(#607D8B, 70))
+            ob_bear_top := na
+            ob_bear_bot := na
+
+// ══════════════════════════════════════════════════════════════
+// §5  FAIR VALUE GAPS (desactivado por defecto, muy discreto)
+// ══════════════════════════════════════════════════════════════
+var array<box> fvg_arr = array.new<box>()
+
+if show_fvg and barstate.isconfirmed and not na(atr_val) and atr_val > 0
+    if low > high[2] and (low - high[2]) >= atr_val * fvg_min_atr
+        fvg_arr.push(box.new(bar_index - 2, low, bar_index + ob_extend, high[2],
+             bgcolor=color.new(#26C6DA, 93), border_color=color.new(#26C6DA, 80), border_width=1))
+    if high < low[2] and (low[2] - high) >= atr_val * fvg_min_atr
+        fvg_arr.push(box.new(bar_index - 2, low[2], bar_index + ob_extend, high,
+             bgcolor=color.new(#EF5350, 93), border_color=color.new(#EF5350, 80), border_width=1))
+    while fvg_arr.size() > 10
+        b = fvg_arr.shift()
+        if not na(b)
+            box.delete(b)
+    int fsz = fvg_arr.size()
+    if fsz > 0
+        for i = 0 to fsz - 1
+            bx = fvg_arr.get(i)
+            if not na(bx)
+                box.set_right(bx, bar_index + ob_extend)
+
+// ══════════════════════════════════════════════════════════════
+// §6  FACTORES F1–F5 → TASA
+// ══════════════════════════════════════════════════════════════
+float f1 = 0.5
+if trend == 1 and not na(hh_val) and not na(hl_val) and not na(atr_val) and atr_val > 0
+    f1 := math.min((hh_val - hl_val) / (atr_val * 10.0), 1.0)
+if trend == -1 and not na(lh_val) and not na(ll_val) and not na(atr_val) and atr_val > 0
+    f1 := math.min((lh_val - ll_val) / (atr_val * 10.0), 1.0)
+
+float f2 = 0.5
+if trend == 1 and not na(hh_val) and not na(hl_val)
+    float rng = hh_val - hl_val
+    if rng > 0
+        f2 := 1.0 - math.max(math.min((close - hl_val) / rng, 1.0), 0.0)
+if trend == -1 and not na(lh_val) and not na(ll_val)
+    float rng = lh_val - ll_val
+    if rng > 0
+        f2 := math.max(math.min((close - ll_val) / rng, 1.0), 0.0)
+
+float f3 = 0.5
+if bos_dir != 0
+    if was_choch
+        f3 := 0.65
+    else if bos_dir == trend
+        f3 := 1.0
+    else
+        f3 := 0.0
+
+int consol_count = 0
+if not na(atr_val) and atr_val > 0
+    for i = 0 to consol_bars - 1
+        if (high[i] - low[i]) < (atr_val * consol_thresh)
+            consol_count += 1
+float f4 = not na(atr_val) and atr_val > 0 ? 1.0 - float(consol_count) / float(consol_bars) : 0.5
+float f5 = math.min(vol_rel / 2.0, 1.0)
+
+float tasa = math.round((f1*0.30 + f2*0.20 + f3*0.25 + f4*0.15 + f5*0.10) * 100)
+
+string tasa_class = tasa > 65 ? "ALTO" : tasa >= 50 ? "MEDIO" : "BAJO"
+color  tasa_col   = tasa > 65 ? color.new(#26A69A, 15) : tasa >= 50 ? color.new(color.orange, 15) : color.new(color.red, 20)
+
+// ══════════════════════════════════════════════════════════════
+// §7  PROBABILIDADES DE RETEST
+// ══════════════════════════════════════════════════════════════
+float lvl_bos_up = hh_val
+float lvl_ob_up  = not na(ob_bull_top) and not na(ob_bull_bot) ? (ob_bull_top + ob_bull_bot) / 2.0 : na
+float lvl_bos_dn = ll_val
+float lvl_ob_dn  = not na(ob_bear_top) and not na(ob_bear_bot) ? (ob_bear_top + ob_bear_bot) / 2.0 : na
+
+float tol_r = nz(atr_val) * touch_atr
+float bnc_r = nz(atr_val) * bounce_atr
+
+calc_retest(float nivel, int direction) =>
+    int touches = 0
+    int held    = 0
+    if not na(nivel) and tol_r > 0 and bnc_r > 0
+        for i = 1 to retest_lb
+            bool touch = low[i] <= nivel + tol_r and high[i] >= nivel - tol_r
+            if touch
+                touches += 1
+                float best = 0.0
+                for j = 0 to 4
+                    if i >= j
+                        best := direction == 1 ?
+                             math.max(best, high[i-j] - nivel) :
+                             math.max(best, nivel - low[i-j])
+                if best >= bnc_r
+                    held += 1
+    [touches, held]
+
+[t_bu, h_bu] = calc_retest(lvl_bos_up,  1)
+[t_ou, h_ou] = calc_retest(lvl_ob_up,   1)
+[t_bd, h_bd] = calc_retest(lvl_bos_dn, -1)
+[t_od, h_od] = calc_retest(lvl_ob_dn,  -1)
+
+float pct_bos_up = t_bu >= 3 ? math.round(float(h_bu) / float(t_bu) * 100) : 50.0
+float pct_ob_up  = t_ou >= 3 ? math.round(float(h_ou) / float(t_ou) * 100) : 50.0
+float pct_bos_dn = t_bd >= 3 ? math.round(float(h_bd) / float(t_bd) * 100) : 50.0
+float pct_ob_dn  = t_od >= 3 ? math.round(float(h_od) / float(t_od) * 100) : 50.0
+
+classify(float p) => p > 65 ? "ALTO" : p >= 50 ? "MEDIO" : "BAJO"
+col_pct(float p)  => p > 65 ? color.new(#26A69A, 20) : p >= 50 ? color.new(color.orange, 20) : color.new(color.red, 25)
+
+// ══════════════════════════════════════════════════════════════
+// §8  CALIFICACIÓN GLOBAL
+// ══════════════════════════════════════════════════════════════
+float best_rt  = trend == 1  ? math.max(pct_ob_up, pct_bos_up) :
+                 trend == -1 ? math.max(pct_ob_dn, pct_bos_dn) : 50.0
+float combined = (tasa + best_rt) / 2.0
+string calif   = combined > 70 ? "OPTIMO" : combined > 60 ? "BUENO" : combined > 50 ? "ACEPTABLE" : "ESPERAR"
+
+// ══════════════════════════════════════════════════════════════
+// §9  PANEL COMPACTO
+// ══════════════════════════════════════════════════════════════
+f_pos(string p) =>
+    p == "Top Left"     ? position.top_left    :
+     p == "Top Right"   ? position.top_right   :
+     p == "Bottom Left" ? position.bottom_left :
+                          position.bottom_right
+
+var table tbl = na
+
+if show_panel and barstate.islast
+    if not na(tbl)
+        table.delete(tbl)
+
+    tbl := table.new(
+         position    = f_pos(panel_pos),
+         columns     = 2,
+         rows        = 13,
+         bgcolor     = color.new(#131722, 10),
+         border_color= color.new(#2A2E39, 70),
+         border_width = 1,
+         frame_color = color.new(#2A2E39, 50),
+         frame_width = 1)
+
+    BG   = color.new(#131722, 15)
+    SEP  = color.new(#1E222D, 60)
+    DIM  = color.new(#787B86, 0)
+    WHT  = color.new(#D1D4DC, 0)
+
+    // — Título
+    table.cell(tbl,0,0,"SENSEI PRO · OB",
+         text_color=color.new(#5B9CF6,0), text_size=size.small,
+         bgcolor=color.new(#1E222D,20), text_halign=text.align_center)
+    table.merge_cells(tbl,0,0,1,0)
+
+    // — Tendencia
+    color  t_bg = trend == 1 ? color.new(#26A69A,30) : trend == -1 ? color.new(#EF5350,30) : color.new(#434651,40)
+    string t_tx = trend == 1 ? "▲ ALCISTA" : trend == -1 ? "▼ BAJISTA" : "◆ NEUTRAL"
+    table.cell(tbl,0,1,"TENDENCIA", text_color=DIM, text_size=size.tiny, bgcolor=BG, text_halign=text.align_left)
+    table.cell(tbl,1,1,t_tx,        text_color=WHT, text_size=size.tiny, bgcolor=t_bg, text_halign=text.align_center)
+
+    // — Tasa cont.
+    table.cell(tbl,0,2,"TASA CONT.", text_color=DIM, text_size=size.tiny, bgcolor=BG, text_halign=text.align_left)
+    table.cell(tbl,1,2,str.tostring(int(tasa))+"% · "+tasa_class,
+         text_color=WHT, text_size=size.tiny, bgcolor=tasa_col, text_halign=text.align_center)
+
+    // — Separador
+    table.cell(tbl,0,3,"RETESTS ARRIBA", text_color=color.new(#5B9CF6,20), text_size=size.tiny, bgcolor=SEP, text_halign=text.align_center)
+    table.merge_cells(tbl,0,3,1,3)
+
+    table.cell(tbl,0,4,"BOS", text_color=DIM, text_size=size.tiny, bgcolor=BG, text_halign=text.align_left)
+    table.cell(tbl,1,4,str.tostring(int(pct_bos_up))+"% · "+classify(pct_bos_up),
+         text_color=WHT, text_size=size.tiny, bgcolor=col_pct(pct_bos_up), text_halign=text.align_center)
+
+    table.cell(tbl,0,5,"OB DEMANDA", text_color=DIM, text_size=size.tiny, bgcolor=BG, text_halign=text.align_left)
+    table.cell(tbl,1,5,str.tostring(int(pct_ob_up))+"% · "+classify(pct_ob_up),
+         text_color=WHT, text_size=size.tiny, bgcolor=col_pct(pct_ob_up), text_halign=text.align_center)
+
+    // — Separador
+    table.cell(tbl,0,6,"RETESTS ABAJO", text_color=color.new(#EF5350,20), text_size=size.tiny, bgcolor=SEP, text_halign=text.align_center)
+    table.merge_cells(tbl,0,6,1,6)
+
+    table.cell(tbl,0,7,"BOS", text_color=DIM, text_size=size.tiny, bgcolor=BG, text_halign=text.align_left)
+    table.cell(tbl,1,7,str.tostring(int(pct_bos_dn))+"% · "+classify(pct_bos_dn),
+         text_color=WHT, text_size=size.tiny, bgcolor=col_pct(pct_bos_dn), text_halign=text.align_center)
+
+    table.cell(tbl,0,8,"OB OFERTA", text_color=DIM, text_size=size.tiny, bgcolor=BG, text_halign=text.align_left)
+    table.cell(tbl,1,8,str.tostring(int(pct_ob_dn))+"% · "+classify(pct_ob_dn),
+         text_color=WHT, text_size=size.tiny, bgcolor=col_pct(pct_ob_dn), text_halign=text.align_center)
+
+    // — OBs activos (niveles)
+    table.cell(tbl,0,9,"OBs ACTIVOS", text_color=DIM, text_size=size.tiny, bgcolor=SEP, text_halign=text.align_center)
+    table.merge_cells(tbl,0,9,1,9)
+
+    bull_s = not na(ob_bull_top) ? str.tostring(math.round(ob_bull_bot*100000)/100000.0)+" – "+str.tostring(math.round(ob_bull_top*100000)/100000.0) : "—"
+    bear_s = not na(ob_bear_top) ? str.tostring(math.round(ob_bear_bot*100000)/100000.0)+" – "+str.tostring(math.round(ob_bear_top*100000)/100000.0) : "—"
+
+    table.cell(tbl,0,10,"Demanda", text_color=color.new(#26C6DA,0), text_size=size.tiny, bgcolor=BG, text_halign=text.align_left)
+    table.cell(tbl,1,10,bull_s,    text_color=color.new(#26C6DA,0), text_size=size.tiny, bgcolor=BG, text_halign=text.align_center)
+
+    table.cell(tbl,0,11,"Oferta",  text_color=color.new(#EF5350,0), text_size=size.tiny, bgcolor=BG, text_halign=text.align_left)
+    table.cell(tbl,1,11,bear_s,    text_color=color.new(#EF5350,0), text_size=size.tiny, bgcolor=BG, text_halign=text.align_center)
+
+    // — Calificación
+    cal_c = combined > 70 ? color.new(#26A69A,20) : combined > 60 ? color.new(#F9A825,25) : combined > 50 ? color.new(#434651,30) : color.new(#EF5350,30)
+    table.cell(tbl,0,12,"SEÑAL", text_color=DIM, text_size=size.tiny, bgcolor=BG, text_halign=text.align_left)
+    table.cell(tbl,1,12,calif,   text_color=WHT, text_size=size.tiny, bgcolor=cal_c, text_halign=text.align_center)
+
+else if not show_panel and barstate.islast and not na(tbl)
+    table.delete(tbl)
+    tbl := na
+
+// ══════════════════════════════════════════════════════════════
+// §10  PLOTS
+// ══════════════════════════════════════════════════════════════
+// Líneas de estructura HH/HL/LL/LH
+plot(trend == 1  and not na(hh_val) ? hh_val : na, "HH", color=color.new(#26A69A,50), linewidth=1, style=plot.style_stepline)
+plot(trend == 1  and not na(hl_val) ? hl_val : na, "HL", color=color.new(#26A69A,65), linewidth=1, style=plot.style_stepline)
+plot(trend == -1 and not na(ll_val) ? ll_val : na, "LL", color=color.new(#EF5350,50), linewidth=1, style=plot.style_stepline)
+plot(trend == -1 and not na(lh_val) ? lh_val : na, "LH", color=color.new(#EF5350,65), linewidth=1, style=plot.style_stepline)
+
+// BOS / CHoCH — shapes pequeños sin texto enorme
+plotshape(new_hh and not was_choch, "BOS↑",   shape.triangleup,   location.belowbar, color.new(#26A69A,30), size=size.tiny, text="BOS", textcolor=color.new(#26A69A,30))
+plotshape(new_ll and not was_choch, "BOS↓",   shape.triangledown, location.abovebar, color.new(#EF5350,30), size=size.tiny, text="BOS", textcolor=color.new(#EF5350,30))
+plotshape(was_choch and new_hh,     "CHoCH↑", shape.diamond,      location.belowbar, color.new(#00BCD4,20), size=size.tiny, text="ChoCh", textcolor=color.new(#00BCD4,20))
+plotshape(was_choch and new_ll,     "CHoCH↓", shape.diamond,      location.abovebar, color.new(#9C27B0,20), size=size.tiny, text="ChoCh", textcolor=color.new(#9C27B0,20))
+
+// Señales de entrada
+float tol_e   = nz(atr_val) * touch_atr
+bool long_sig  = trend == 1  and tasa > 65 and not na(ob_bull_top) and low <= ob_bull_top + tol_e and high >= ob_bull_bot - tol_e
+bool short_sig = trend == -1 and tasa > 65 and not na(ob_bear_top) and high >= ob_bear_bot - tol_e and low <= ob_bear_top + tol_e
+
+plotshape(long_sig,  "LONG",  shape.arrowup,   location.belowbar, color.new(#00E5FF,0), size=size.small)
+plotshape(short_sig, "SHORT", shape.arrowdown, location.abovebar, color.new(#FF1744,0), size=size.small)
+
+plot(tasa,    "TASA_ALERT",    display=display.none)
+plot(combined,"COMBINED_ALERT",display=display.none)
+
+// ══════════════════════════════════════════════════════════════
+// §11  ALERTAS
+// ══════════════════════════════════════════════════════════════
+alertcondition(long_sig,         "LONG — OB Demanda",  "Sensei Pro: LONG | Tasa {{plot(\"TASA_ALERT\")}}% | Score {{plot(\"COMBINED_ALERT\")}}%")
+alertcondition(short_sig,        "SHORT — OB Oferta",  "Sensei Pro: SHORT | Tasa {{plot(\"TASA_ALERT\")}}% | Score {{plot(\"COMBINED_ALERT\")}}%")
+alertcondition(was_choch and new_hh, "CHoCH Alcista",  "Sensei Pro: Cambio de caracter alcista")
+alertcondition(was_choch and new_ll, "CHoCH Bajista",  "Sensei Pro: Cambio de caracter bajista")
+alertcondition(tasa < 40,            "Tasa baja",      "Sensei Pro: Tasa BAJA — no operar")
