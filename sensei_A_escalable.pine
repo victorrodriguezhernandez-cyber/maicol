@@ -138,8 +138,19 @@ soloMinutosCerrados = input.bool(true,
 bloquearTFIncorrecto = input.bool(true,
      "No operar si el gráfico no está en el timeframe esperado", group=gF)
 
-// ─── Coste de spread en R ────────────────────────────────────────────────────
-costeR = switch activo
+// ─── Coste de spread ─────────────────────────────────────────────────────────
+// OJO: el coste en R NO es invariante a la escala.
+//   R = el stop en precio = slInput × ATR.
+//   Al dividir la escala el ATR se encoge (de 15m a 5m, alrededor de ×1.73),
+//   así que el stop en precio se encoge igual — pero el spread del bróker es
+//   el MISMO en puntos. El mismo spread pasa a valer casi el doble en R.
+// La tabla de abajo está calibrada para la escala original (15m, SL 1.5×ATR).
+// Usarla con divisor > 1 subestima el coste y te infla el resultado.
+//
+// Por eso: si pones el spread real en puntos, se calcula operación a
+// operación contra el stop real de esa operación, y deja de depender de la
+// escala. Es la única forma de que el número sea honesto al encoger.
+costeRTabla = switch activo
     "XAUUSD"   => 0.005
     "USDJPY_i" => 0.009
     "AUDUSD_i" => 0.037
@@ -148,6 +159,14 @@ costeR = switch activo
     "EURUSD_i" => 0.000
     "BTCUSD"   => 0.050
     => 0.0
+
+spreadPuntos = input.float(0, "Spread real en puntos (0 = usar tabla en R)",
+     minval=0, step=0.0001, group="Escala",
+     tooltip="Recomendado al usar divisor > 1. La tabla en R está calibrada "
+     + "para 15m con SL 1.5×ATR y se queda corta al encoger la escala.")
+
+// Coste efectivo de la última operación cerrada, para enseñarlo en el panel.
+var float costeRUsado = na
 
 // ─── Comprobaciones de entorno ───────────────────────────────────────────────
 // Antes esto creaba una etiqueta POR VELA. Con max_labels_count lleno,
@@ -335,8 +354,14 @@ if motorActivo and nPasos > 0
 
             if not na(exitPrice)
 
+                // Coste medido contra el stop REAL de esta operación: así no
+                // depende de la escala. Sólo cae a la tabla si no has puesto
+                // el spread.
+                costeAplicado = spreadPuntos > 0 ? spreadPuntos / riesgoR : costeRTabla
+                costeRUsado := costeAplicado
+
                 resR = (dirOp == 1 ? exitPrice - entrada
-                                   : entrada - exitPrice) / riesgoR - costeR
+                                   : entrada - exitPrice) / riesgoR - costeAplicado
 
                 esBE = beHecho and math.abs(exitPrice - entrada) < syminfo.mintick
                 ultimoResultado := esBE ? "BREAKEVEN" : resR > 0 ? "GANADA" : "PERDIDA"
@@ -555,7 +580,7 @@ breakevenPct = 100.0 * slInput / (slInput + tpInput)
 // =============================================================================
 //  PANEL
 // =============================================================================
-var table t = table.new(position.top_right, 2, 16,
+var table t = table.new(position.top_right, 2, 18,
      bgcolor=color.new(color.black, 15), border_width=1)
 
 f_fila(int fila, string etiqueta, string valor, color colValor) =>
@@ -625,3 +650,17 @@ if barstate.islast
     // y las estadísticas de arriba no son comparables con el backtest.
     f_fila(15, "Velas sin datos M1", str.tostring(barsSinM1),
          barsSinM1 == 0 ? color.green : color.red)
+
+    // RR = lo que cobras por acierto frente a lo que pagas por fallo.
+    // Con TP < SL necesitas MÁS de 50% sólo para no perder.
+    rr = tpInput / slInput
+    f_fila(16, "RR (TP/SL)",
+         str.tostring(rr, "#.##") + " : 1" + (rr < 1.0 ? "  ⚠" : ""),
+         rr < 1.0 ? color.red : color.green)
+
+    // Si esto crece al bajar el divisor, el spread se está comiendo el margen.
+    f_fila(17, "Coste aplicado",
+         na(costeRUsado) ? "-" : str.tostring(costeRUsado, "#.####") + "R" +
+              (spreadPuntos > 0 ? "  (spread real)" : "  (tabla 15m)"),
+         na(costeRUsado) ? color.gray :
+         costeRUsado > 0.02 ? color.red : color.white)
