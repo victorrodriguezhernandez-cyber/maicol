@@ -1,0 +1,637 @@
+//@version=6
+indicator("SENSEI A — 5 minutos (armado intrabar, motor determinista)",
+     overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=100)
+
+// =============================================================================
+//  GRÁFICO: 5 MINUTOS  (EURUSD_i: 10 MINUTOS)
+// =============================================================================
+//  Mismo motor que la versión de 15m ya corregida. Sólo cambia la escala:
+//
+//                          15m (antes)        5m (ahora)
+//    Gráfico ............  15m                 5m      (EURUSD_i: 30m -> 10m)
+//    EMA200 tendencia ...  60m                20m
+//    ATR14 ..............  de la vela 15m     de la vela 5m
+//    Validez de la orden.  5×15 = 75 min      5×5 = 25 min
+//    Minutos por vela ...  15 velas M1         5 velas M1
+//
+//  El ATR14, el retroceso, el SL y el TP se encogen SOLOS al bajar el
+//  timeframe del gráfico: no hay ningún multiplicador tocado. Las operaciones
+//  duran proporcionalmente menos.
+//
+// =============================================================================
+//  LO QUE HAY QUE SABER AL BAJAR DE 15m A 5m
+// =============================================================================
+//
+//  1. EL SPREAD PESA MÁS. Es lo que más daño hace y no es evidente.
+//     El resultado se mide en R, y R = el stop en precio = slInput × ATR.
+//     Al pasar de 15m a 5m el ATR cae alrededor de ×1,7, así que el stop en
+//     precio cae igual — pero el spread del bróker es EL MISMO en puntos.
+//     El mismo spread pasa a valer casi el doble en R.
+//     La tabla de costes en R que venía del backtest está calibrada para 15m
+//     con SL 1.5×ATR: aquí se queda corta y te infla el resultado.
+//     -> Rellena "Spread real en puntos". Mientras esté en 0, el panel te
+//        marca el coste en rojo, porque está subestimado.
+//
+//  2. MENOS PRECISIÓN DE RELLENO. Hay 5 velas M1 por vela del gráfico en vez
+//     de 15. La precisión sigue siendo de 1 minuto (no se puede bajar: los
+//     datos de segundos exigen plan Premium y apenas guardan histórico), pero
+//     el armado intrabar tiene menos puntos donde detectar la condición.
+//
+//  3. MÁS OPERACIONES. Hay el triple de velas al día, así que "maxdia" y la
+//     ventana horaria dejan pasar bastante más. Más operaciones con el mismo
+//     margen por operación no es mejor: multiplica también el coste.
+//
+//  4. LA VENTANA HORARIA NO ESCALA. Es hora de reloj.
+//
+// =============================================================================
+//  LO QUE YA VENÍA CORREGIDO Y SE MANTIENE
+// =============================================================================
+//
+//  · CAUSALIDAD POR CONSTRUCCIÓN (mata el look-ahead)
+//    La vela se REPRODUCE minuto a minuto, en orden, con una máquina de
+//    estados. Dentro de cada minuto el orden es siempre:
+//       (1) resolver la posición que YA estaba abierta
+//       (2) rellenar la orden que YA estaba armada
+//       (3) armar una orden nueva al cierre de ese minuto
+//    Armar va el último a propósito: lo que se arma en el minuto k no puede
+//    rellenarse hasta k+1, y lo que entra en j no puede cerrarse hasta j+1.
+//    El bucle impide físicamente usar información anterior al evento, sin
+//    necesidad de índices de rescate.
+//
+//  · DETERMINISMO (mata la mezcla var/varip)
+//    Cero `varip` de cálculo. El máximo, el mínimo y el ATR parcial se
+//    reconstruyen desde cero en cada ejecución. Da igual cuántas veces haga
+//    rollback Pine en tiempo real: sale siempre lo mismo. Esto es lo que
+//    arreglaba el "me llegó el push pero la etiqueta no está en el gráfico".
+//    `varip` sólo deduplica avisos, nunca toca un cálculo.
+//
+//  · NIVELES QUE NO SE MUEVEN
+//    Por defecto sólo se procesan minutos M1 ya cerrados.
+//
+//  · SIN DATOS M1 NO SE INVENTA NADA
+//    Se degrada al OHLC de la vela cerrada y esas velas se cuentan en el panel.
+//
+//  · NO OPERA CON EL TIMEFRAME EQUIVOCADO
+//
+//  · BREAKEVEN Y RR REALES EN EL PANEL
+//    Con SL 1.25 y TP 1.0 cada acierto vale 0.8R y cada fallo 1R: hace falta
+//    55.6% para no perder, no 50%. El panel lo calcula y lo avisa.
+//
+// =============================================================================
+//  CONVENCIONES A REPLICAR EN EL BACKTEST DE PYTHON
+// =============================================================================
+//   · Orden armada en el minuto k -> primer relleno posible en k+1.
+//   · Posición abierta en el minuto j -> primer cierre posible en j+1.
+//   · SL y TP tocados dentro del mismo minuto -> gana el SL.
+//   · Break-even detectado en el minuto m -> el stop movido salta desde m+1.
+//   · Orden armada en la vela A -> viva durante A, A+1 ... A+val-1 (5 velas
+//     de 5m = 25 minutos).
+//   · ATR de dimensionado = ATR parcial CONGELADO en el momento del armado.
+// =============================================================================
+
+// ─── Gestión ─────────────────────────────────────────────────────────────────
+gG = "Gestión de Stop Loss / Take Profit"
+slInput = input.float(1.25, "Stop Loss (múltiplo de ATR)",  minval=0.1, step=0.05, group=gG)
+tpInput = input.float(1.0,  "Take Profit (múltiplo de ATR)", minval=0.1, step=0.05, group=gG)
+beInput = input.float(0,    "Break Even al % del camino a TP (0 = desactivado)",
+     minval=0, maxval=100, step=1, group=gG)
+maxdia     = input.int(20, "Operaciones máx. por día", minval=1, group=gG)
+horaInicio = input.int(9,  "Hora inicio ventana (Madrid)", minval=0, maxval=23, group=gG)
+horaFin    = input.int(23, "Hora fin ventana (Madrid)",    minval=0, maxval=23, group=gG)
+
+// ─── Activo ──────────────────────────────────────────────────────────────────
+activo = input.string("XAUUSD", "Activo",
+     options=["XAUUSD","USDJPY_i","AUDUSD_i","EURJPY_i","USDCAD_i","EURUSD_i","BTCUSD"],
+     group="Activo")
+
+// ─── Parámetros del backtest ─────────────────────────────────────────────────
+gB = "Parámetros del backtest (no tocar)"
+retK         = input.float(0.7, "Retroceso de entrada (x ATR)", step=0.05, group=gB)
+val          = input.int(5, "Velas de validez de la orden límite", minval=1, group=gB)
+minutoMinimo = input.int(1, "No armar antes del minuto", minval=1, maxval=9, group=gB)
+
+// ─── Fiabilidad ──────────────────────────────────────────────────────────────
+gF = "Fiabilidad"
+soloMinutosCerrados = input.bool(true,
+     "Usar sólo minutos M1 ya cerrados (niveles que no se mueven)", group=gF)
+bloquearTFIncorrecto = input.bool(true,
+     "No operar si el gráfico no está en el timeframe esperado", group=gF)
+spreadPuntos = input.float(0, "Spread real en puntos (0 = tabla en R, subestima)",
+     minval=0, step=0.0001, group=gF,
+     tooltip="MUY recomendable en 5m. La tabla de costes en R está calibrada "
+     + "para 15m con SL 1.5×ATR; al bajar de escala el mismo spread pesa casi "
+     + "el doble en R y la tabla te infla el resultado.")
+
+// =============================================================================
+//  ESCALA — FIJADA A 5 MINUTOS
+// =============================================================================
+// EURUSD_i mantiene el doble que el resto, igual que en la versión original
+// (allí iba a 30m mientras los demás iban a 15m).
+minutosSenal = activo == "EURUSD_i" ? 10 : 5
+tfEsperado   = str.tostring(minutosSenal)
+tfTendencia  = "20"                       // antes 60m, dividido por 3
+
+// En una vela de 5m el último minuto es el 5: un minutoMinimo mayor no
+// llegaría a armar nunca.
+minutoMinimoEf = math.min(minutoMinimo, minutosSenal - 1)
+
+// ─── Coste de spread ─────────────────────────────────────────────────────────
+// Tabla original, calibrada para 15m con SL 1.5×ATR. Aquí se queda corta.
+costeRTabla = switch activo
+    "XAUUSD"   => 0.005
+    "USDJPY_i" => 0.009
+    "AUDUSD_i" => 0.037
+    "EURJPY_i" => 0.041
+    "USDCAD_i" => 0.048
+    "EURUSD_i" => 0.000
+    "BTCUSD"   => 0.050
+    => 0.0
+
+var float costeRUsado = na   // coste efectivo de la última operación cerrada
+
+// ─── Comprobaciones de entorno ───────────────────────────────────────────────
+// Una sola etiqueta y sólo en la última vela. Si se creara una por vela,
+// max_labels_count se llenaría y TradingView borraría tus etiquetas de señal.
+tfOK = timeframe.period == tfEsperado
+
+tickerLimpio = str.upper(str.replace_all(syminfo.ticker, "_", ""))
+activoLimpio = str.upper(str.replace_all(activo, "_i", ""))
+simboloOK    = str.contains(tickerLimpio, activoLimpio)
+
+var label lblAviso = na
+if barstate.islast
+    txtAviso = ""
+    if not tfOK
+        txtAviso := "⚠ " + activo + " requiere gráfico de " + tfEsperado +
+             "m — estás en " + timeframe.period + "m." +
+             (bloquearTFIncorrecto ? "\nMOTOR DETENIDO." : "\nResultados NO fiables.")
+    if not simboloOK
+        txtAviso := txtAviso + (txtAviso == "" ? "" : "\n") +
+             "⚠ El desplegable dice " + activo + " pero el gráfico es " +
+             syminfo.ticker + ".\nSe está aplicando el coste de " + activo + "."
+    if txtAviso != ""
+        if not na(lblAviso)
+            label.delete(lblAviso)
+        lblAviso := label.new(bar_index, high, txtAviso,
+             style=label.style_label_down, color=color.red,
+             textcolor=color.white, size=size.normal)
+
+motorActivo = tfOK or not bloquearTFIncorrecto
+
+// ─── Tendencia 20m (sin repintado: el [1] fuerza la vela ya cerrada) ─────────
+f_tend() =>
+    e = ta.ema(close, 200)
+    close > e ? 1 : -1
+
+[tend, ema200] = request.security(syminfo.tickerid, tfTendencia,
+     [f_tend()[1], ta.ema(close, 200)[1]], lookahead=barmerge.lookahead_off)
+
+plot(ema200, "EMA200 20m", color=color.orange, linewidth=2)
+bgcolor(tend == 1 ? color.new(color.green, 92) :
+        tend == -1 ? color.new(color.red, 92) : na)
+
+// ─── ATR14 Wilder de la vela de 5m ───────────────────────────────────────────
+atr = ta.atr(14)
+
+// ─── Ventana horaria (soporta cruce de medianoche) ───────────────────────────
+h1v = horaInicio * 60
+h2v = horaFin * 60
+minsDia = hour(time, "Europe/Madrid") * 60 + minute(time, "Europe/Madrid")
+enVentana = h1v <= h2v ? (minsDia >= h1v and minsDia < h2v)
+                       : (minsDia >= h1v or  minsDia < h2v)
+
+// =============================================================================
+//  ESTADO PERSISTENTE
+//  Todo `var`. Se recalcula de forma determinista en cada ejecución, así que
+//  el rollback de Pine en tiempo real es irrelevante.
+// =============================================================================
+var int   nSenalesHoy   = 0
+var float pendLimite    = na
+var int   pendDir       = na
+var int   pendBarArmado = na
+var float atrArmado     = na
+
+var bool  enPosicion = false
+var float entrada    = na
+var float stop       = na
+var float objetivo   = na
+var int   dirOp      = na
+var float riesgoR    = na
+var bool  beHecho    = false
+
+var float   ultimoR         = na
+var string  ultimoResultado = na
+var float[] historialR = array.new_float(0)
+var int[]   historialT = array.new_int(0)
+var int     barsSinM1  = 0
+
+var line lEntrada  = na
+var line lStop     = na
+var line lObjetivo = na
+
+if ta.change(dayofmonth(time, "Europe/Madrid")) != 0
+    nSenalesHoy := 0
+
+// ─── Deduplicación de avisos ─────────────────────────────────────────────────
+// Único uso de varip del script, y no toca ningún cálculo.
+varip int avBar = na
+varip int avArm = na
+varip int avEnt = na
+varip int avSal = na
+if na(avBar) or avBar != bar_index
+    avBar := bar_index
+    avArm := na
+    avEnt := na
+    avSal := na
+
+// =============================================================================
+//  DATOS M1 — UNA SOLA PETICIÓN, REUTILIZADA EN TODO EL MOTOR
+// =============================================================================
+[hM1, lM1, cM1, tM1] = request.security_lower_tf(syminfo.tickerid, "1",
+     [high, low, close, time])
+
+nM1 = array.size(cM1)
+
+// Sólo minutos cerrados: se descarta el último elemento mientras la vela de 5m
+// siga viva, porque su high/low aún puede moverse.
+nUsar = nM1
+if soloMinutosCerrados and barstate.isrealtime and not barstate.isconfirmed and nM1 > 0
+    nUsar := nM1 - 1
+
+sinDatosM1 = nM1 == 0
+if sinDatosM1 and barstate.isconfirmed
+    barsSinM1 += 1
+
+// Sin M1 se degrada a la vela de 5m, y sólo con la vela cerrada.
+usarFallback = sinDatosM1 and barstate.isconfirmed
+nPasos = usarFallback ? 1 : nUsar
+
+// =============================================================================
+//  MOTOR — REPRODUCCIÓN SECUENCIAL DE LA VELA
+// =============================================================================
+
+// Caducidad de la orden: se evalúa ANTES de mirar ningún precio de esta vela,
+// para que una orden ya muerta no pueda rellenarse.
+// val = 5 velas de 5m = 25 minutos.
+if motorActivo and not na(pendLimite) and bar_index - pendBarArmado >= val
+    pendLimite := na
+    pendDir    := na
+
+if motorActivo and nPasos > 0
+
+    float runHigh = na
+    float runLow  = na
+
+    for i = 0 to nPasos - 1
+
+        // if/else en vez de ternario a propósito: con ternario Pine evaluaría
+        // también la rama de array.get, y en modo fallback el array está vacío
+        // -> "Array index out of bounds" en tiempo de ejecución.
+        float hMin = na
+        float lMin = na
+        float cMin = na
+        int   tMin = na
+        if usarFallback
+            hMin := high
+            lMin := low
+            cMin := close
+            tMin := time
+        else
+            hMin := array.get(hM1, i)
+            lMin := array.get(lM1, i)
+            cMin := array.get(cM1, i)
+            tMin := array.get(tM1, i)
+
+        runHigh := na(runHigh) ? hMin : math.max(runHigh, hMin)
+        runLow  := na(runLow)  ? lMin : math.min(runLow,  lMin)
+
+        minutoFormado = int(math.floor((tMin - time) / 60000)) + 1
+        horaMin = str.format_time(tMin, "HH:mm", "Europe/Madrid")
+
+        // ─────────────────────────────────────────────────────────────────
+        //  PASO 1 · Resolver la posición que YA estaba abierta al empezar
+        //           este minuto. Nunca se evalúa el minuto de la entrada.
+        // ─────────────────────────────────────────────────────────────────
+        if enPosicion
+
+            hitSL = dirOp == 1 ? lMin <= stop     : hMin >= stop
+            hitTP = dirOp == 1 ? hMin >= objetivo : lMin <= objetivo
+
+            float exitPrice = na
+            if hitSL              // empate dentro del minuto -> gana el stop
+                exitPrice := stop
+            else if hitTP
+                exitPrice := objetivo
+
+            if not na(exitPrice)
+
+                // Coste medido contra el stop REAL de esta operación: así no
+                // depende de la escala. Sólo cae a la tabla de 15m si no has
+                // puesto el spread.
+                costeAplicado = spreadPuntos > 0 ? spreadPuntos / riesgoR : costeRTabla
+                costeRUsado := costeAplicado
+
+                resR = (dirOp == 1 ? exitPrice - entrada
+                                   : entrada - exitPrice) / riesgoR - costeAplicado
+
+                esBE = beHecho and math.abs(exitPrice - entrada) < syminfo.mintick
+                ultimoResultado := esBE ? "BREAKEVEN" : resR > 0 ? "GANADA" : "PERDIDA"
+                ultimoR := resR
+
+                label.new(bar_index, dirOp == 1 ? high : low,
+                     ultimoResultado + " " + str.tostring(resR, "#.####") + "R" +
+                     "\n" + horaMin,
+                     style     = resR >= 0 ? label.style_label_down : label.style_label_up,
+                     color     = esBE ? color.aqua : resR > 0 ? color.green : color.red,
+                     textcolor = color.white, size = size.small)
+
+                if na(avSal) or avSal != minutoFormado
+                    avSal := minutoFormado
+                    alert(activo + " SALIDA " + ultimoResultado + " " +
+                         str.tostring(resR, "#.####") + "R | " + horaMin,
+                         alert.freq_all)
+
+                if not na(lEntrada)
+                    line.set_extend(lEntrada, extend.none)
+                    line.set_x2(lEntrada, bar_index)
+                if not na(lStop)
+                    line.set_extend(lStop, extend.none)
+                    line.set_x2(lStop, bar_index)
+                if not na(lObjetivo)
+                    line.set_extend(lObjetivo, extend.none)
+                    line.set_x2(lObjetivo, bar_index)
+
+                array.push(historialR, resR)
+                array.push(historialT, tMin)
+
+                enPosicion := false
+                entrada    := na
+                stop       := na
+                objetivo   := na
+                dirOp      := na
+                riesgoR    := na
+
+            else if beInput > 0 and not beHecho
+                // El break-even se evalúa DESPUÉS del SL/TP, así que el stop
+                // movido sólo puede saltar a partir del minuto siguiente. Sin
+                // esto, un minuto que barre en las dos direcciones cierra en BE
+                // una operación que nunca llegó a estar en beneficio.
+                progreso = dirOp == 1 ? (hMin - entrada) / (objetivo - entrada) * 100.0
+                                      : (entrada - lMin) / (entrada - objetivo) * 100.0
+                if progreso >= beInput
+                    stop    := entrada
+                    beHecho := true
+
+        // ─────────────────────────────────────────────────────────────────
+        //  PASO 2 · Rellenar la orden que YA estaba armada al empezar este
+        //           minuto. Nunca se evalúa el minuto del armado.
+        // ─────────────────────────────────────────────────────────────────
+        if not na(pendLimite) and not enPosicion
+
+            toca = pendDir == 1 ? lMin <= pendLimite : hMin >= pendLimite
+
+            if toca
+                entrada  := pendLimite
+                dirOp    := pendDir
+                riesgoR  := slInput * atrArmado          // ATR congelado al armar
+                stop     := entrada - dirOp * riesgoR
+                objetivo := entrada + dirOp * tpInput * atrArmado
+                enPosicion := true
+                beHecho    := false
+                nSenalesHoy += 1
+                pendLimite := na
+                pendDir    := na
+
+                lEntrada  := line.new(bar_index, entrada,  bar_index + 1, entrada,
+                     extend=extend.right, color=color.blue,  style=line.style_dashed)
+                lStop     := line.new(bar_index, stop,     bar_index + 1, stop,
+                     extend=extend.right, color=color.red,   style=line.style_dashed)
+                lObjetivo := line.new(bar_index, objetivo, bar_index + 1, objetivo,
+                     extend=extend.right, color=color.green, style=line.style_dashed)
+
+                label.new(bar_index, entrada,
+                     "ENTRADA " + (dirOp == 1 ? "▲ LONG" : "▼ SHORT") +
+                     "\n" + horaMin + "  (min " + str.tostring(minutoFormado) + "/" +
+                     str.tostring(minutosSenal) + ")" +
+                     "\nEntrada: " + str.tostring(entrada,  format.mintick) +
+                     "\nSL: "      + str.tostring(stop,     format.mintick) +
+                     "\nTP: "      + str.tostring(objetivo, format.mintick),
+                     style     = dirOp == 1 ? label.style_label_up : label.style_label_down,
+                     color     = color.blue, textcolor = color.white, size = size.small)
+
+                if na(avEnt) or avEnt != minutoFormado
+                    avEnt := minutoFormado
+                    alert(activo + " ENTRADA " + (dirOp == 1 ? "LONG" : "SHORT") +
+                         " @ " + str.tostring(entrada, format.mintick) +
+                         " | SL " + str.tostring(stop, format.mintick) +
+                         " | TP " + str.tostring(objetivo, format.mintick) +
+                         " | rellenada " + horaMin,
+                         alert.freq_all)
+
+        // ─────────────────────────────────────────────────────────────────
+        //  PASO 3 · Armar una orden nueva al cierre de ESTE minuto.
+        //           Va el último a propósito: lo que se arme aquí no puede
+        //           rellenarse hasta la siguiente iteración del bucle.
+        // ─────────────────────────────────────────────────────────────────
+        if na(pendLimite) and not enPosicion
+
+            float trParcial = na
+            if na(close[1])
+                trParcial := runHigh - runLow
+            else
+                trParcial := math.max(runHigh - runLow,
+                     math.max(math.abs(runHigh - close[1]), math.abs(runLow - close[1])))
+
+            float atrParcial = na
+            if not na(atr[1]) and not na(trParcial)
+                atrParcial := (atr[1] * 13.0 + trParcial) / 14.0
+
+            armar = minutoFormado >= minutoMinimoEf and
+                 not na(tend) and
+                 not na(atrParcial) and atrParcial > 0 and
+                 enVentana and
+                 nSenalesHoy < maxdia and
+                 (cMin - open) * tend > 0
+
+            if armar
+                pendLimite    := cMin - tend * retK * atrParcial
+                pendDir       := tend
+                pendBarArmado := bar_index
+                atrArmado     := atrParcial
+
+                label.new(bar_index, tend == 1 ? runLow : runHigh,
+                     "Orden armada " + (tend == 1 ? "▲ LONG" : "▼ SHORT") +
+                     "\n" + horaMin + "  (min " + str.tostring(minutoFormado) + "/" +
+                     str.tostring(minutosSenal) + ")" +
+                     "\n@ " + str.tostring(pendLimite, format.mintick),
+                     style     = tend == 1 ? label.style_label_up : label.style_label_down,
+                     color     = color.gray, textcolor = color.white, size = size.small)
+
+                if na(avArm) or avArm != minutoFormado
+                    avArm := minutoFormado
+                    alert(activo + " ORDEN ARMADA " + (tend == 1 ? "LONG" : "SHORT") +
+                         " @ " + str.tostring(pendLimite, format.mintick) +
+                         " | armada " + horaMin +
+                         " (min " + str.tostring(minutoFormado) + "/" +
+                         str.tostring(minutosSenal) + ") | válida 25 min",
+                         alert.freq_all)
+
+// =============================================================================
+//  ESTADÍSTICAS
+// =============================================================================
+nOps = array.size(historialR)
+
+var float winrate = na
+var float rProm   = na
+var float rTotal  = na
+var int rachaGanActual  = 0
+var int rachaPerdActual = 0
+var int rachaGanMax     = 0
+var int rachaPerdMax    = 0
+var float  ddMax    = 0.0
+var string ultimos5 = "-"
+var string desdeTxt = "-"
+
+if barstate.islast and nOps > 0
+    wins = 0
+    cGan = 0
+    cPerd = 0
+    cum = 0.0
+    cumMax = 0.0
+    rgMax = 0
+    rpMax = 0
+    ddTemp = 0.0
+
+    for i = 0 to nOps - 1
+        r = array.get(historialR, i)
+        if r > 0
+            wins += 1
+            cGan += 1
+            rgMax := math.max(rgMax, cGan)
+            cPerd := 0
+        else
+            cPerd += 1
+            rpMax := math.max(rpMax, cPerd)
+            cGan  := 0
+        cum    += r
+        cumMax := math.max(cumMax, cum)
+        ddTemp := math.max(ddTemp, cumMax - cum)
+
+    ddMax        := ddTemp
+    rachaGanMax  := rgMax
+    rachaPerdMax := rpMax
+
+    rachaGanActual  := 0
+    rachaPerdActual := 0
+    if array.get(historialR, nOps - 1) > 0
+        i2 = nOps - 1
+        while i2 >= 0 and array.get(historialR, i2) > 0
+            rachaGanActual += 1
+            i2 -= 1
+    else
+        i2 = nOps - 1
+        while i2 >= 0 and array.get(historialR, i2) <= 0
+            rachaPerdActual += 1
+            i2 -= 1
+
+    winrate := 100.0 * wins / nOps
+    rTotal  := array.sum(historialR)
+    rProm   := rTotal / nOps
+
+    desdeTxt := str.format_time(array.get(historialT, 0), "yyyy-MM-dd", "Europe/Madrid")
+
+    ultimos5 := ""
+    for i = math.max(0, nOps - 5) to nOps - 1
+        ultimos5 := ultimos5 + (array.get(historialR, i) > 0 ? "✅" : "❌")
+
+// Cada acierto vale tpInput/slInput en R; cada fallo vale 1R.
+breakevenPct = 100.0 * slInput / (slInput + tpInput)
+
+// =============================================================================
+//  PANEL
+// =============================================================================
+var table t = table.new(position.top_right, 2, 18,
+     bgcolor=color.new(color.black, 15), border_width=1)
+
+f_fila(int fila, string etiqueta, string valor, color colValor) =>
+    table.cell(t, 0, fila, etiqueta, text_color=color.white, text_size=size.small)
+    table.cell(t, 1, fila, valor,    text_color=colValor,    text_size=size.small)
+
+if barstate.islast
+    table.cell(t, 0, 0, "Activo", text_color=color.white, bgcolor=color.gray)
+    table.cell(t, 1, 0, activo,   text_color=color.white, bgcolor=color.gray)
+
+    table.cell(t, 0, 1, "SIN VALIDAR", text_color=color.white,
+         bgcolor=color.new(color.red, 40))
+    table.cell(t, 1, 1, motorActivo ? tfEsperado + "m · tend. " + tfTendencia + "m"
+                                    : "MOTOR DETENIDO (TF)",
+         text_color=color.white, bgcolor=color.new(color.red, 40))
+
+    f_fila(2, "Tendencia " + tfTendencia + "m",
+         na(tend) ? "sin datos" : tend == 1 ? "ALCISTA" : "BAJISTA",
+         na(tend) ? color.gray  : tend == 1 ? color.green : color.red)
+
+    f_fila(3, "Estado",
+         enPosicion ? (beHecho ? "EN POSICIÓN (BE activo)" : "EN POSICIÓN")
+                    : (not na(pendLimite) ? "ORDEN ARMADA" : "SIN OPERAR"),
+         color.yellow)
+
+    f_fila(4, "Entrada / Límite",
+         enPosicion ? str.tostring(entrada, format.mintick)
+                    : (not na(pendLimite) ? str.tostring(pendLimite, format.mintick) : "-"),
+         color.white)
+
+    f_fila(5, "SL / TP",
+         enPosicion ? str.tostring(stop, format.mintick) + " / " +
+                      str.tostring(objetivo, format.mintick) : "-",
+         color.white)
+
+    f_fila(6, "Último resultado",
+         na(ultimoR) ? "-" : ultimoResultado + " " + str.tostring(ultimoR, "#.####") + "R",
+         na(ultimoR) ? color.gray : ultimoR > 0 ? color.green
+                     : ultimoResultado == "BREAKEVEN" ? color.aqua : color.red)
+
+    f_fila(7, "Operaciones", str.tostring(nOps), color.white)
+    f_fila(8, "Muestra desde", desdeTxt, color.white)
+
+    // ─── LO QUE HAY QUE MIRAR ───────────────────────────────────────────────
+    // R/op es el único número comparable entre configuraciones. El winrate
+    // solo no dice nada si no sabes el RR.
+    f_fila(9, "R/op · R total",
+         na(rProm) ? "-" : str.tostring(rProm, "#.####") + " · " +
+                           str.tostring(rTotal, "#.##"),
+         na(rProm) ? color.gray : rProm > 0 ? color.green : color.red)
+
+    f_fila(10, "Winrate  (BE " + str.tostring(breakevenPct, "#.#") + "%)",
+         na(winrate) ? "-" : str.tostring(winrate, "#.##") + "%",
+         na(winrate) ? color.gray : winrate >= breakevenPct ? color.green : color.red)
+
+    rr = tpInput / slInput
+    f_fila(11, "RR (TP/SL)",
+         str.tostring(rr, "#.##") + " : 1" + (rr < 1.0 ? "  ⚠" : ""),
+         rr < 1.0 ? color.red : color.green)
+
+    // En 5m el spread pesa casi el doble que en 15m. Si esto está en rojo,
+    // el resultado de arriba está inflado.
+    f_fila(12, "Coste aplicado",
+         na(costeRUsado) ? (spreadPuntos > 0 ? "spread real" : "tabla 15m ⚠")
+              : str.tostring(costeRUsado, "#.####") + "R" +
+                (spreadPuntos > 0 ? " (real)" : " (tabla 15m ⚠)"),
+         spreadPuntos > 0 ? color.white : color.red)
+
+    f_fila(13, "Racha actual",
+         rachaGanActual  > 0 ? str.tostring(rachaGanActual)  + " ganando"  :
+         rachaPerdActual > 0 ? str.tostring(rachaPerdActual) + " perdiendo" : "-",
+         rachaGanActual  > 0 ? color.green :
+         rachaPerdActual > 0 ? color.red   : color.gray)
+
+    f_fila(14, "Racha máx. G / P",
+         str.tostring(rachaGanMax) + " / " + str.tostring(rachaPerdMax), color.white)
+
+    f_fila(15, "Drawdown máx.", str.tostring(ddMax, "#.##") + "R", color.white)
+    f_fila(16, "Últimas 5", ultimos5, color.white)
+
+    // Si esto no es 0, parte del gráfico se ha evaluado sin precisión M1
+    // y las estadísticas no son comparables con el backtest.
+    f_fila(17, "Velas sin datos M1", str.tostring(barsSinM1),
+         barsSinM1 == 0 ? color.green : color.red)
