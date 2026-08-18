@@ -1,0 +1,565 @@
+//@version=6
+indicator("SENSEI A — armado intrabar (motor determinista)", overlay=true,
+     max_lines_count=500, max_labels_count=500, max_boxes_count=100)
+
+// =============================================================================
+//  QUÉ CAMBIA RESPECTO A LA VERSIÓN ANTERIOR
+// =============================================================================
+//
+//  1. CAUSALIDAD POR CONSTRUCCIÓN (elimina el look-ahead)
+//     La vela del gráfico se REPRODUCE minuto a minuto, en orden, con una
+//     máquina de estados secuencial. Dentro de cada minuto el orden es:
+//        (1) resolver la posición que YA estaba abierta
+//        (2) rellenar la orden que YA estaba armada
+//        (3) armar una orden nueva al cierre de ese minuto
+//     Consecuencia: una orden armada en el minuto k sólo puede rellenarse en
+//     k+1 o posterior, y una posición abierta en el minuto j sólo puede
+//     cerrarse en j+1 o posterior. No hacen falta índices de rescate
+//     (pendArmedMinIdx / entradaMinIdx): el bucle impide físicamente usar
+//     información anterior al evento.
+//
+//  2. DETERMINISMO (elimina la mezcla var / varip)
+//     No queda ni un solo `varip` de cálculo. Todo el estado intrabar
+//     (máximo, mínimo, ATR parcial) se reconstruye desde cero en cada
+//     ejecución a partir del array completo de M1. Da igual que Pine haga
+//     rollback en cada tick: la reproducción vuelve a dar exactamente el
+//     mismo resultado. Esto arregla el caso "me llegó el push pero la
+//     etiqueta no está en el gráfico".
+//     `varip` sólo se usa para no repetir notificaciones — nunca para
+//     cálculo. Si eso se desincronizase, lo peor que pasa es un aviso
+//     duplicado, nunca un resultado corrupto.
+//
+//  3. NIVELES QUE NO SE MUEVEN
+//     Por defecto sólo se procesan minutos M1 YA CERRADOS. Un nivel que
+//     aparece en pantalla no vuelve a cambiar nunca. Cuesta hasta 60 s de
+//     latencia; se puede desactivar en los inputs.
+//
+//  4. SIN DATOS M1 NO SE INVENTA NADA
+//     Si TradingView no sirve M1 para una vela (histórico antiguo, límite
+//     de intrabarras del plan), se usa el OHLC de la vela del gráfico y sólo
+//     al cierre confirmado. Esas velas se CUENTAN y se muestran en el panel:
+//     si el número es alto, las estadísticas no valen.
+//
+//  5. NO OPERA CON EL TIMEFRAME EQUIVOCADO
+//     Con el gráfico en un timeframe distinto al esperado, el motor no se
+//     ejecuta. Antes calculaba igual y producía estadísticas falsas.
+//
+//  6. BREAKEVEN DEL PANEL CORRECTO
+//     Con SL 1.25 y TP 1.0 cada acierto vale 0.8R y cada fallo 1R: hace
+//     falta 55.6% de aciertos para no perder, no 50%. El panel calculaba el
+//     umbral fijo en 50 y pintaba de verde winrates perdedores.
+//
+// =============================================================================
+//  CONVENCIONES A REPLICAR EN EL BACKTEST DE PYTHON
+// =============================================================================
+//   · Orden armada en el minuto k -> primer relleno posible en k+1.
+//   · Posición abierta en el minuto j -> primer cierre posible en j+1.
+//   · SL y TP tocados dentro del mismo minuto -> gana el SL.
+//   · Break-even detectado en el minuto m -> el stop movido sólo puede
+//     saltar a partir de m+1.
+//   · Orden armada en la vela A -> viva durante A, A+1 ... A+val-1.
+//   · ATR de dimensionado = ATR parcial CONGELADO en el momento del armado.
+// =============================================================================
+
+// ─── Gestión ─────────────────────────────────────────────────────────────────
+gG = "Gestión de Stop Loss / Take Profit"
+slInput = input.float(1.25, "Stop Loss (múltiplo de ATR)",  minval=0.1, step=0.1, group=gG)
+tpInput = input.float(1.0,  "Take Profit (múltiplo de ATR)", minval=0.1, step=0.1, group=gG)
+beInput = input.float(0,    "Break Even al % del camino a TP (0 = desactivado)",
+     minval=0, maxval=100, step=1, group=gG)
+maxdia     = input.int(20, "Operaciones máx. por día", minval=1, group=gG)
+horaInicio = input.int(9,  "Hora inicio ventana (Madrid)", minval=0, maxval=23, group=gG)
+horaFin    = input.int(23, "Hora fin ventana (Madrid)",    minval=0, maxval=23, group=gG)
+
+// ─── Activo ──────────────────────────────────────────────────────────────────
+activo = input.string("XAUUSD", "Activo",
+     options=["XAUUSD","USDJPY_i","AUDUSD_i","EURJPY_i","USDCAD_i","EURUSD_i","BTCUSD"],
+     group="Activo")
+
+// ─── Parámetros del backtest ─────────────────────────────────────────────────
+gB = "Parámetros del backtest (no tocar)"
+retK         = input.float(0.7, "Retroceso de entrada (x ATR)", group=gB)
+val          = input.int(5, "Velas de validez de la orden límite", minval=1, group=gB)
+minutoMinimo = input.int(1, "No armar antes del minuto", minval=1, maxval=14, group=gB)
+
+// ─── Fiabilidad ──────────────────────────────────────────────────────────────
+gF = "Fiabilidad"
+soloMinutosCerrados = input.bool(true,
+     "Usar sólo minutos M1 ya cerrados (niveles que no se mueven)", group=gF)
+bloquearTFIncorrecto = input.bool(true,
+     "No operar si el gráfico no está en el timeframe esperado", group=gF)
+
+// ─── Coste de spread en R ────────────────────────────────────────────────────
+costeR = switch activo
+    "XAUUSD"   => 0.005
+    "USDJPY_i" => 0.009
+    "AUDUSD_i" => 0.037
+    "EURJPY_i" => 0.041
+    "USDCAD_i" => 0.048
+    "EURUSD_i" => 0.000
+    "BTCUSD"   => 0.050
+    => 0.0
+
+// ─── Comprobaciones de entorno ───────────────────────────────────────────────
+// Antes esto creaba una etiqueta POR VELA. Con max_labels_count lleno,
+// TradingView borraba las etiquetas reales de señal para hacer sitio.
+// Ahora es una sola etiqueta, sólo en la última vela.
+tfEsperado = activo == "EURUSD_i" ? "30" : "15"
+tfOK       = timeframe.period == tfEsperado
+
+tickerLimpio = str.upper(str.replace_all(syminfo.ticker, "_", ""))
+activoLimpio = str.upper(str.replace_all(activo, "_i", ""))
+simboloOK    = str.contains(tickerLimpio, activoLimpio)
+
+var label lblAviso = na
+if barstate.islast
+    txtAviso = ""
+    if not tfOK
+        txtAviso := "⚠ " + activo + " requiere gráfico de " + tfEsperado +
+             "m — estás en " + timeframe.period + "m." +
+             (bloquearTFIncorrecto ? "\nMOTOR DETENIDO." : "\nResultados NO fiables.")
+    if not simboloOK
+        txtAviso := txtAviso + (txtAviso == "" ? "" : "\n") +
+             "⚠ El desplegable dice " + activo + " pero el gráfico es " +
+             syminfo.ticker + ".\nSe está aplicando el coste de " + activo + "."
+    if txtAviso != ""
+        if not na(lblAviso)
+            label.delete(lblAviso)
+        lblAviso := label.new(bar_index, high, txtAviso,
+             style=label.style_label_down, color=color.red,
+             textcolor=color.white, size=size.normal)
+
+motorActivo = tfOK or not bloquearTFIncorrecto
+
+// ─── Tendencia H1 (sin repintado: vela H1 anterior ya cerrada) ───────────────
+f_tend_h1() =>
+    e = ta.ema(close, 200)
+    close > e ? 1 : -1
+
+[tend, ema200_h1] = request.security(syminfo.tickerid, "60",
+     [f_tend_h1()[1], ta.ema(close, 200)[1]], lookahead=barmerge.lookahead_off)
+
+plot(ema200_h1, "EMA200 H1", color=color.orange, linewidth=2)
+bgcolor(tend == 1 ? color.new(color.green, 92) :
+        tend == -1 ? color.new(color.red, 92) : na)
+
+// ─── ATR14 Wilder de la vela del gráfico ─────────────────────────────────────
+atr = ta.atr(14)
+
+// ─── Ventana horaria (soporta cruce de medianoche) ───────────────────────────
+h1v = horaInicio * 60
+h2v = horaFin * 60
+minsDia = hour(time, "Europe/Madrid") * 60 + minute(time, "Europe/Madrid")
+enVentana = h1v <= h2v ? (minsDia >= h1v and minsDia < h2v)
+                       : (minsDia >= h1v or  minsDia < h2v)
+
+// =============================================================================
+//  ESTADO PERSISTENTE
+//  Todo `var`. Se recalcula de forma determinista en cada ejecución, así que
+//  el rollback de Pine en tiempo real es irrelevante.
+// =============================================================================
+var int   nSenalesHoy   = 0
+var float pendLimite    = na
+var int   pendDir       = na
+var int   pendBarArmado = na
+var float atrArmado     = na
+
+var bool  enPosicion = false
+var float entrada    = na
+var float stop       = na
+var float objetivo   = na
+var int   dirOp      = na
+var float riesgoR    = na
+var bool  beHecho    = false
+
+var float   ultimoR         = na
+var string  ultimoResultado = na
+var float[] historialR = array.new_float(0)
+var int[]   historialT = array.new_int(0)
+var int     barsSinM1  = 0
+
+var line lEntrada  = na
+var line lStop     = na
+var line lObjetivo = na
+
+if ta.change(dayofmonth(time, "Europe/Madrid")) != 0
+    nSenalesHoy := 0
+
+// ─── Deduplicación de avisos ─────────────────────────────────────────────────
+// Único uso de varip en todo el script, y no toca ningún cálculo.
+varip int avBar = na
+varip int avArm = na
+varip int avEnt = na
+varip int avSal = na
+if na(avBar) or avBar != bar_index
+    avBar := bar_index
+    avArm := na
+    avEnt := na
+    avSal := na
+
+// =============================================================================
+//  DATOS M1 — UNA SOLA PETICIÓN, REUTILIZADA EN TODO EL MOTOR
+//  La versión anterior hacía tres llamadas idénticas.
+// =============================================================================
+[hM1, lM1, cM1, tM1] = request.security_lower_tf(syminfo.tickerid, "1",
+     [high, low, close, time])
+
+nM1 = array.size(cM1)
+
+// Sólo minutos cerrados: se descarta el último elemento mientras la vela del
+// gráfico siga viva, porque su high/low aún puede moverse.
+nUsar = nM1
+if soloMinutosCerrados and barstate.isrealtime and not barstate.isconfirmed and nM1 > 0
+    nUsar := nM1 - 1
+
+sinDatosM1 = nM1 == 0
+if sinDatosM1 and barstate.isconfirmed
+    barsSinM1 += 1
+
+// Sin M1 se degrada a la vela del gráfico, y sólo con la vela cerrada.
+usarFallback = sinDatosM1 and barstate.isconfirmed
+nPasos = usarFallback ? 1 : nUsar
+
+// =============================================================================
+//  MOTOR — REPRODUCCIÓN SECUENCIAL DE LA VELA
+// =============================================================================
+
+// Caducidad de la orden pendiente: se evalúa ANTES de mirar ningún precio de
+// esta vela, para que una orden ya muerta no pueda rellenarse.
+if motorActivo and not na(pendLimite) and bar_index - pendBarArmado >= val
+    pendLimite := na
+    pendDir    := na
+
+if motorActivo and nPasos > 0
+
+    float runHigh = na
+    float runLow  = na
+
+    for i = 0 to nPasos - 1
+
+        // if/else en vez de operador ternario a propósito: con ternario Pine
+        // evaluaría también la rama de array.get, y en modo fallback el array
+        // está vacío -> "Array index out of bounds" en tiempo de ejecución.
+        float hMin = na
+        float lMin = na
+        float cMin = na
+        int   tMin = na
+        if usarFallback
+            hMin := high
+            lMin := low
+            cMin := close
+            tMin := time
+        else
+            hMin := array.get(hM1, i)
+            lMin := array.get(lM1, i)
+            cMin := array.get(cM1, i)
+            tMin := array.get(tM1, i)
+
+        runHigh := na(runHigh) ? hMin : math.max(runHigh, hMin)
+        runLow  := na(runLow)  ? lMin : math.min(runLow,  lMin)
+
+        minutoFormado = int(math.floor((tMin - time) / 60000)) + 1
+        horaMin = str.format_time(tMin, "HH:mm", "Europe/Madrid")
+
+        // ─────────────────────────────────────────────────────────────────
+        //  PASO 1 · Resolver la posición que YA estaba abierta al empezar
+        //           este minuto. Nunca se evalúa el minuto de la entrada.
+        // ─────────────────────────────────────────────────────────────────
+        if enPosicion
+
+            hitSL = dirOp == 1 ? lMin <= stop     : hMin >= stop
+            hitTP = dirOp == 1 ? hMin >= objetivo : lMin <= objetivo
+
+            float exitPrice = na
+            if hitSL              // empate dentro del minuto -> gana el stop
+                exitPrice := stop
+            else if hitTP
+                exitPrice := objetivo
+
+            if not na(exitPrice)
+
+                resR = (dirOp == 1 ? exitPrice - entrada
+                                   : entrada - exitPrice) / riesgoR - costeR
+
+                esBE = beHecho and math.abs(exitPrice - entrada) < syminfo.mintick
+                ultimoResultado := esBE ? "BREAKEVEN" : resR > 0 ? "GANADA" : "PERDIDA"
+                ultimoR := resR
+
+                label.new(bar_index, dirOp == 1 ? high : low,
+                     ultimoResultado + " " + str.tostring(resR, "#.####") + "R" +
+                     "\n" + horaMin,
+                     style     = resR >= 0 ? label.style_label_down : label.style_label_up,
+                     color     = esBE ? color.aqua : resR > 0 ? color.green : color.red,
+                     textcolor = color.white, size = size.small)
+
+                if na(avSal) or avSal != minutoFormado
+                    avSal := minutoFormado
+                    alert(activo + " SALIDA " + ultimoResultado + " " +
+                         str.tostring(resR, "#.####") + "R | " + horaMin,
+                         alert.freq_all)
+
+                if not na(lEntrada)
+                    line.set_extend(lEntrada, extend.none)
+                    line.set_x2(lEntrada, bar_index)
+                if not na(lStop)
+                    line.set_extend(lStop, extend.none)
+                    line.set_x2(lStop, bar_index)
+                if not na(lObjetivo)
+                    line.set_extend(lObjetivo, extend.none)
+                    line.set_x2(lObjetivo, bar_index)
+
+                array.push(historialR, resR)
+                array.push(historialT, tMin)
+
+                enPosicion := false
+                entrada    := na
+                stop       := na
+                objetivo   := na
+                dirOp      := na
+                riesgoR    := na
+
+            else if beInput > 0 and not beHecho
+                // El break-even se evalúa DESPUÉS del SL/TP, así que el stop
+                // movido sólo puede saltar a partir del minuto siguiente.
+                // Sin esto, un minuto que barre en las dos direcciones cierra
+                // en BE una operación que nunca llegó a estar en beneficio.
+                progreso = dirOp == 1 ? (hMin - entrada) / (objetivo - entrada) * 100.0
+                                      : (entrada - lMin) / (entrada - objetivo) * 100.0
+                if progreso >= beInput
+                    stop    := entrada
+                    beHecho := true
+
+        // ─────────────────────────────────────────────────────────────────
+        //  PASO 2 · Rellenar la orden que YA estaba armada al empezar este
+        //           minuto. Nunca se evalúa el minuto del armado.
+        // ─────────────────────────────────────────────────────────────────
+        if not na(pendLimite) and not enPosicion
+
+            toca = pendDir == 1 ? lMin <= pendLimite : hMin >= pendLimite
+
+            if toca
+                entrada  := pendLimite
+                dirOp    := pendDir
+                riesgoR  := slInput * atrArmado          // ATR congelado al armar
+                stop     := entrada - dirOp * riesgoR
+                objetivo := entrada + dirOp * tpInput * atrArmado
+                enPosicion := true
+                beHecho    := false
+                nSenalesHoy += 1
+                pendLimite := na
+                pendDir    := na
+
+                lEntrada  := line.new(bar_index, entrada,  bar_index + 1, entrada,
+                     extend=extend.right, color=color.blue,  style=line.style_dashed)
+                lStop     := line.new(bar_index, stop,     bar_index + 1, stop,
+                     extend=extend.right, color=color.red,   style=line.style_dashed)
+                lObjetivo := line.new(bar_index, objetivo, bar_index + 1, objetivo,
+                     extend=extend.right, color=color.green, style=line.style_dashed)
+
+                label.new(bar_index, entrada,
+                     "ENTRADA " + (dirOp == 1 ? "▲ LONG" : "▼ SHORT") +
+                     "\n" + horaMin + "  (min " + str.tostring(minutoFormado) + ")" +
+                     "\nEntrada: " + str.tostring(entrada,  format.mintick) +
+                     "\nSL: "      + str.tostring(stop,     format.mintick) +
+                     "\nTP: "      + str.tostring(objetivo, format.mintick),
+                     style     = dirOp == 1 ? label.style_label_up : label.style_label_down,
+                     color     = color.blue, textcolor = color.white, size = size.small)
+
+                if na(avEnt) or avEnt != minutoFormado
+                    avEnt := minutoFormado
+                    alert(activo + " ENTRADA " + (dirOp == 1 ? "LONG" : "SHORT") +
+                         " @ " + str.tostring(entrada, format.mintick) +
+                         " | SL " + str.tostring(stop, format.mintick) +
+                         " | TP " + str.tostring(objetivo, format.mintick) +
+                         " | rellenada " + horaMin,
+                         alert.freq_all)
+
+        // ─────────────────────────────────────────────────────────────────
+        //  PASO 3 · Armar una orden nueva al cierre de ESTE minuto.
+        //           Va el último a propósito: lo que se arme aquí no puede
+        //           rellenarse hasta la siguiente iteración del bucle.
+        // ─────────────────────────────────────────────────────────────────
+        if na(pendLimite) and not enPosicion
+
+            float trParcial = na
+            if na(close[1])
+                trParcial := runHigh - runLow
+            else
+                trParcial := math.max(runHigh - runLow,
+                     math.max(math.abs(runHigh - close[1]), math.abs(runLow - close[1])))
+
+            float atrParcial = na
+            if not na(atr[1]) and not na(trParcial)
+                atrParcial := (atr[1] * 13.0 + trParcial) / 14.0
+
+            armar = minutoFormado >= minutoMinimo and
+                 not na(tend) and
+                 not na(atrParcial) and atrParcial > 0 and
+                 enVentana and
+                 nSenalesHoy < maxdia and
+                 (cMin - open) * tend > 0
+
+            if armar
+                pendLimite    := cMin - tend * retK * atrParcial
+                pendDir       := tend
+                pendBarArmado := bar_index
+                atrArmado     := atrParcial
+
+                label.new(bar_index, tend == 1 ? runLow : runHigh,
+                     "Orden armada " + (tend == 1 ? "▲ LONG" : "▼ SHORT") +
+                     "\n" + horaMin + "  (min " + str.tostring(minutoFormado) + ")" +
+                     "\n@ " + str.tostring(pendLimite, format.mintick),
+                     style     = tend == 1 ? label.style_label_up : label.style_label_down,
+                     color     = color.gray, textcolor = color.white, size = size.small)
+
+                if na(avArm) or avArm != minutoFormado
+                    avArm := minutoFormado
+                    alert(activo + " ORDEN ARMADA " + (tend == 1 ? "LONG" : "SHORT") +
+                         " @ " + str.tostring(pendLimite, format.mintick) +
+                         " | armada " + horaMin +
+                         " (min " + str.tostring(minutoFormado) + ")",
+                         alert.freq_all)
+
+// =============================================================================
+//  ESTADÍSTICAS
+// =============================================================================
+nOps = array.size(historialR)
+
+var float winrate = na
+var float rProm   = na
+var float rTotal  = na
+var int rachaGanActual  = 0
+var int rachaPerdActual = 0
+var int rachaGanMax     = 0
+var int rachaPerdMax    = 0
+var float  ddMax    = 0.0
+var string ultimos5 = "-"
+var string desdeTxt = "-"
+
+if barstate.islast and nOps > 0
+    wins = 0
+    cGan = 0
+    cPerd = 0
+    cum = 0.0
+    cumMax = 0.0
+    rgMax = 0
+    rpMax = 0
+    ddTemp = 0.0
+
+    for i = 0 to nOps - 1
+        r = array.get(historialR, i)
+        if r > 0
+            wins += 1
+            cGan += 1
+            rgMax := math.max(rgMax, cGan)
+            cPerd := 0
+        else
+            cPerd += 1
+            rpMax := math.max(rpMax, cPerd)
+            cGan  := 0
+        cum    += r
+        cumMax := math.max(cumMax, cum)
+        ddTemp := math.max(ddTemp, cumMax - cum)
+
+    ddMax        := ddTemp
+    rachaGanMax  := rgMax
+    rachaPerdMax := rpMax
+
+    rachaGanActual  := 0
+    rachaPerdActual := 0
+    if array.get(historialR, nOps - 1) > 0
+        i2 = nOps - 1
+        while i2 >= 0 and array.get(historialR, i2) > 0
+            rachaGanActual += 1
+            i2 -= 1
+    else
+        i2 = nOps - 1
+        while i2 >= 0 and array.get(historialR, i2) <= 0
+            rachaPerdActual += 1
+            i2 -= 1
+
+    winrate := 100.0 * wins / nOps
+    rTotal  := array.sum(historialR)
+    rProm   := rTotal / nOps
+
+    desdeTxt := str.format_time(array.get(historialT, 0), "yyyy-MM-dd", "Europe/Madrid")
+
+    ultimos5 := ""
+    for i = math.max(0, nOps - 5) to nOps - 1
+        ultimos5 := ultimos5 + (array.get(historialR, i) > 0 ? "✅" : "❌")
+
+// Breakeven REAL a partir de los múltiplos configurados.
+// Cada acierto vale tpInput/slInput en R; cada fallo vale 1R.
+breakevenPct = 100.0 * slInput / (slInput + tpInput)
+
+// =============================================================================
+//  PANEL
+// =============================================================================
+var table t = table.new(position.top_right, 2, 16,
+     bgcolor=color.new(color.black, 15), border_width=1)
+
+f_fila(int fila, string etiqueta, string valor, color colValor) =>
+    table.cell(t, 0, fila, etiqueta, text_color=color.white, text_size=size.small)
+    table.cell(t, 1, fila, valor,    text_color=colValor,    text_size=size.small)
+
+if barstate.islast
+    table.cell(t, 0, 0, "Activo", text_color=color.white, bgcolor=color.gray)
+    table.cell(t, 1, 0, activo,   text_color=color.white, bgcolor=color.gray)
+
+    table.cell(t, 0, 1, "SIN VALIDAR", text_color=color.white,
+         bgcolor=color.new(color.red, 40))
+    table.cell(t, 1, 1, motorActivo ? "armado intrabar" : "MOTOR DETENIDO (TF)",
+         text_color=color.white, bgcolor=color.new(color.red, 40))
+
+    f_fila(2, "Tendencia H1",
+         na(tend) ? "sin datos" : tend == 1 ? "ALCISTA" : "BAJISTA",
+         na(tend) ? color.gray  : tend == 1 ? color.green : color.red)
+
+    f_fila(3, "Estado",
+         enPosicion ? (beHecho ? "EN POSICIÓN (BE activo)" : "EN POSICIÓN")
+                    : (not na(pendLimite) ? "ORDEN ARMADA" : "SIN OPERAR"),
+         color.yellow)
+
+    f_fila(4, "Entrada / Límite",
+         enPosicion ? str.tostring(entrada, format.mintick)
+                    : (not na(pendLimite) ? str.tostring(pendLimite, format.mintick) : "-"),
+         color.white)
+
+    f_fila(5, "SL / TP",
+         enPosicion ? str.tostring(stop, format.mintick) + " / " +
+                      str.tostring(objetivo, format.mintick) : "-",
+         color.white)
+
+    f_fila(6, "Último resultado",
+         na(ultimoR) ? "-" : ultimoResultado + " " + str.tostring(ultimoR, "#.####") + "R",
+         na(ultimoR) ? color.gray : ultimoR > 0 ? color.green
+                     : ultimoResultado == "BREAKEVEN" ? color.aqua : color.red)
+
+    f_fila(7, "Operaciones", str.tostring(nOps), color.white)
+    f_fila(8, "Muestra desde", desdeTxt, color.white)
+
+    f_fila(9, "Winrate  (BE " + str.tostring(breakevenPct, "#.#") + "%)",
+         na(winrate) ? "-" : str.tostring(winrate, "#.##") + "%",
+         na(winrate) ? color.gray : winrate >= breakevenPct ? color.green : color.red)
+
+    f_fila(10, "R/op · R total",
+         na(rProm) ? "-" : str.tostring(rProm, "#.####") + " · " +
+                           str.tostring(rTotal, "#.##"),
+         na(rProm) ? color.gray : rProm > 0 ? color.green : color.red)
+
+    f_fila(11, "Racha actual",
+         rachaGanActual  > 0 ? str.tostring(rachaGanActual)  + " ganando"  :
+         rachaPerdActual > 0 ? str.tostring(rachaPerdActual) + " perdiendo" : "-",
+         rachaGanActual  > 0 ? color.green :
+         rachaPerdActual > 0 ? color.red   : color.gray)
+
+    f_fila(12, "Racha máx. G / P",
+         str.tostring(rachaGanMax) + " / " + str.tostring(rachaPerdMax), color.white)
+
+    f_fila(13, "Drawdown máx.", str.tostring(ddMax, "#.##") + "R", color.white)
+    f_fila(14, "Últimas 5", ultimos5, color.white)
+
+    // Si esto no es 0, parte del gráfico se ha evaluado sin precisión M1
+    // y las estadísticas de arriba no son comparables con el backtest.
+    f_fila(15, "Velas sin datos M1", str.tostring(barsSinM1),
+         barsSinM1 == 0 ? color.green : color.red)
