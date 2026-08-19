@@ -139,18 +139,32 @@ motorActivo = tfOK or not bloquearTF
 
 // =============================================================================
 //  DATOS DEL TIMEFRAME SUPERIOR — sin repintado
-//  El [1] dentro de la función devuelve el valor de la vela de 15m YA CERRADA.
-//  Sin él, durante los 15 minutos en curso el valor cambiaría tick a tick.
+//  El [1] devuelve el valor de la vela de 15m YA CERRADA. Sin él, durante los
+//  15 minutos en curso el valor cambiaría tick a tick y todo repintaría.
 // =============================================================================
-f_htf() =>
-    e = ta.ema(close, 200)
-    a = ta.atr(14)
-    dir      = close > e ? 1 : -1
-    subiendo = e > e[1] ? 1 : -1
-    [dir[1], subiendo[1], a[1], e[1]]
+// Cuatro llamadas simples en vez de una función que devuelva una tupla: es la
+// forma que Pine acepta sin problemas, y son 4 de las 40 peticiones
+// permitidas. Todos los valores llevan [1] (o [2]) para que salgan siempre de
+// una vela del timeframe superior YA CERRADA.
+emaHtf    = request.security(syminfo.tickerid, htf, ta.ema(close, 200)[1],
+     lookahead=barmerge.lookahead_off)
+emaPrev   = request.security(syminfo.tickerid, htf, ta.ema(close, 200)[2],
+     lookahead=barmerge.lookahead_off)
+cierreHtf = request.security(syminfo.tickerid, htf, close[1],
+     lookahead=barmerge.lookahead_off)
+atrRef    = request.security(syminfo.tickerid, htf, ta.atr(14)[1],
+     lookahead=barmerge.lookahead_off)
 
-[tend, pendiente, atrRef, emaHtf] = request.security(syminfo.tickerid, htf,
-     f_htf(), lookahead=barmerge.lookahead_off)
+// Dirección: el cierre de la vela HTF cerrada contra su EMA200.
+int tend = na
+if not na(cierreHtf) and not na(emaHtf)
+    tend := cierreHtf > emaHtf ? 1 : -1
+
+// Pendiente: la propia EMA200 subiendo o bajando entre las dos últimas velas
+// HTF cerradas. Es lo que filtra los rangos.
+int pendiente = na
+if not na(emaHtf) and not na(emaPrev)
+    pendiente := emaHtf > emaPrev ? 1 : -1
 
 // El title de plot() exige una cadena CONSTANTE: no se puede concatenar con
 // `htf`, que viene de un input. El timeframe activo se muestra en el panel.
