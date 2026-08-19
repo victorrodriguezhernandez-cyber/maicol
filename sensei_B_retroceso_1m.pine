@@ -1,0 +1,548 @@
+//@version=6
+indicator("SENSEI B — Retroceso M1 a favor de tendencia 15m", overlay=true,
+     max_lines_count=500, max_labels_count=500, max_boxes_count=100)
+
+// =============================================================================
+//  GRÁFICO: 1 MINUTO.  ESTRATEGIA NUEVA — SIN VALIDAR, requiere backtest.
+// =============================================================================
+//
+//  IDEA
+//  Operar a favor de la tendencia de 15 minutos, entrando justo cuando el
+//  precio de 1 minuto va EN CONTRA de esa tendencia y se agota.
+//  En tendencia alcista de 15m: esperar a que el M1 retroceda, y comprar en el
+//  primer minuto que gira al alza. Al revés para bajista.
+//
+//  POR QUÉ 15 MINUTOS COMO TENDENCIA
+//  La EMA200 de 15m cubre unas 50 horas (dos días de mercado): es una
+//  tendencia de verdad y se refresca cada cuarto de hora. Una de 1h sería
+//  demasiado lenta para reaccionar operando en M1; una de 5m sería casi ruido.
+//
+//  POR QUÉ LAS OPERACIONES NO SON CORTAS
+//  Ésta es la decisión clave. TODAS las distancias — profundidad del
+//  retroceso, stop y objetivo — se miden con el ATR14 de 15 MINUTOS, no con el
+//  de 1 minuto. Con el ATR de M1 los stops serían minúsculos, las operaciones
+//  durarían dos minutos y el spread se lo comería todo. Aquí sólo la DECISIÓN
+//  es de 1 minuto; el tamaño del riesgo es de 15.
+//  El objetivo está a 1.5 veces el riesgo, así que el precio tiene que
+//  recorrer del orden de 1.5 a 3 ATR de 15m: eso son decenas de minutos, no
+//  segundos. Vigila la fila "Duración media" del panel para confirmarlo.
+//
+//  EN QUÉ SE DIFERENCIA DE LA ESTRATEGIA A
+//    A: tendencia H1 + vela de 15m a favor -> orden LÍMITE esperando un
+//       retroceso que puede no llegar nunca.
+//    B: tendencia 15m + retroceso ya ocurrido y medido en M1 -> entrada A
+//       MERCADO en el minuto del giro.
+//  La diferencia práctica más importante: al entrar a mercado en el cierre de
+//  la vela del giro NO EXISTE bucle de relleno, y por tanto es imposible que
+//  la entrada se resuelva con minutos ya pasados. Toda esa clase de fallos
+//  desaparece por construcción, no por un parche.
+//
+// =============================================================================
+//  GARANTÍAS DE FIABILIDAD
+// =============================================================================
+//   · TODO el motor corre dentro de barstate.isconfirmed. No se calcula ni se
+//     dibuja nada con la vela en formación: una etiqueta que aparece ya no se
+//     mueve nunca. Latencia máxima 60 segundos.
+//   · Los valores de 15m se piden con [1] y lookahead_off: siempre de la vela
+//     de 15m YA CERRADA. Sin repintado.
+//   · Cero varip. Cero request.security_lower_tf (en M1 no hay timeframe
+//     inferior utilizable: los datos de segundos exigen Premium y apenas
+//     guardan histórico). La vela de 1 minuto es la unidad atómica.
+//   · Causalidad: la posición abierta en la vela j sólo puede cerrarse desde
+//     j+1. Nunca se evalúa el SL/TP en la propia vela de la entrada.
+//   · SL y TP tocados dentro de la misma vela -> gana el SL.
+//   · El coste se calcula con el spread real contra el riesgo REAL de cada
+//     operación, no con una constante en R. Aquí el riesgo varía de una
+//     operación a otra, así que una constante no valdría.
+// =============================================================================
+
+// ─── Tendencia ───────────────────────────────────────────────────────────────
+gT = "Tendencia (timeframe superior)"
+htf = input.timeframe("15", "Timeframe de tendencia", group=gT,
+     tooltip="15 es el valor pensado para gráfico de 1m. Subirlo a 30 o 60 da "
+     + "menos señales y más lentas; bajarlo a 5 mete ruido.")
+exigirPendiente = input.bool(true, "Exigir que la EMA200 esté girada a favor",
+     group=gT,
+     tooltip="Filtra los rangos: no basta con estar por encima de la EMA200, "
+     + "la propia EMA tiene que estar subiendo (o bajando).")
+
+// ─── Retroceso en M1 ─────────────────────────────────────────────────────────
+gR = "Retroceso en M1 (contra la tendencia)"
+velasExtremo = input.int(60, "Velas M1 para el extremo de referencia", minval=10,
+     group=gR, tooltip="Desde qué máximo/mínimo se mide el retroceso. 60 = 1 hora.")
+minPull = input.float(0.5, "Retroceso mínimo (x ATR 15m)", minval=0.1, step=0.05,
+     group=gR, tooltip="Por debajo de esto no es un retroceso, es ruido.")
+maxPull = input.float(2.0, "Retroceso máximo (x ATR 15m)", minval=0.2, step=0.05,
+     group=gR, tooltip="Por encima de esto la tendencia probablemente esté rota; "
+     + "no es un retroceso, es una vuelta.")
+velasRetro = input.int(15, "Velas M1 del extremo del retroceso (para el stop)",
+     minval=3, group=gR)
+exigirGiro = input.bool(true, "Esperar al giro del M1 antes de entrar", group=gR,
+     tooltip="Activado: entra en la primera vela M1 que se come el extremo de la "
+     + "anterior a favor de la tendencia. Evita coger un cuchillo cayendo, a "
+     + "cambio de entrar un poco peor.\n"
+     + "Desactivado: entra en cuanto el retroceso alcanza la profundidad "
+     + "pedida, con el M1 todavía yendo en contra. Es la versión pura de "
+     + "'contra el minuto': mejor precio, más riesgo de que siga cayendo.")
+
+// ─── Riesgo ──────────────────────────────────────────────────────────────────
+gRi = "Riesgo"
+bufferK = input.float(0.25, "Colchón del stop tras el extremo (x ATR 15m)",
+     minval=0, step=0.05, group=gRi)
+slMinK = input.float(0.8, "Stop mínimo (x ATR 15m)", minval=0.1, step=0.05, group=gRi)
+slMaxK = input.float(2.0, "Stop máximo (x ATR 15m)", minval=0.2, step=0.05, group=gRi,
+     tooltip="Techo del riesgo. Si el extremo del retroceso queda más lejos que "
+     + "esto, la operación se descarta en vez de asumir un stop enorme.")
+rr = input.float(1.5, "Objetivo (x riesgo)", minval=0.2, step=0.1, group=gRi,
+     tooltip="1.5 -> hace falta 40% de aciertos para no perder. Además alarga "
+     + "la operación, que es lo que se busca.")
+
+// ─── Gestión ─────────────────────────────────────────────────────────────────
+gG = "Gestión"
+beInput = input.float(0, "Break Even al % del camino a TP (0 = desactivado)",
+     minval=0, maxval=100, step=5, group=gG)
+duracionMaxMin = input.int(240, "Cierre forzado por tiempo (minutos, 0 = off)",
+     minval=0, group=gG)
+salirSiGiraTendencia = input.bool(false,
+     "Cerrar si la tendencia de 15m se da la vuelta", group=gG)
+cooldownMin = input.int(15, "Espera tras cerrar una operación (minutos)",
+     minval=0, group=gG)
+maxdia     = input.int(6, "Operaciones máx. por día", minval=1, group=gG)
+horaInicio = input.int(9,  "Hora inicio ventana (Madrid)", minval=0, maxval=23, group=gG)
+horaFin    = input.int(23, "Hora fin ventana (Madrid)",    minval=0, maxval=23, group=gG)
+
+// ─── Fiabilidad ──────────────────────────────────────────────────────────────
+gF = "Fiabilidad"
+bloquearTF = input.bool(true, "No operar si el gráfico no está en 1 minuto", group=gF)
+spreadPuntos = input.float(0, "Spread real en puntos", minval=0, step=0.0001, group=gF,
+     tooltip="Rellénalo. El riesgo cambia de una operación a otra, así que un "
+     + "coste fijo en R no vale: hay que dividir el spread entre el riesgo real "
+     + "de cada operación.")
+
+// =============================================================================
+//  ENTORNO
+// =============================================================================
+tfOK = timeframe.period == "1"
+
+var label lblAviso = na
+if barstate.islast and not tfOK
+    if not na(lblAviso)
+        label.delete(lblAviso)
+    lblAviso := label.new(bar_index, high,
+         "⚠ Este script es para gráfico de 1 minuto — estás en " +
+         timeframe.period + "." +
+         (bloquearTF ? "\nMOTOR DETENIDO." : "\nResultados NO fiables."),
+         style=label.style_label_down, color=color.red,
+         textcolor=color.white, size=size.normal)
+
+motorActivo = tfOK or not bloquearTF
+
+// =============================================================================
+//  DATOS DEL TIMEFRAME SUPERIOR — sin repintado
+//  El [1] dentro de la función devuelve el valor de la vela de 15m YA CERRADA.
+//  Sin él, durante los 15 minutos en curso el valor cambiaría tick a tick.
+// =============================================================================
+f_htf() =>
+    e = ta.ema(close, 200)
+    a = ta.atr(14)
+    dir      = close > e ? 1 : -1
+    subiendo = e > e[1] ? 1 : -1
+    [dir[1], subiendo[1], a[1], e[1]]
+
+[tend, pendiente, atrRef, emaHtf] = request.security(syminfo.tickerid, htf,
+     f_htf(), lookahead=barmerge.lookahead_off)
+
+plot(emaHtf, "EMA200 " + htf, color=color.orange, linewidth=2)
+bgcolor(tend == 1 ? color.new(color.green, 94) :
+        tend == -1 ? color.new(color.red, 94) : na)
+
+tendenciaOK = not na(tend) and not na(atrRef) and atrRef > 0 and
+     (not exigirPendiente or tend == pendiente)
+
+// =============================================================================
+//  MEDIDA DEL RETROCESO EN M1
+// =============================================================================
+extAlto = ta.highest(high, velasExtremo)
+extBajo = ta.lowest(low,  velasExtremo)
+
+// Cuánto ha retrocedido el precio desde el extremo, en ATR de 15m.
+profLong  = not na(atrRef) and atrRef > 0 ? (extAlto - close) / atrRef : na
+profShort = not na(atrRef) and atrRef > 0 ? (close - extBajo) / atrRef : na
+
+// Extremo del propio retroceso: de ahí sale el stop estructural.
+bajoRetro = ta.lowest(low,  velasRetro)
+altoRetro = ta.highest(high, velasRetro)
+
+// Giro: la vela M1 se come el extremo de la anterior en la dirección buena.
+// Es el disparador, y se evalúa sólo con velas cerradas.
+giroAlza = close > high[1]
+giroBaja = close < low[1]
+
+// ─── Ventana horaria (soporta cruce de medianoche) ───────────────────────────
+h1v = horaInicio * 60
+h2v = horaFin * 60
+minsDia = hour(time, "Europe/Madrid") * 60 + minute(time, "Europe/Madrid")
+enVentana = h1v <= h2v ? (minsDia >= h1v and minsDia < h2v)
+                       : (minsDia >= h1v or  minsDia < h2v)
+
+// =============================================================================
+//  ESTADO
+// =============================================================================
+var int nOpsHoy = 0
+
+var bool  enPosicion  = false
+var float entrada     = na
+var float stop        = na
+var float objetivo    = na
+var int   dirOp       = na
+var float riesgoOp    = na          // riesgo en PRECIO. 1R = esto.
+var bool  beHecho     = false
+var int   entradaBar  = na
+var int   entradaTime = na
+
+var int ultimaSalida = na
+
+var float  ultimoR         = na
+var string ultimoResultado = na
+var float  costeRUsado     = na
+
+var float[] histR = array.new_float(0)
+var int[]   histT = array.new_int(0)
+var int[]   histD = array.new_int(0)
+
+var line lEnt = na
+var line lSl  = na
+var line lTp  = na
+
+if ta.change(dayofmonth(time, "Europe/Madrid")) != 0
+    nOpsHoy := 0
+
+// =============================================================================
+//  MOTOR — sólo con la vela de 1 minuto cerrada.
+//  Nada se calcula ni se dibuja con la vela en formación, así que lo que
+//  aparece en pantalla no vuelve a cambiar.
+// =============================================================================
+if motorActivo and barstate.isconfirmed
+
+    horaAhora = str.format_time(time, "HH:mm", "Europe/Madrid")
+
+    // ─── 1 · Resolver la posición abierta ────────────────────────────────
+    // bar_index > entradaBar: nunca se evalúa la vela de la entrada, así que
+    // es imposible cerrar una operación con precio anterior a haberla abierto.
+    if enPosicion and bar_index > entradaBar
+
+        hitSL = dirOp == 1 ? low  <= stop     : high >= stop
+        hitTP = dirOp == 1 ? high >= objetivo : low  <= objetivo
+
+        float precioSalida = na
+        string motivo = ""
+
+        if hitSL                    // empate dentro de la vela -> gana el stop
+            precioSalida := stop
+            motivo := beHecho and math.abs(stop - entrada) < syminfo.mintick ? "BE" : "SL"
+        else if hitTP
+            precioSalida := objetivo
+            motivo := "TP"
+        else if salirSiGiraTendencia and not na(tend) and tend != dirOp
+            precioSalida := close
+            motivo := "GIRO"
+        else if duracionMaxMin > 0 and (time - entradaTime) / 60000 >= duracionMaxMin
+            precioSalida := close
+            motivo := "TIEMPO"
+
+        if not na(precioSalida)
+
+            // El riesgo cambia en cada operación, así que el coste hay que
+            // dividirlo entre el riesgo REAL de ésta. Un coste fijo en R sería
+            // falso en cuanto dos operaciones tuvieran stops distintos.
+            coste = spreadPuntos > 0 ? spreadPuntos / riesgoOp : 0.0
+            costeRUsado := coste
+
+            resR = (dirOp == 1 ? precioSalida - entrada
+                               : entrada - precioSalida) / riesgoOp - coste
+            durMin = int((time - entradaTime) / 60000)
+
+            ultimoResultado := motivo == "BE" ? "BREAKEVEN"
+                 : resR > 0 ? "GANADA" : "PERDIDA"
+            ultimoR := resR
+
+            label.new(bar_index, dirOp == 1 ? high : low,
+                 ultimoResultado + " " + str.tostring(resR, "#.###") + "R" +
+                 "\n" + motivo + " · " + str.tostring(durMin) + " min",
+                 style     = resR >= 0 ? label.style_label_down : label.style_label_up,
+                 color     = motivo == "BE" ? color.aqua
+                           : resR > 0 ? color.green : color.red,
+                 textcolor = color.white, size = size.tiny)
+
+            alert("SENSEI B " + syminfo.ticker + " SALIDA " + ultimoResultado +
+                 " " + str.tostring(resR, "#.###") + "R | " + motivo +
+                 " | " + str.tostring(durMin) + " min | " + horaAhora,
+                 alert.freq_once_per_bar)
+
+            if not na(lEnt)
+                line.set_extend(lEnt, extend.none)
+                line.set_x2(lEnt, bar_index)
+            if not na(lSl)
+                line.set_extend(lSl, extend.none)
+                line.set_x2(lSl, bar_index)
+            if not na(lTp)
+                line.set_extend(lTp, extend.none)
+                line.set_x2(lTp, bar_index)
+
+            array.push(histR, resR)
+            array.push(histT, time)
+            array.push(histD, durMin)
+
+            enPosicion   := false
+            entrada      := na
+            stop         := na
+            objetivo     := na
+            dirOp        := na
+            riesgoOp     := na
+            ultimaSalida := time
+
+        else if beInput > 0 and not beHecho
+            // Se evalúa DESPUÉS del SL/TP: el stop movido sólo puede saltar a
+            // partir de la vela siguiente. Sin esto, una vela que barre en las
+            // dos direcciones cerraría en BE una operación que nunca llegó a
+            // estar en beneficio.
+            progreso = dirOp == 1 ? (high - entrada) / (objetivo - entrada) * 100.0
+                                  : (entrada - low)  / (entrada - objetivo) * 100.0
+            if progreso >= beInput
+                stop    := entrada
+                beHecho := true
+
+    // ─── 2 · Buscar entrada nueva ────────────────────────────────────────
+    // Va después de resolver: una operación cerrada en esta vela no puede
+    // abrir otra en la misma vela (el cooldown lo impide igualmente).
+    if not enPosicion and tendenciaOK and enVentana and nOpsHoy < maxdia
+
+        enfriado = na(ultimaSalida) or (time - ultimaSalida) / 60000 >= cooldownMin
+
+        // LONG: tendencia 15m alcista + M1 ha retrocedido lo justo.
+        // Con exigirGiro se espera además a que el M1 se dé la vuelta; sin él
+        // se entra con el M1 todavía cayendo (contra el minuto, en estado puro).
+        pullLongOK = not na(profLong) and profLong >= minPull and profLong <= maxPull
+        condLong = enfriado and tend == 1 and pullLongOK and (not exigirGiro or giroAlza)
+
+        // SHORT: espejo
+        pullShortOK = not na(profShort) and profShort >= minPull and profShort <= maxPull
+        condShort = enfriado and tend == -1 and pullShortOK and (not exigirGiro or giroBaja)
+
+        if condLong or condShort
+
+            d = condLong ? 1 : -1
+
+            // Stop estructural: justo pasado el extremo del retroceso, con
+            // colchón. Acotado por arriba y por abajo para que el riesgo no se
+            // dispare ni sea ridículo.
+            nivelExtremo = d == 1 ? bajoRetro - bufferK * atrRef
+                                  : altoRetro + bufferK * atrRef
+            riesgoBruto = d == 1 ? close - nivelExtremo : nivelExtremo - close
+
+            // Si el extremo queda más lejos que el techo, se descarta la
+            // operación en vez de recortar el stop: recortarlo lo pondría
+            // dentro del propio retroceso y saltaría casi seguro.
+            if riesgoBruto <= slMaxK * atrRef
+
+                riesgoOp := math.max(riesgoBruto, slMinK * atrRef)
+
+                entrada     := close          // a mercado, cierre de esta vela
+                dirOp       := d
+                stop        := entrada - d * riesgoOp
+                objetivo    := entrada + d * rr * riesgoOp
+                enPosicion  := true
+                beHecho     := false
+                entradaBar  := bar_index
+                entradaTime := time
+                nOpsHoy     += 1
+
+                lEnt := line.new(bar_index, entrada,  bar_index + 1, entrada,
+                     extend=extend.right, color=color.blue,  style=line.style_dashed)
+                lSl  := line.new(bar_index, stop,     bar_index + 1, stop,
+                     extend=extend.right, color=color.red,   style=line.style_dashed)
+                lTp  := line.new(bar_index, objetivo, bar_index + 1, objetivo,
+                     extend=extend.right, color=color.green, style=line.style_dashed)
+
+                label.new(bar_index, d == 1 ? low : high,
+                     "ENTRADA " + (d == 1 ? "▲ LONG" : "▼ SHORT") + "  " + horaAhora +
+                     "\nRetroceso: " +
+                     str.tostring(d == 1 ? profLong : profShort, "#.##") + " ATR" +
+                     "\nEntrada: " + str.tostring(entrada,  format.mintick) +
+                     "\nSL: "      + str.tostring(stop,     format.mintick) +
+                     "\nTP: "      + str.tostring(objetivo, format.mintick),
+                     style     = d == 1 ? label.style_label_up : label.style_label_down,
+                     color     = color.blue, textcolor = color.white, size = size.tiny)
+
+                alert("SENSEI B " + syminfo.ticker + " ENTRADA " +
+                     (d == 1 ? "LONG" : "SHORT") +
+                     " @ " + str.tostring(entrada, format.mintick) +
+                     " | SL " + str.tostring(stop, format.mintick) +
+                     " | TP " + str.tostring(objetivo, format.mintick) +
+                     " | " + horaAhora,
+                     alert.freq_once_per_bar)
+
+// =============================================================================
+//  ESTADÍSTICAS
+// =============================================================================
+nOps = array.size(histR)
+
+var float winrate = na
+var float rProm   = na
+var float rTotal  = na
+var float durProm = na
+var int rachaGan  = 0
+var int rachaPerd = 0
+var int rachaGanMax  = 0
+var int rachaPerdMax = 0
+var float  ddMax    = 0.0
+var string ultimos5 = "-"
+var string desdeTxt = "-"
+
+if barstate.islast and nOps > 0
+    wins = 0
+    cG = 0
+    cP = 0
+    cum = 0.0
+    cumMax = 0.0
+    rgMax = 0
+    rpMax = 0
+    ddTemp = 0.0
+
+    for i = 0 to nOps - 1
+        r = array.get(histR, i)
+        if r > 0
+            wins += 1
+            cG += 1
+            rgMax := math.max(rgMax, cG)
+            cP := 0
+        else
+            cP += 1
+            rpMax := math.max(rpMax, cP)
+            cG := 0
+        cum    += r
+        cumMax := math.max(cumMax, cum)
+        ddTemp := math.max(ddTemp, cumMax - cum)
+
+    ddMax        := ddTemp
+    rachaGanMax  := rgMax
+    rachaPerdMax := rpMax
+
+    rachaGan  := 0
+    rachaPerd := 0
+    if array.get(histR, nOps - 1) > 0
+        i2 = nOps - 1
+        while i2 >= 0 and array.get(histR, i2) > 0
+            rachaGan += 1
+            i2 -= 1
+    else
+        i2 = nOps - 1
+        while i2 >= 0 and array.get(histR, i2) <= 0
+            rachaPerd += 1
+            i2 -= 1
+
+    winrate := 100.0 * wins / nOps
+    rTotal  := array.sum(histR)
+    rProm   := rTotal / nOps
+    durProm := array.sum(histD) / nOps
+
+    desdeTxt := str.format_time(array.get(histT, 0), "yyyy-MM-dd", "Europe/Madrid")
+
+    ultimos5 := ""
+    for i = math.max(0, nOps - 5) to nOps - 1
+        ultimos5 := ultimos5 + (array.get(histR, i) > 0 ? "✅" : "❌")
+
+// Cada acierto vale rr en R; cada fallo vale 1R.
+breakevenPct = 100.0 / (1.0 + rr)
+
+// =============================================================================
+//  PANEL
+// =============================================================================
+var table t = table.new(position.top_right, 2, 17,
+     bgcolor=color.new(color.black, 15), border_width=1)
+
+f_fila(int fila, string etiqueta, string valor, color colValor) =>
+    table.cell(t, 0, fila, etiqueta, text_color=color.white, text_size=size.small)
+    table.cell(t, 1, fila, valor,    text_color=colValor,    text_size=size.small)
+
+if barstate.islast
+    table.cell(t, 0, 0, "SENSEI B", text_color=color.white, bgcolor=color.gray)
+    table.cell(t, 1, 0, syminfo.ticker, text_color=color.white, bgcolor=color.gray)
+
+    table.cell(t, 0, 1, "SIN VALIDAR", text_color=color.white,
+         bgcolor=color.new(color.red, 40))
+    table.cell(t, 1, 1, motorActivo ? "1m · tend. " + htf : "MOTOR DETENIDO (TF)",
+         text_color=color.white, bgcolor=color.new(color.red, 40))
+
+    f_fila(2, "Tendencia " + htf,
+         na(tend) ? "sin datos" : not tendenciaOK ? "sin permiso (pendiente)"
+              : tend == 1 ? "ALCISTA" : "BAJISTA",
+         na(tend) or not tendenciaOK ? color.gray
+              : tend == 1 ? color.green : color.red)
+
+    f_fila(3, "Retroceso actual",
+         na(atrRef) or atrRef <= 0 ? "-"
+              : str.tostring(tend == 1 ? profLong : profShort, "#.##") + " ATR" +
+                " (busca " + str.tostring(minPull, "#.##") + "–" +
+                str.tostring(maxPull, "#.##") + ")",
+         na(atrRef) ? color.gray :
+         (tend == 1 ? profLong : profShort) >= minPull and
+         (tend == 1 ? profLong : profShort) <= maxPull ? color.green : color.gray)
+
+    f_fila(4, "Estado",
+         enPosicion ? (beHecho ? "EN POSICIÓN (BE activo)" : "EN POSICIÓN")
+                    : "ESPERANDO GIRO",
+         color.yellow)
+
+    f_fila(5, "Entrada",
+         enPosicion ? str.tostring(entrada, format.mintick) : "-", color.white)
+
+    f_fila(6, "SL / TP",
+         enPosicion ? str.tostring(stop, format.mintick) + " / " +
+                      str.tostring(objetivo, format.mintick) : "-", color.white)
+
+    f_fila(7, "1R en precio",
+         enPosicion ? str.tostring(riesgoOp, format.mintick) : "-", color.white)
+
+    f_fila(8, "Último resultado",
+         na(ultimoR) ? "-" : ultimoResultado + " " + str.tostring(ultimoR, "#.###") + "R",
+         na(ultimoR) ? color.gray : ultimoR > 0 ? color.green
+              : ultimoResultado == "BREAKEVEN" ? color.aqua : color.red)
+
+    f_fila(9, "Operaciones · desde",
+         str.tostring(nOps) + " · " + desdeTxt, color.white)
+
+    // R/op es el único número comparable entre configuraciones.
+    // El winrate a secas no dice nada si no sabes el RR.
+    f_fila(10, "R/op · R total",
+         na(rProm) ? "-" : str.tostring(rProm, "#.####") + " · " +
+                           str.tostring(rTotal, "#.##"),
+         na(rProm) ? color.gray : rProm > 0 ? color.green : color.red)
+
+    f_fila(11, "Winrate  (BE " + str.tostring(breakevenPct, "#.#") + "%)",
+         na(winrate) ? "-" : str.tostring(winrate, "#.##") + "%",
+         na(winrate) ? color.gray : winrate >= breakevenPct ? color.green : color.red)
+
+    f_fila(12, "RR (objetivo/riesgo)",
+         str.tostring(rr, "#.##") + " : 1", rr >= 1.0 ? color.green : color.red)
+
+    // Si esto sale en pocos minutos, el ATR de 15m se ha quedado corto para
+    // este activo: sube el timeframe de tendencia o el multiplicador del stop.
+    f_fila(13, "Duración media",
+         na(durProm) ? "-" : str.tostring(durProm, "#.#") + " min", color.white)
+
+    f_fila(14, "Coste aplicado",
+         spreadPuntos <= 0 ? "SIN SPREAD ⚠"
+              : na(costeRUsado) ? "spread real"
+              : str.tostring(costeRUsado, "#.####") + "R",
+         spreadPuntos <= 0 ? color.red : color.white)
+
+    f_fila(15, "Racha actual",
+         rachaGan  > 0 ? str.tostring(rachaGan)  + " ganando"   :
+         rachaPerd > 0 ? str.tostring(rachaPerd) + " perdiendo" : "-",
+         rachaGan  > 0 ? color.green :
+         rachaPerd > 0 ? color.red   : color.gray)
+
+    f_fila(16, "Racha máx · DD · Últimas 5",
+         str.tostring(rachaGanMax) + "/" + str.tostring(rachaPerdMax) + " · " +
+         str.tostring(ddMax, "#.##") + "R · " + ultimos5, color.white)
