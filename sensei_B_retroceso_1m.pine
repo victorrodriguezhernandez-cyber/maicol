@@ -152,7 +152,9 @@ f_htf() =>
 [tend, pendiente, atrRef, emaHtf] = request.security(syminfo.tickerid, htf,
      f_htf(), lookahead=barmerge.lookahead_off)
 
-plot(emaHtf, "EMA200 " + htf, color=color.orange, linewidth=2)
+// El title de plot() exige una cadena CONSTANTE: no se puede concatenar con
+// `htf`, que viene de un input. El timeframe activo se muestra en el panel.
+plot(emaHtf, "EMA200 tendencia", color=color.orange, linewidth=2)
 bgcolor(tend == 1 ? color.new(color.green, 94) :
         tend == -1 ? color.new(color.red, 94) : na)
 
