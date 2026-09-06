@@ -78,6 +78,10 @@ automáticamente vía `.mcp.json`. Prueba a preguntar:
 - "¿Qué alertas ha mandado TradingView hoy?"
 - "Dame el pulso del mercado."
 - "¿Qué probabilidad histórica tiene una zona alcista de este tamaño?"
+- "¿A cuánto está BTC ahora mismo?" / "Enséñame las últimas velas de 15m" —
+  estas dos usan `get_live_price` / `get_live_candles`, que van directas a
+  Binance (no a TradingView ni a Supabase), así que responden con el
+  mercado en vivo sin depender de que hayas disparado una alerta.
 
 ## Verificación rápida sin esperar una alerta real
 

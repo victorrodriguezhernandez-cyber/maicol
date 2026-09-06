@@ -18,6 +18,13 @@ No ejecuta operaciones, no escribe nada: todas las tools son de lectura.
 | `get_recent_zones` | Últimas zonas SENSEI detectadas (order blocks / FVG), con su resultado |
 | `get_zone_probability` | Probabilidad histórica de que una zona se respete, dado tipo/tendencia/altura |
 | `get_market_pulse` | Resumen combinado: últimas alertas + últimas zonas, de un solo vistazo |
+| `get_live_price` | Precio y estadísticas 24h **en vivo**, directo de Binance (sin esperar a una alerta) |
+| `get_live_candles` | Velas OHLCV recientes **en vivo**, directo de Binance — misma fuente que usa `index.html` |
+
+Las dos últimas no dependen de TradingView en absoluto: TradingView no tiene
+API para leer el gráfico en vivo, así que van directas a Binance (el
+exchange del que TradingView saca los precios de `BINANCE:BTCUSDT`), que sí
+es pública y gratuita.
 
 ## Instalación
 

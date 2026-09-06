@@ -7,6 +7,11 @@
 //      captured via the /api/tradingview-webhook endpoint into `tv_alerts`.
 //    - Zone history (`zones_history`) already used by the web dashboard
 //      (see ../supabase.js) to score order-block / FVG probability.
+//    - Live price/candles straight from Binance's public REST API (no key
+//      needed) — the same source index.html already charts — so Claude can
+//      check the market on demand instead of waiting for an alert to fire.
+//      This is NOT a TradingView API (none exists for that); it's the raw
+//      exchange data TradingView's own BINANCE:* charts are built from.
 //
 //  This server never trades or writes — every tool here is read-only.
 //  Transport: stdio (for Claude Code / Claude Desktop).
@@ -166,6 +171,91 @@ server.registerTool(
             latest_alerts: alertsErr ? { error: alertsErr.message } : alerts,
             latest_zones: zonesErr ? { error: zonesErr.message } : zones
         });
+    }
+);
+
+// ─── Live market data (Binance public REST — no key needed) ────────────────
+// This is the exact same endpoint index.html already uses (see line ~291),
+// which is also what TradingView's BINANCE:BTCUSDT chart is drawing from.
+// No TradingView API involved: this is public exchange data, fetched live
+// instead of waiting for a Pine Script alert to fire.
+const BINANCE_REST = 'https://api.binance.com/api/v3';
+
+async function binanceFetch(path) {
+    const res = await fetch(`${BINANCE_REST}${path}`);
+    if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`Binance API ${res.status}: ${body || res.statusText}`);
+    }
+    return res.json();
+}
+
+server.registerTool(
+    'get_live_price',
+    {
+        title: 'Get live price from Binance',
+        description:
+            'Current live price and 24h stats for a symbol, straight from Binance (the same exchange this ' +
+            'project charts). Use this whenever you need "what is the price doing right now" without waiting ' +
+            'for a TradingView alert.',
+        inputSchema: {
+            symbol: z.string().default('BTCUSDT').describe('Binance symbol, e.g. "BTCUSDT", "ETHUSDT"')
+        },
+        annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: true }
+    },
+    async ({ symbol }) => {
+        try {
+            const data = await binanceFetch(`/ticker/24hr?symbol=${encodeURIComponent(symbol ?? 'BTCUSDT')}`);
+            return json({
+                symbol: data.symbol,
+                last_price: Number(data.lastPrice),
+                change_pct_24h: Number(data.priceChangePercent),
+                high_24h: Number(data.highPrice),
+                low_24h: Number(data.lowPrice),
+                volume_24h: Number(data.volume),
+                as_of: new Date().toISOString()
+            });
+        } catch (err) {
+            return toolError(err.message);
+        }
+    }
+);
+
+server.registerTool(
+    'get_live_candles',
+    {
+        title: 'Get live candles from Binance',
+        description:
+            'Recent OHLCV candles for a symbol/timeframe, straight from Binance, live. Same data source as ' +
+            'the dashboard and the ATR/pivot logic in zones.js — use this to eyeball current structure ' +
+            '(swing highs/lows, recent range) without opening TradingView.',
+        inputSchema: {
+            symbol: z.string().default('BTCUSDT').describe('Binance symbol, e.g. "BTCUSDT"'),
+            interval: z
+                .enum(['1m', '5m', '15m', '30m', '1h', '4h', '1d'])
+                .default('15m')
+                .describe('Candle timeframe'),
+            limit: z.number().int().min(1).max(500).default(100).describe('How many recent candles to return')
+        },
+        annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: true }
+    },
+    async ({ symbol, interval, limit }) => {
+        try {
+            const raw = await binanceFetch(
+                `/klines?symbol=${encodeURIComponent(symbol ?? 'BTCUSDT')}&interval=${interval ?? '15m'}&limit=${limit ?? 100}`
+            );
+            const candles = raw.map((c) => ({
+                open_time: new Date(c[0]).toISOString(),
+                open: Number(c[1]),
+                high: Number(c[2]),
+                low: Number(c[3]),
+                close: Number(c[4]),
+                volume: Number(c[5])
+            }));
+            return json({ symbol, interval: interval ?? '15m', count: candles.length, candles });
+        } catch (err) {
+            return toolError(err.message);
+        }
     }
 );
 
