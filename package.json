@@ -1,0 +1,8 @@
+{
+  "name": "maicol",
+  "private": true,
+  "description": "EL SENSEI — BTCUSDT dashboard + TradingView alert ingestion",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  }
+}

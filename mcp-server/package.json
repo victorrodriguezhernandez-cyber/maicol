@@ -1,0 +1,19 @@
+{
+  "name": "sensei-tradingview-mcp",
+  "version": "1.0.0",
+  "description": "MCP server exposing EL SENSEI's TradingView alerts and zone history (Supabase) as tools for Claude.",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "sensei-tradingview-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "smoke": "node scripts/smoke-test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@supabase/supabase-js": "^2.45.4",
+    "zod": "^3.23.8"
+  }
+}

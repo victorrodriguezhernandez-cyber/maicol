@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "sensei-tradingview": {
+      "command": "node",
+      "args": ["mcp-server/src/index.js"]
+    }
+  }
+}
