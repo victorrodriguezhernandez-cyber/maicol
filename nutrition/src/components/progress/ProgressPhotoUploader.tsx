@@ -68,7 +68,6 @@ export function ProgressPhotoUploader() {
           <input
             type="file"
             accept="image/*"
-            capture="environment"
             className="hidden"
             disabled={uploading}
             onChange={(e) => handleFile(e.target.files?.[0])}

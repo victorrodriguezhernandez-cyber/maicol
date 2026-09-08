@@ -2,7 +2,7 @@
 
 Aplicación personal de nutrición, peso y volumen con IA — un sustituto de
 MyFitnessPal/Yazio/MacroFactor adaptado a un único usuario, con captura de
-comidas por foto, código de barras, etiqueta, texto y voz, seguimiento de
+comidas por foto, etiqueta, texto y voz, seguimiento de
 peso con tendencia (no picos diarios), y un asistente de IA que responde
 sobre tus propios datos.
 

@@ -40,10 +40,4 @@ export const serverConfig = {
   get usdaApiKey(): string | undefined {
     return process.env.USDA_API_KEY;
   },
-  get openFoodFactsUserAgent(): string {
-    return (
-      process.env.OPEN_FOOD_FACTS_USER_AGENT ??
-      "MaicolNutrition/1.0 (unset contact)"
-    );
-  },
 };

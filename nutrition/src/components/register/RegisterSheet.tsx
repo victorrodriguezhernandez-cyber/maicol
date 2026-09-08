@@ -11,7 +11,6 @@ interface RegisterSheetProps {
 const OPTIONS = [
   { href: "/registrar/foto", label: "Fotografiar comida", icon: "📷" },
   { href: "/registrar/foto?multi=1", label: "Varias fotografías", icon: "📷" },
-  { href: "/registrar/codigo-barras", label: "Escanear código de barras", icon: "▦" },
   { href: "/registrar/etiqueta", label: "Fotografiar etiqueta", icon: "🏷️" },
   { href: "/registrar/voz", label: "Hablar", icon: "🎙️" },
   { href: "/registrar/texto", label: "Escribir", icon: "⌨️" },

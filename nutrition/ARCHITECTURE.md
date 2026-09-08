@@ -37,7 +37,7 @@ reach is protected by Row Level Security (see `DATABASE.md`).
     `/progreso`, `/ia`, `/recetas`, `/ajustes`). `src/app/(app)/layout.tsx`
     redirects to `/login` server-side if there's no session.
   - `registrar/*` — the capture flows opened from the "Registrar" bottom
-    sheet (manual, search, barcode, photo, label, text, voice, recipe,
+    sheet (manual, search, photo, label, text, voice, recipe,
     favorites). These are full routes (so browser back/forward and deep
     links work) but render with their own minimal header, not the main app
     chrome — closer to a modal than a tab.
@@ -57,7 +57,7 @@ reach is protected by Row Level Security (see `DATABASE.md`).
   before touching Postgres.
 - **`src/components/register/MealComposer.tsx`** is the single shared
   "review before you save" screen (section 9 of the spec): every capture
-  flow — photo, label, text, voice, barcode, manual, search, recipe —
+  flow — photo, label, text, voice, manual, search, recipe —
   converges on it. Nothing is ever written to `meals`/`meal_items` before
   the user has seen and can edit it.
 
@@ -105,7 +105,7 @@ it calls it. The model name itself is never hardcoded: it comes from the
 
 ## Data flow: registering a meal
 
-1. Client collects raw input (photo/text/audio/barcode/manual fields).
+1. Client collects raw input (photo/text/audio/manual fields).
 2. For AI paths: client compresses images (`src/lib/image.ts`) or records
    audio, then calls the relevant Edge Function via
    `supabase.functions.invoke(...)` (JWT forwarded automatically).

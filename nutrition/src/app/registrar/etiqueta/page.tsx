@@ -165,11 +165,10 @@ export default function EtiquetaCapturaPage() {
       <h1 className="text-lg font-semibold text-[var(--text-primary)]">Fotografiar etiqueta</h1>
       <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--border)] px-6 py-10 text-center transition-colors duration-150 active:bg-[var(--surface-2)]">
         <span className="text-3xl">🏷️</span>
-        <span className="text-sm font-medium text-[var(--accent)]">Fotografiar tabla nutricional</span>
+        <span className="text-sm font-medium text-[var(--accent)]">Hacer foto o elegir de la galería</span>
         <input
           type="file"
           accept="image/*"
-          capture="environment"
           className="hidden"
           onChange={(e) => handleFile(e.target.files?.[0])}
         />

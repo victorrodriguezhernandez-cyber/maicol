@@ -6,13 +6,12 @@ AI never invents a nutrition number when a better source exists. The
 hierarchy, most trustworthy first:
 
 1. `nutrition_label` — a real, photographed nutrition label.
-2. `open_food_facts` — barcode lookup.
-3. `usda` — FoodData Central (schema/types are ready; no search UI wired
+2. `usda` — FoodData Central (schema/types are ready; no search UI wired
    yet — see "Not yet implemented" below).
-4. `custom_food` — a food the user defined manually or from a label scan.
-5. `recipe` — computed from known ingredients.
-6. `manual` — the user typed the numbers directly.
-7. `ai_photo_estimation` / `ai_text_estimation` / `ai_voice_estimation` —
+3. `custom_food` — a food the user defined manually or from a label scan.
+4. `recipe` — computed from known ingredients.
+5. `manual` — the user typed the numbers directly.
+6. `ai_photo_estimation` / `ai_text_estimation` / `ai_voice_estimation` —
    last resort, and always labeled as an estimate with a confidence and a
    probable range, never presented as exact.
 
@@ -153,7 +152,7 @@ and persisted as a correction. The natural place to add this is
   `external_id` exist in the schema and `USDA_API_KEY` is documented in
   `.env.example`, but no search UI or Edge Function calls that API yet.
   `search_personal_foods`/the `/registrar/buscar` flow currently only
-  searches the user's own catalog + Open Food Facts (via barcode).
+  searches the user's own catalog.
 - **Correction learning loop** and **`ai_memory` writes** — see above.
 - **Few-shot correction examples in prompts** (spec section 39's "en
   futuras estimaciones... proporcionar a Gemini ejemplos relevantes de mis

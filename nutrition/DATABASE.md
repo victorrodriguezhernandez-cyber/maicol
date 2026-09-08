@@ -32,14 +32,14 @@ types/constraints.
 | `weight_entries` | raw weigh-ins | `is_usual_conditions` flags whether the standard weigh-in protocol was followed, without invalidating other entries |
 | `body_measurements` | waist/chest/arm/thigh/hip/neck/custom | `measurement_type` + `value_cm`, `custom_label` used only when type is `custom` |
 | `progress_photos` | metadata only | actual files live in the private `progress-images` bucket; never sent to Gemini |
-| `foods` | the unified, normalized food catalog | `user_id IS NULL` ⇒ shared/global (Open Food Facts, USDA, a scanned label); `user_id` set ⇒ private custom food. `basis` says whether the macro columns are per 100 g, per 100 ml, or per declared serving |
+| `foods` | the unified, normalized food catalog | `user_id IS NULL` ⇒ shared/global (USDA, a scanned label); `user_id` set ⇒ private custom food. `basis` says whether the macro columns are per 100 g, per 100 ml, or per declared serving. `source = 'open_food_facts'` rows may still exist from the barcode scanner (removed — see ARCHITECTURE.md) but nothing creates new ones |
 | `recipes` / `recipe_items` | user recipes | `recipe_items.grams_equivalent` is what actually gets scaled — `quantity_amount`/`quantity_unit` are just the display unit |
 | `meals` / `meal_items` / `meal_images` | the diary | `meal_items` stores a full nutrient **snapshot** at log time (`precision_level`, `source`, `confidence`, `range_kcal_min/max`) so editing a food/recipe later never rewrites history (section 52) |
 | `favorites` | quick access to a food or recipe | exactly one of `food_id`/`recipe_id` per row (CHECK constraint) |
 | `user_food_stats` | frequency/usual-quantity learning | one row per `(user_id, food_id)`, updated on every `createMeal` |
 | `day_logs` | explicit day completeness | `complete`/`partial`/`not_logged` — lets the adaptive-goal check ignore days you know you under-logged (section 53) |
 | `training_sessions` | optional workout context | not yet surfaced in any UI beyond the schema — reserved for a future nutrition/training correlation feature (section 54) |
-| `ai_analyses` | raw structured result of every AI capture call | one row per photo/label/text/voice/barcode analysis, whether or not the user ends up saving it (`accepted`) |
+| `ai_analyses` | raw structured result of every AI capture call | one row per photo/label/text/voice analysis, whether or not the user ends up saving it (`accepted`) |
 | `ai_corrections` | learning signal | records `(food_name, dish_context, original_estimate, corrected_value)` when a user edits an AI estimate — not yet fed back into prompts as few-shot examples (see the "Not yet implemented" list in `AI.md`) |
 | `ai_conversations` / `ai_messages` | Coach IA chat history | `ai_messages.tool_calls` logs which tools the model invoked and what they returned, for debugging |
 | `ai_memory` | structured assistant memory | category (`preference`/`meal_pattern`/`dislike`/`config`/`goal_context`) + key/value; schema exists, not yet written to by any code path (see `AI.md`) |

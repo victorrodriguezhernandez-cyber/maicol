@@ -79,10 +79,12 @@ was configured, in case you ever need to redo it for a new project:
   - `GEMINI_MODEL` = `gemini-3.6-flash`
   - Optional: `SUPABASE_SERVICE_ROLE_KEY` (the **secret** service-role key
     from that same API settings page — never put it in `NEXT_PUBLIC_*`).
-    Without it, barcode/label scans fall back to caching the food as a
-    private copy instead of the shared catalog — see
-    `src/lib/data/foods-write.ts`.
-  - Optional: `USDA_API_KEY`, `OPEN_FOOD_FACTS_USER_AGENT` — see `AI.md`.
+    Nothing currently reads it — its only consumer was the barcode
+    scanner's shared-catalog cache (`src/lib/data/foods-write.ts`),
+    removed along with that feature. Kept as documented, ready-to-use
+    infra (`src/lib/supabase/admin.ts`) for the next feature that needs a
+    service-role write.
+  - Optional: `USDA_API_KEY` — see `AI.md`.
 - Git integration: connected to `victorrodriguezhernandez-cyber/maicol`,
   `main` as the production branch — this is what "la rama principal debe
   desplegar producción" (spec section 66) refers to. Every push to `main`
