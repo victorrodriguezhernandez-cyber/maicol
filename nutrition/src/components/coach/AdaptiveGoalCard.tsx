@@ -34,7 +34,7 @@ export function AdaptiveGoalCard({
   }
 
   return (
-    <div className="rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] p-4">
+    <div className="rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] p-4 shadow-[var(--shadow-sm)]">
       <p className="text-sm text-[var(--text-primary)]">
         {suggestion.reason} Propongo {suggestion.deltaKcal! > 0 ? "aumentar" : "reducir"} el objetivo
         diario de {formatKcal(currentGoal.kcal)} a {formatKcal(suggestion.suggestedKcal)}.

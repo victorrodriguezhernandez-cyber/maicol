@@ -347,7 +347,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         {errorMessage ? <p className="text-xs text-[var(--danger)]">{errorMessage}</p> : null}
 
         {lastExecuted ? (
-          <div className="flex items-center justify-between rounded-2xl bg-[var(--accent-soft)] px-3.5 py-2.5 text-sm text-[var(--text-primary)]">
+          <div className="flex items-center justify-between rounded-2xl bg-[var(--accent-soft)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] shadow-[var(--shadow-sm)]">
             <span>✅ {lastExecuted.summary}</span>
             {lastExecuted.undo ? (
               <button
@@ -363,7 +363,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         ) : null}
 
         {proposedAction ? (
-          <div className="rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] p-3 text-sm text-[var(--text-primary)]">
+          <div className="rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] p-3 text-sm text-[var(--text-primary)] shadow-[var(--shadow-sm)]">
             <p className="font-medium">Confirmar acción</p>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">{proposedAction.summary}</p>
             {proposedAction.kind === "goal_change" && (proposedAction.payload as { kcal?: number }).kcal ? (
@@ -397,7 +397,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
           e.preventDefault();
           send(input);
         }}
-        className="sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] flex items-center gap-1.5 rounded-full bg-[var(--surface-raised)] p-1.5 shadow-lg shadow-black/10"
+        className="sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] flex items-center gap-1.5 rounded-full bg-[var(--surface-raised)] p-1.5 shadow-[var(--shadow-md)]"
       >
         <input
           value={input}

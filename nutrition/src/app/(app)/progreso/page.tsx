@@ -38,8 +38,10 @@ export default async function ProgresoPage() {
       {points.length === 0 ? (
         <EmptyState title="Todavía no tienes pesajes registrados" />
       ) : (
-        <section className="flex flex-col gap-1">
-          {/* Annotations live right against the chart, not boxed above it. */}
+        // One continuous panel holding both the numbers and the chart — the
+        // opposite composition from Hoy's open, unboxed hero, so the two
+        // main screens don't read as the same template with different data.
+        <section className="flex flex-col gap-1 rounded-2xl bg-[var(--surface-2)] p-4 pb-2">
           <div className="flex items-end justify-between">
             <div>
               <p className="text-[11px] text-[var(--text-tertiary)]">Tendencia</p>

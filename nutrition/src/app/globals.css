@@ -28,6 +28,16 @@
   --metric-fiber: #15803d;
   --metric-weight: #2563eb;
   --metric-weight-soft: #dbeafe;
+
+  /* Elevation is spent deliberately, not stamped on every block: only
+     things that truly float above the flat page (the composer, the FAB,
+     an action card demanding a decision) get a shadow, and it's tinted
+     toward the page ink rather than pure black so it reads as "lifted",
+     not "smudged". Flat surfaces (surface/surface-2) stay flat on
+     purpose — that contrast IS the depth signal. */
+  --shadow-color: 220 20% 30%;
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 1px hsl(var(--shadow-color) / 0.04);
+  --shadow-md: 0 8px 24px hsl(var(--shadow-color) / 0.12), 0 2px 6px hsl(var(--shadow-color) / 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -51,6 +61,10 @@
     --metric-fiber: #4ade80;
     --metric-weight: #60a5fa;
     --metric-weight-soft: #17284a;
+
+    --shadow-color: 220 40% 2%;
+    --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4), 0 1px 1px hsl(var(--shadow-color) / 0.3);
+    --shadow-md: 0 8px 24px hsl(var(--shadow-color) / 0.5), 0 2px 8px hsl(var(--shadow-color) / 0.4);
   }
 }
 
@@ -74,6 +88,10 @@
   --metric-fiber: #4ade80;
   --metric-weight: #60a5fa;
   --metric-weight-soft: #17284a;
+
+  --shadow-color: 220 40% 2%;
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4), 0 1px 1px hsl(var(--shadow-color) / 0.3);
+  --shadow-md: 0 8px 24px hsl(var(--shadow-color) / 0.5), 0 2px 8px hsl(var(--shadow-color) / 0.4);
 }
 
 @theme inline {

@@ -19,6 +19,8 @@ import {
   MEAL_TYPE_LABELS,
 } from "@/lib/format";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { RingProgress } from "@/components/ui/RingProgress";
+import { MealTypeIcon } from "@/components/ui/MealTypeIcon";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function TodayPage() {
@@ -57,24 +59,30 @@ export default async function TodayPage() {
     <div className="flex flex-col gap-7">
       {/* Hero: today's calories dominate the screen — everything else is
           secondary, on purpose (section 3 of the design pass). */}
-      <section className="flex flex-col gap-3 pt-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
-          Calorías de hoy
-        </p>
-        <div className="flex items-baseline gap-2.5">
-          <span className="font-numeric text-[3.25rem] font-semibold leading-none text-[var(--text-primary)]">
-            {Math.round(totals.energy_kcal)}
-          </span>
-          <span className="text-sm font-medium text-[var(--text-secondary)]">
-            / {goal.kcal} kcal
-          </span>
+      <section className="flex items-center justify-between gap-4 pt-1">
+        <div className="flex flex-col gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+            Calorías de hoy
+          </p>
+          <div className="flex items-baseline gap-2.5">
+            <span className="font-numeric text-[3.25rem] font-semibold leading-none text-[var(--text-primary)]">
+              {Math.round(totals.energy_kcal)}
+            </span>
+            <span className="text-sm font-medium text-[var(--text-secondary)]">
+              / {goal.kcal} kcal
+            </span>
+          </div>
+          <p className="text-xs text-[var(--text-tertiary)]">
+            {remaining >= 0
+              ? `Quedan ${formatKcal(remaining)}`
+              : `${formatKcal(Math.abs(remaining))} por encima del objetivo`}
+          </p>
         </div>
-        <ProgressBar value={totals.energy_kcal} max={goal.kcal} />
-        <p className="text-xs text-[var(--text-tertiary)]">
-          {remaining >= 0
-            ? `Quedan ${formatKcal(remaining)}`
-            : `${formatKcal(Math.abs(remaining))} por encima del objetivo`}
-        </p>
+        <RingProgress value={totals.energy_kcal} max={goal.kcal} size={78} strokeWidth={7}>
+          <span className="font-numeric text-base font-semibold text-[var(--text-primary)]">
+            {Math.round(Math.min(100, goal.kcal > 0 ? (totals.energy_kcal / goal.kcal) * 100 : 0))}%
+          </span>
+        </RingProgress>
       </section>
 
       {/* Macros: compact chips instead of four equal full-width bars. */}
@@ -135,9 +143,12 @@ export default async function TodayPage() {
                 <li key={meal.id}>
                   <Link
                     href={`/diario/comida/${meal.id}`}
-                    className="flex items-center justify-between py-3 active:opacity-70"
+                    className="flex items-center gap-3 py-3 active:opacity-70"
                   >
-                    <div>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-secondary)]">
+                      <MealTypeIcon type={meal.meal_type} />
+                    </span>
+                    <div className="flex-1">
                       <p className="text-sm font-medium text-[var(--text-primary)]">
                         {formatTime(meal.occurred_at)} — {MEAL_TYPE_LABELS[meal.meal_type]}
                       </p>

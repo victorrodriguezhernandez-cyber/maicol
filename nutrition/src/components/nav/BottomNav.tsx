@@ -33,7 +33,7 @@ export function BottomNav() {
             className="flex flex-col items-center gap-1 px-3 py-2"
             aria-label="Registrar"
           >
-            <span className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-fg)] shadow-lg shadow-black/10">
+            <span className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-fg)] shadow-[var(--shadow-md)]">
               <PlusIcon />
             </span>
             <span className="text-[11px] font-medium text-[var(--text-secondary)]">

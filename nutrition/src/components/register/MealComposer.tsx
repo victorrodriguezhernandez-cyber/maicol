@@ -303,7 +303,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
         type="button"
         disabled={items.length === 0 || isPending}
         onClick={handleSave}
-        className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+16px)] mx-auto max-w-lg rounded-xl bg-[var(--accent)] py-3.5 text-sm font-semibold text-[var(--accent-fg)] shadow-lg disabled:opacity-50"
+        className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+16px)] mx-auto max-w-lg rounded-xl bg-[var(--accent)] py-3.5 text-sm font-semibold text-[var(--accent-fg)] shadow-[var(--shadow-md)] disabled:opacity-50"
       >
         {isPending ? "Guardando…" : "Guardar comida"}
       </button>
