@@ -19,6 +19,8 @@ const eslintConfig = defineConfig([
     "public/worker-*.js",
     "public/fallback-*.js",
     "public/*.js.map",
+    // Deno runtime (Supabase Edge Functions) — separate toolchain/lint.
+    "supabase/functions/**",
   ]),
 ]);
 
