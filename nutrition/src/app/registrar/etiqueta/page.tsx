@@ -47,7 +47,11 @@ export default function EtiquetaCapturaPage() {
       body: { image: { data, mimeType } },
     });
     if (error) {
-      setState({ kind: "error", message: error.message });
+      // error.message here is supabase-js's own generic wrapper text ("Edge
+      // Function returned a non-2xx status code"), not anything useful to
+      // show someone — the specific case worth surfacing (no key configured)
+      // already has its own branch below.
+      setState({ kind: "error", message: "No se ha podido analizar la etiqueta. Inténtalo de nuevo en unos segundos." });
       return;
     }
     if (result?.error === "ai_unavailable") {

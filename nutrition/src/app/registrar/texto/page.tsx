@@ -23,7 +23,11 @@ export default function TextoEntryPage() {
     const supabase = createClient();
     const { data, error } = await supabase.functions.invoke("analyze-text", { body: { text } });
     if (error) {
-      setState({ kind: "error", message: error.message });
+      // error.message here is supabase-js's own generic wrapper text ("Edge
+      // Function returned a non-2xx status code"), not anything useful to
+      // show someone — the specific case worth surfacing (no key configured)
+      // already has its own branch below.
+      setState({ kind: "error", message: "No se ha podido analizar. Inténtalo de nuevo en unos segundos." });
       return;
     }
     if (data?.error === "ai_unavailable") {
