@@ -82,7 +82,7 @@ const tools: FunctionDeclaration[] = [
   {
     name: "propose_goal_change",
     description:
-      "Propone un cambio de objetivo (no lo aplica). Úsalo cuando el usuario pida o acepte ajustar sus objetivos. El usuario deberá confirmar explícitamente en la app.",
+      "Propone un cambio de objetivo (no lo aplica). Úsalo cuando el usuario pida o acepte ajustar sus objetivos. Cambiar el objetivo es una acción importante: la aplicación pedirá confirmación explícita antes de guardarla.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -95,16 +95,107 @@ const tools: FunctionDeclaration[] = [
       required: ["reason"],
     },
   },
+  {
+    name: "get_meals_on_date",
+    description:
+      "Comidas registradas (con sus alimentos, ids y valores completos) en una fecha concreta. Úsalo SIEMPRE antes de editar, borrar o duplicar una comida, para tener el meal_id exacto — nunca lo adivines.",
+    parameters: { type: Type.OBJECT, properties: { date: { type: Type.STRING } }, required: ["date"] },
+  },
+  {
+    name: "get_weight_entry_on_date",
+    description: "El pesaje registrado en una fecha concreta, si existe.",
+    parameters: { type: Type.OBJECT, properties: { date: { type: Type.STRING } }, required: ["date"] },
+  },
+  {
+    name: "propose_add_meal_item",
+    description:
+      "Añade un alimento a una comida de una fecha concreta (crea la comida si ese tipo no existe todavía ese día). Estima tú mismo cantidad y macros del alimento, igual que harías respondiendo en texto — es una acción de bajo riesgo que se ejecuta en cuanto el usuario lo pide, sin confirmación previa.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        date: { type: Type.STRING, description: "YYYY-MM-DD" },
+        meal_type: { type: Type.STRING, enum: ["breakfast", "lunch", "dinner", "snack", "other"] },
+        food_name: { type: Type.STRING },
+        quantity_amount: { type: Type.NUMBER },
+        quantity_unit: { type: Type.STRING },
+        energy_kcal: { type: Type.NUMBER },
+        protein_g: { type: Type.NUMBER },
+        carbohydrates_g: { type: Type.NUMBER },
+        fat_g: { type: Type.NUMBER },
+        fiber_g: { type: Type.NUMBER },
+        confidence: { type: Type.STRING, enum: ["high", "medium", "low"] },
+        reason: { type: Type.STRING },
+      },
+      required: [
+        "date", "meal_type", "food_name", "quantity_amount", "quantity_unit",
+        "energy_kcal", "protein_g", "carbohydrates_g", "fat_g", "reason",
+      ],
+    },
+  },
+  {
+    name: "propose_update_weight_entry",
+    description:
+      "Fija el peso de una fecha concreta: corrige el pesaje existente ese día, o crea uno nuevo si no había ninguno. Acción de bajo riesgo, sin confirmación previa.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        date: { type: Type.STRING, description: "YYYY-MM-DD" },
+        weight_kg: { type: Type.NUMBER },
+        reason: { type: Type.STRING },
+      },
+      required: ["date", "weight_kg", "reason"],
+    },
+  },
+  {
+    name: "propose_delete_meal",
+    description:
+      "Borra una comida completa (con todos sus alimentos). Usa get_meals_on_date o get_recent_meals primero para obtener el meal_id exacto. Acción destructiva: la aplicación pedirá confirmación antes de ejecutarla.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { meal_id: { type: Type.STRING }, reason: { type: Type.STRING } },
+      required: ["meal_id", "reason"],
+    },
+  },
+  {
+    name: "propose_duplicate_meal",
+    description:
+      "Copia una comida existente a otra fecha, con la misma hora del día y los mismos alimentos (p.ej. 'pon este desayuno también mañana'). Usa get_meals_on_date o get_recent_meals primero para obtener el meal_id exacto. Acción de bajo riesgo, sin confirmación previa.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        meal_id: { type: Type.STRING },
+        target_date: { type: Type.STRING, description: "YYYY-MM-DD" },
+        reason: { type: Type.STRING },
+      },
+      required: ["meal_id", "target_date", "reason"],
+    },
+  },
 ];
 
-const SYSTEM_INSTRUCTION = `Eres el Coach IA de Maicol Nutrición, un asistente personal de nutrición y volumen.
+const MEAL_TYPE_LABEL: Record<string, string> = {
+  breakfast: "el desayuno",
+  lunch: "la comida",
+  dinner: "la cena",
+  snack: "el snack",
+  other: "la comida",
+};
+
+function buildSystemInstruction(): string {
+  return `Eres el Coach IA de Maicol Nutrición, un asistente personal de nutrición y volumen.
+
+Hoy es ${todayIso()}. Usa esta fecha para resolver expresiones relativas
+("hoy", "ayer", "el domingo pasado", "mañana") y conviértelas siempre a
+YYYY-MM-DD antes de llamar a cualquier herramienta.
 
 Reglas:
 - Responde siempre en español, de forma concisa y directa, como un entrenador que conoce bien los datos del usuario.
-- NUNCA inventes cifras: usa las herramientas disponibles para consultar los datos reales del usuario antes de responder cualquier pregunta sobre su nutrición, peso o adherencia.
+- NUNCA inventes cifras sobre datos que ya existen: usa las herramientas de lectura antes de responder cualquier pregunta sobre nutrición, peso o adherencia, y antes de modificar, borrar o duplicar cualquier registro (get_meals_on_date, get_recent_meals, get_weight_entry_on_date) para tener su id exacto — nunca adivines un id.
 - Basa cualquier afirmación sobre progreso de peso en la TENDENCIA (get_weight_trend), nunca en un único pesaje.
-- Si los datos son insuficientes para responder con confianza, dilo explícitamente en vez de adivinar.
-- Nunca modifiques objetivos, comidas o pesos directamente. Si el usuario quiere cambiar un objetivo, usa "propose_goal_change" para proponerlo — la aplicación se lo confirmará al usuario antes de guardar nada.`;
+- Si los datos son insuficientes para responder, o si lo que pide el usuario podría referirse a más de un registro (p.ej. "el desayuno de siempre" sin un patrón claro, o varias comidas que podrían ser la referida), dilo explícitamente y pregunta para confirmar en vez de actuar sobre el registro equivocado.
+- Puedes actuar de verdad sobre los datos del usuario con las herramientas "propose_*", no solo explicar cómo hacerlo. Añadir un alimento, duplicar una comida y corregir un peso son acciones de bajo riesgo que la aplicación ejecuta en cuanto las propones. Borrar una comida y cambiar el objetivo son acciones importantes: la aplicación siempre pide confirmación explícita al usuario antes de ejecutarlas, así que puedes proponerlas igualmente en cuanto el usuario lo pida o lo acepte.
+- Nunca propongas más de una acción por turno.
+- Nunca modifiques nada por tu cuenta fuera de esas herramientas "propose_*" — son el único camino de escritura.`;
+}
 
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
@@ -141,7 +232,7 @@ Deno.serve(async (req) => {
       parts: [{ text: m.content ?? "" }],
     }));
 
-    let proposedAction: unknown = null;
+    let action: ActionProposal | null = null;
     let finalText = "";
     const toolLog: unknown[] = [];
 
@@ -150,7 +241,7 @@ Deno.serve(async (req) => {
         ai.models.generateContent({
           model: getGeminiModel(),
           contents,
-          config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ functionDeclarations: tools }] },
+          config: { systemInstruction: buildSystemInstruction(), tools: [{ functionDeclarations: tools }] },
         }),
       );
 
@@ -165,13 +256,16 @@ Deno.serve(async (req) => {
 
       const responseParts = [];
       for (const call of calls) {
-        if (call.name === "propose_goal_change") {
-          proposedAction = { type: "goal_change", ...call.args };
+        if (call.name?.startsWith("propose_")) {
+          const built = await buildAction(supabase, user.id, call.name, call.args ?? {});
+          if ("error" in built) {
+            responseParts.push({ functionResponse: { name: call.name, response: { error: built.error } } });
+            continue;
+          }
+          action = built.action;
+          toolLog.push({ name: call.name, args: call.args, action });
           responseParts.push({
-            functionResponse: {
-              name: call.name,
-              response: { status: "proposed_to_user_pending_confirmation" },
-            },
+            functionResponse: { name: call.name, response: { status: "queued_for_user", risk: built.action.risk } },
           });
           continue;
         }
@@ -188,8 +282,14 @@ Deno.serve(async (req) => {
       content: finalText,
       tool_calls: toolLog.length ? toolLog : null,
     });
+    // Bumps updated_at so the conversation list (most-recent-first) reflects
+    // this exchange — inserting a message alone doesn't touch the parent row.
+    await supabase
+      .from("ai_conversations")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", conversationId);
 
-    return json({ conversationId, reply: finalText, proposedAction }, 200);
+    return json({ conversationId, reply: finalText, action }, 200);
   } catch (e) {
     if (e instanceof Response) return withCors(e);
     if (e instanceof GeminiUnavailableError) return json({ error: "ai_unavailable" }, 503);
@@ -319,6 +419,32 @@ async function runTool(
       return data ?? [];
     }
 
+    case "get_meals_on_date": {
+      const date = String(args.date);
+      const { data } = await supabase
+        .from("meals")
+        .select("id, occurred_at, meal_type, name, notes, meal_items(*)")
+        .eq("user_id", userId)
+        .gte("occurred_at", `${date}T00:00:00`)
+        .lte("occurred_at", `${date}T23:59:59.999`)
+        .order("occurred_at", { ascending: true });
+      return (data ?? []).map((meal) => ({ meal_id: meal.id, ...toMealSnapshot(meal) }));
+    }
+
+    case "get_weight_entry_on_date": {
+      const date = String(args.date);
+      const { data } = await supabase
+        .from("weight_entries")
+        .select("id, measured_at, weight_kg, is_usual_conditions, notes")
+        .eq("user_id", userId)
+        .gte("measured_at", `${date}T00:00:00`)
+        .lte("measured_at", `${date}T23:59:59.999`)
+        .order("measured_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      return data ?? { found: false };
+    }
+
     case "compare_periods": {
       const [a, b] = await Promise.all([
         periodSummary(supabase, userId, String(args.period_a_start), String(args.period_a_end)),
@@ -427,6 +553,206 @@ function daysBetween(a: string, b: string): number {
 }
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+// ---------------------------------------------------------------------
+// Action layer — the only path through which the coach ever touches the
+// user's data. Every "propose_*" tool call lands here instead of runTool:
+// this builds a structured, typed proposal (never a raw DB write) that the
+// Next.js client executes via the same validated Server Actions the rest
+// of the app uses (createMeal, deleteMeal, addMealItemForDate,
+// setWeightEntryForDate, applyGoalChange) — the model never gets a
+// database connection of its own. For anything that targets an existing
+// row (delete/duplicate a meal), the snapshot is built by fetching that
+// row ourselves from the DB (RLS-scoped to this user), never from
+// whatever the model claims — so a hallucinated argument can only fail to
+// find the row, never silently act on invented data.
+// ---------------------------------------------------------------------
+interface ActionProposal {
+  kind: "add_meal_item" | "update_weight_entry" | "delete_meal" | "duplicate_meal" | "goal_change";
+  risk: "safe" | "destructive";
+  summary: string;
+  payload: Record<string, unknown>;
+}
+
+interface MealItemRow {
+  food_id: string | null;
+  recipe_id: string | null;
+  name: string;
+  quantity_amount: number;
+  quantity_unit: string;
+  grams_equivalent: number | null;
+  energy_kcal: number;
+  protein_g: number;
+  carbohydrates_g: number;
+  sugars_g: number | null;
+  fat_g: number;
+  saturated_fat_g: number | null;
+  fiber_g: number | null;
+  sodium_mg: number | null;
+  salt_g: number | null;
+  micronutrients: Record<string, number> | null;
+  precision_level: string;
+  source: string;
+  confidence: string | null;
+  range_kcal_min: number | null;
+  range_kcal_max: number | null;
+  notes: string | null;
+}
+interface MealRow {
+  id: string;
+  occurred_at: string;
+  meal_type: string;
+  name: string | null;
+  notes: string | null;
+  meal_items: MealItemRow[];
+}
+
+/** Maps a DB meal (+items) row into the exact shape createMeal's
+ * CreateMealInput expects, so restoring/duplicating a meal is always just
+ * `createMeal(snapshot)` — no separate reconstruction logic to keep in sync. */
+function toMealSnapshot(meal: MealRow) {
+  return {
+    occurredAt: meal.occurred_at,
+    mealType: meal.meal_type,
+    name: meal.name,
+    notes: meal.notes,
+    items: (meal.meal_items ?? []).map((it) => ({
+      foodId: it.food_id,
+      recipeId: it.recipe_id,
+      name: it.name,
+      quantityAmount: it.quantity_amount,
+      quantityUnit: it.quantity_unit,
+      gramsEquivalent: it.grams_equivalent,
+      energyKcal: it.energy_kcal,
+      proteinG: it.protein_g,
+      carbohydratesG: it.carbohydrates_g,
+      sugarsG: it.sugars_g,
+      fatG: it.fat_g,
+      saturatedFatG: it.saturated_fat_g,
+      fiberG: it.fiber_g,
+      sodiumMg: it.sodium_mg,
+      saltG: it.salt_g,
+      micronutrients: it.micronutrients ?? {},
+      precisionLevel: it.precision_level,
+      source: it.source,
+      confidence: it.confidence,
+      rangeKcalMin: it.range_kcal_min,
+      rangeKcalMax: it.range_kcal_max,
+      notes: it.notes,
+    })),
+  };
+}
+
+async function fetchOwnedMeal(
+  supabase: SupabaseClient,
+  userId: string,
+  mealId: string,
+): Promise<MealRow | null> {
+  const { data } = await supabase
+    .from("meals")
+    .select("id, occurred_at, meal_type, name, notes, meal_items(*)")
+    .eq("id", mealId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data as MealRow | null) ?? null;
+}
+
+async function buildAction(
+  supabase: SupabaseClient,
+  userId: string,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<{ action: ActionProposal } | { error: string }> {
+  switch (name) {
+    case "propose_add_meal_item": {
+      const date = String(args.date);
+      const mealType = String(args.meal_type);
+      const item = {
+        name: String(args.food_name),
+        quantityAmount: Number(args.quantity_amount),
+        quantityUnit: String(args.quantity_unit),
+        energyKcal: Number(args.energy_kcal),
+        proteinG: Number(args.protein_g) || 0,
+        carbohydratesG: Number(args.carbohydrates_g) || 0,
+        fatG: Number(args.fat_g) || 0,
+        fiberG: args.fiber_g != null ? Number(args.fiber_g) : null,
+        source: "ai_text_estimation",
+        precisionLevel: "estimated",
+        confidence: (args.confidence as string) ?? "medium",
+      };
+      return {
+        action: {
+          kind: "add_meal_item",
+          risk: "safe",
+          summary: `Añadido a ${MEAL_TYPE_LABEL[mealType] ?? mealType} del ${date}: ${item.name} (${item.quantityAmount} ${item.quantityUnit})`,
+          payload: { date, mealType, item },
+        },
+      };
+    }
+
+    case "propose_update_weight_entry": {
+      const date = String(args.date);
+      const weightKg = Number(args.weight_kg);
+      return {
+        action: {
+          kind: "update_weight_entry",
+          risk: "safe",
+          summary: `Peso del ${date} fijado a ${weightKg} kg`,
+          payload: { date, weightKg },
+        },
+      };
+    }
+
+    case "propose_delete_meal": {
+      const meal = await fetchOwnedMeal(supabase, userId, String(args.meal_id));
+      if (!meal) return { error: "meal_not_found" };
+      return {
+        action: {
+          kind: "delete_meal",
+          risk: "destructive",
+          summary: `Borrar ${MEAL_TYPE_LABEL[meal.meal_type] ?? meal.meal_type} del ${meal.occurred_at.slice(0, 10)} (${meal.meal_items.length} alimento${meal.meal_items.length === 1 ? "" : "s"})`,
+          payload: { mealId: meal.id, snapshot: toMealSnapshot(meal) },
+        },
+      };
+    }
+
+    case "propose_duplicate_meal": {
+      const meal = await fetchOwnedMeal(supabase, userId, String(args.meal_id));
+      if (!meal) return { error: "meal_not_found" };
+      const targetDate = String(args.target_date);
+      const timeOfDay = meal.occurred_at.slice(11); // "HH:MM:SS.sssZ" or similar offset
+      const snapshot = { ...toMealSnapshot(meal), occurredAt: `${targetDate}T${timeOfDay}` };
+      return {
+        action: {
+          kind: "duplicate_meal",
+          risk: "safe",
+          summary: `Copiada ${MEAL_TYPE_LABEL[meal.meal_type] ?? meal.meal_type} al ${targetDate}`,
+          payload: { snapshot },
+        },
+      };
+    }
+
+    case "propose_goal_change": {
+      return {
+        action: {
+          kind: "goal_change",
+          risk: "destructive",
+          summary: String(args.reason ?? "Cambiar objetivo"),
+          payload: {
+            kcal: args.kcal != null ? Number(args.kcal) : undefined,
+            proteinG: args.protein_g != null ? Number(args.protein_g) : undefined,
+            carbohydratesG: args.carbohydrates_g != null ? Number(args.carbohydrates_g) : undefined,
+            fatG: args.fat_g != null ? Number(args.fat_g) : undefined,
+            reason: args.reason,
+          },
+        },
+      };
+    }
+
+    default:
+      return { error: "unknown_action" };
+  }
 }
 
 // Gemini's FunctionResponse.response field is a Struct — it must be a JSON

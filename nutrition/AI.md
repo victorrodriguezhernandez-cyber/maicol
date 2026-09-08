@@ -60,7 +60,7 @@ not a guarantee about what actually comes back.
 | `analyze-label-photo` | 1 photo of a nutrition label | full nutrient set + detected `basis` (per 100g/100ml/serving) + `legible` flag | 13 |
 | `analyze-text` | free-form Spanish text | same item shape as `analyze-meal-photo` | 14 |
 | `analyze-voice` | audio (base64, sent directly to Gemini — no separate transcription step) | same item shape | 15 |
-| `ai-coach` | `{ conversationId?, message }` | `{ conversationId, reply, proposedAction? }` | 32, 33, 34 |
+| `ai-coach` | `{ conversationId?, message }` | `{ conversationId, reply, action? }` | 32, 33, 34 |
 
 Every function requires a valid user JWT (`verify_jwt: true`) and does all
 its Supabase reads/writes through a client scoped to that JWT — never the
@@ -68,24 +68,48 @@ service role — so it can only ever see the calling user's own data.
 
 ## Coach IA tools
 
-`ai-coach` declares 12 read-only tools plus one write-adjacent one, and
+`ai-coach` declares 14 read-only tools and 5 `propose_*` action tools, and
 lets Gemini's function-calling decide which it needs per message (spec
 section 32):
 
-`get_current_goals`, `get_today_nutrition`, `get_day_nutrition`,
+Read-only: `get_current_goals`, `get_today_nutrition`, `get_day_nutrition`,
 `calculate_remaining_macros`, `get_weight_trend`, `get_weight_history`,
 `get_weekly_summary`, `get_nutrition_adherence`, `get_macro_history`,
-`search_personal_foods`, `get_recent_meals`, `compare_periods`.
+`search_personal_foods`, `get_recent_meals`, `compare_periods`,
+`get_meals_on_date`, `get_weight_entry_on_date`.
 
-All 12 only ever `SELECT`. The 13th, `propose_goal_change`, is
-deliberately **not** a database write — it returns its arguments as
-`proposedAction` in the HTTP response; the Next.js client renders a
-Confirm/Cancel UI (`ChatCoach.tsx`) and only calls `applyGoalChange`
-(a normal Server Action, same one the manual goal editor uses) after the
-user taps Confirm. The system instruction (`ai-coach/index.ts`) also
-tells the model this explicitly. This is what spec section 33 means by
-"no debe modificar silenciosamente" — there is no code path from a chat
-message to a database write that skips the confirmation UI.
+Action tools: `propose_add_meal_item`, `propose_update_weight_entry`,
+`propose_duplicate_meal`, `propose_delete_meal`, `propose_goal_change`.
+
+None of the `propose_*` tools is a database write — the Edge Function has
+no write path of its own. Each one lands in `buildAction()`
+(`ai-coach/index.ts`), which returns a typed `{ kind, risk, summary,
+payload }` object as `action` in the HTTP response; `ChatCoach.tsx` is the
+only place that actually executes it, and always through the same Server
+Action the rest of the app uses for that write (`createMeal`, `deleteMeal`,
+`addMealItemForDate`, `setWeightEntryForDate`, `applyGoalChange`) — never
+an ad-hoc insert/update from the client. `risk` decides *when* that
+happens, never *whether* it's validated:
+
+- `risk: "safe"` (`add_meal_item`, `update_weight_entry`, `duplicate_meal`)
+  executes immediately, then shows a "✅ hecho" card with **Deshacer**
+  (undo). Undo is implemented per-kind in `executeAction()` — e.g. undoing
+  an added item deletes just that item (or the whole meal, if adding it
+  created a new one); undoing a weight correction restores the previous
+  value it captured before overwriting it. It only holds for the current
+  chat session (in-memory), not a persisted "trash" — see the gap below.
+- `risk: "destructive"` (`delete_meal`, `goal_change`) renders the
+  existing Confirm/Cancel card and only executes on confirmation, exactly
+  like the original `propose_goal_change` behavior.
+
+For anything that targets an existing row (`delete_meal`/`duplicate_meal`),
+`buildAction()` fetches that row itself from the database (RLS-scoped to
+the calling user) rather than trusting whatever the model passed as
+arguments — a hallucinated or wrong `meal_id` can only fail to find the
+row (returned to the model as an error to relay to the user), never
+silently act on invented data. This is what spec section 33 means by "no
+debe modificar silenciosamente": there is no code path from a chat message
+to a database write that skips this validation.
 
 ## Memory (spec section 34)
 
@@ -134,3 +158,27 @@ and persisted as a correction. The natural place to add this is
 - **Few-shot correction examples in prompts** (spec section 39's "en
   futuras estimaciones... proporcionar a Gemini ejemplos relevantes de mis
   correcciones anteriores") depends on the correction-learning loop above.
+- **Undo is session-only, not a persisted soft-delete.** `executeAction()`
+  in `ChatCoach.tsx` undoes a `risk: "safe"` action by reversing it with
+  the same Server Actions (re-inserting a deleted row's captured snapshot,
+  or restoring a weight's previous value) — it works right after the
+  action, in that browser tab, but there's no `deleted_at`/trash table, so
+  it can't be undone from a different session or after a reload.
+- **Bulk multi-day corrections** ("corrige los últimos tres días porque el
+  arroz eran 250 g cocidos") aren't a coach action yet — `propose_*` only
+  covers one meal/weight entry per call, deliberately, since resolving
+  which of several past items is "the rice" without asking is exactly the
+  kind of guess the system instruction tells the model not to make.
+  Correcting several days at once today means asking the coach once per
+  day, or editing each meal in Diario directly.
+- **No "this record" context.** The coach only knows what's in the chat
+  text — it has no notion of which meal/weight entry you're currently
+  looking at on another screen, so "borra esta comida" only resolves if
+  you name or the coach can otherwise identify which one you mean (e.g. it
+  was just discussed, or there's exactly one match for the date given).
+- **No recipe creation via chat** ("crea una receta con estos alimentos")
+  — recipe creation stays a `/recetas/nueva` form flow; the coach has no
+  `propose_create_recipe` tool yet.
+- **Conversation titles are the first 60 characters of the first
+  message**, set once at creation (`ensureConversation` in
+  `ai-coach/index.ts`) — not a separate Gemini-generated summary title.

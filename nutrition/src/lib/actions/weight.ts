@@ -32,6 +32,68 @@ export async function addWeightEntry(input: z.infer<typeof addWeightSchema>) {
   revalidatePath("/progreso");
 }
 
+const setWeightEntryForDateSchema = z.object({
+  date: z.string(), // YYYY-MM-DD
+  weightKg: z.coerce.number().positive(),
+});
+export type SetWeightEntryForDateInput = z.infer<typeof setWeightEntryForDateSchema>;
+
+/**
+ * Used by the Coach IA's "update_weight_entry" action: if a weigh-in
+ * already exists that calendar date, corrects its value in place (keeping
+ * the original time-of-day and is_usual_conditions); otherwise creates one
+ * at noon, tagged as not-usual-conditions since it's a backfilled value
+ * rather than this user's own morning routine weigh-in. Returns the prior
+ * value so the caller can offer an undo.
+ */
+export async function setWeightEntryForDate(input: SetWeightEntryForDateInput) {
+  const parsed = setWeightEntryForDateSchema.parse(input);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const dayStart = `${parsed.date}T00:00:00`;
+  const dayEnd = `${parsed.date}T23:59:59.999`;
+
+  const { data: existing } = await supabase
+    .from("weight_entries")
+    .select("id, weight_kg")
+    .eq("user_id", user.id)
+    .gte("measured_at", dayStart)
+    .lte("measured_at", dayEnd)
+    .order("measured_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from("weight_entries")
+      .update({ weight_kg: parsed.weightKg })
+      .eq("id", existing.id);
+    if (error) throw error;
+    revalidatePath("/");
+    revalidatePath("/progreso");
+    return { id: existing.id as string, created: false, previousWeightKg: existing.weight_kg as number };
+  }
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("weight_entries")
+    .insert({
+      user_id: user.id,
+      measured_at: `${parsed.date}T12:00:00`,
+      weight_kg: parsed.weightKg,
+      is_usual_conditions: false,
+    })
+    .select("id")
+    .single();
+  if (insertError) throw insertError;
+  revalidatePath("/");
+  revalidatePath("/progreso");
+  return { id: inserted.id as string, created: true, previousWeightKg: null as number | null };
+}
+
 export async function deleteWeightEntry(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("weight_entries").delete().eq("id", id);

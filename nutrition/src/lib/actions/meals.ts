@@ -149,6 +149,103 @@ async function upsertFoodUsageStats(
   }
 }
 
+const addMealItemForDateSchema = z.object({
+  date: z.string(), // YYYY-MM-DD
+  mealType: z.enum(["breakfast", "lunch", "dinner", "snack", "other"]),
+  item: itemSchema,
+});
+export type AddMealItemForDateInput = z.infer<typeof addMealItemForDateSchema>;
+
+/**
+ * Used by the Coach IA's "add_meal_item" action (never called directly from
+ * a form): finds the first meal of the given type on that date, or creates
+ * one at noon if none exists yet, then appends this single item. Returns
+ * enough to undo it (which meal it landed in, and whether that meal is new
+ * — undoing a brand-new meal means deleting the whole meal, undoing an
+ * item added to an existing meal means deleting just that item).
+ */
+export async function addMealItemForDate(input: AddMealItemForDateInput) {
+  const parsed = addMealItemForDateSchema.parse(input);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const dayStart = `${parsed.date}T00:00:00`;
+  const dayEnd = `${parsed.date}T23:59:59.999`;
+
+  const { data: existingMeal } = await supabase
+    .from("meals")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("meal_type", parsed.mealType)
+    .gte("occurred_at", dayStart)
+    .lte("occurred_at", dayEnd)
+    .order("occurred_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  let mealId: string;
+  let mealCreated = false;
+  if (existingMeal) {
+    mealId = existingMeal.id as string;
+  } else {
+    const { data: meal, error } = await supabase
+      .from("meals")
+      .insert({ user_id: user.id, occurred_at: `${parsed.date}T12:00:00`, meal_type: parsed.mealType })
+      .select("id")
+      .single();
+    if (error) throw error;
+    mealId = meal.id as string;
+    mealCreated = true;
+  }
+
+  const { count: existingItemCount } = await supabase
+    .from("meal_items")
+    .select("id", { count: "exact", head: true })
+    .eq("meal_id", mealId);
+
+  const item = parsed.item;
+  const { data: insertedItem, error: itemError } = await supabase
+    .from("meal_items")
+    .insert({
+      meal_id: mealId,
+      food_id: item.foodId ?? null,
+      recipe_id: item.recipeId ?? null,
+      name: item.name,
+      quantity_amount: item.quantityAmount,
+      quantity_unit: item.quantityUnit,
+      grams_equivalent: item.gramsEquivalent ?? null,
+      energy_kcal: item.energyKcal,
+      protein_g: item.proteinG,
+      carbohydrates_g: item.carbohydratesG,
+      sugars_g: item.sugarsG ?? null,
+      fat_g: item.fatG,
+      saturated_fat_g: item.saturatedFatG ?? null,
+      fiber_g: item.fiberG ?? null,
+      sodium_mg: item.sodiumMg ?? null,
+      salt_g: item.saltG ?? null,
+      micronutrients: item.micronutrients,
+      precision_level: clampPrecision(item.source, item.precisionLevel),
+      source: item.source,
+      confidence: item.confidence ?? null,
+      range_kcal_min: item.rangeKcalMin ?? null,
+      range_kcal_max: item.rangeKcalMax ?? null,
+      notes: item.notes ?? null,
+      position: existingItemCount ?? 0,
+    })
+    .select("id")
+    .single();
+  if (itemError) throw itemError;
+
+  await upsertFoodUsageStats(supabase, user.id, [item]);
+
+  revalidatePath("/");
+  revalidatePath("/diario");
+  return { mealId, mealItemId: insertedItem.id as string, mealCreated };
+}
+
 export async function deleteMeal(mealId: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("meals").delete().eq("id", mealId);

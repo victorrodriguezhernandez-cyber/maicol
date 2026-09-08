@@ -28,11 +28,26 @@ project.
    en `supabase/functions/_shared/trend.ts`, que existe porque los Edge
    Functions son un deployable Deno separado y no pueden `import` desde
    `src/`).
-4. **La IA nunca escribe silenciosamente.** `propose_goal_change` en
-   `ai-coach` solo devuelve una propuesta; la aplicación real pasa siempre
-   por `applyGoalChange` (Server Action) tras confirmación explícita del
-   usuario. Si añades una nueva tool que "podría cambiar algo", que
-   proponga, nunca que escriba.
+4. **La IA nunca escribe directamente en la base de datos.** Cualquier
+   tool `propose_*` de `ai-coach` (ver `buildAction()`) solo devuelve una
+   propuesta tipada `{ kind, risk, summary, payload }`; el Edge Function
+   nunca tiene una vía de escritura propia. La app (`ChatCoach.tsx`)
+   ejecuta la propuesta llamando siempre a la misma Server Action
+   validada que usaría el resto de la app (`createMeal`, `deleteMeal`,
+   `addMealItemForDate`, `setWeightEntryForDate`, `applyGoalChange`...) —
+   nunca un `insert`/`update` improvisado en el cliente. Lo que varía por
+   `risk` es solo *cuándo* se ejecuta, no *si* pasa por esa validación:
+   `risk: "safe"` (añadir un alimento, duplicar una comida, corregir un
+   peso) se ejecuta en cuanto llega, mostrando después una tarjeta
+   "✅ hecho" con "Deshacer"; `risk: "destructive"` (borrar una comida,
+   cambiar el objetivo) pide confirmación explícita antes de ejecutar
+   nada. Si añades una nueva tool `propose_*`, decide su `risk` con el
+   mismo criterio y dale una vía de deshacer real en `executeAction()`
+   (no prometas "Deshacer" si no puedes cumplirlo). Para acciones sobre un
+   registro ya existente (borrar/duplicar una comida), `buildAction()`
+   busca esa fila en la base de datos él mismo (nunca confía en lo que el
+   modelo diga que contiene) — así un argumento alucinado como mucho no
+   encuentra nada, nunca actúa sobre datos inventados.
 5. **Ningún secreto en el cliente.** `SUPABASE_SERVICE_ROLE_KEY` y
    `GEMINI_API_KEY` solo se leen server-side (`src/lib/config.ts`
    `serverConfig`, o `Deno.env.get(...)` en Edge Functions). Si necesitas
