@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
         }
         const result = await runTool(supabase, user.id, call.name!, call.args ?? {});
         toolLog.push({ name: call.name, args: call.args, result });
-        responseParts.push({ functionResponse: { name: call.name!, response: result as object } });
+        responseParts.push({ functionResponse: { name: call.name!, response: toFunctionResponse(result) } });
       }
       contents.push({ role: "user", parts: responseParts as never });
     }
@@ -452,6 +452,16 @@ async function generateWithRetry(
 function isTransientGeminiError(e: unknown): boolean {
   const message = e instanceof Error ? e.message : String(e);
   return /429|503|rate.?limit|overloaded|unavailable/i.test(message);
+}
+
+// Gemini's FunctionResponse.response field is a Struct — it must be a JSON
+// *object*, never a bare array or scalar (several tools here, like
+// search_personal_foods or get_recent_meals, return arrays directly; sending
+// one as-is fails with "Proto field is not repeating, cannot start list").
+function toFunctionResponse(result: unknown): object {
+  if (Array.isArray(result)) return { items: result };
+  if (result !== null && typeof result === "object") return result as object;
+  return { value: result };
 }
 
 function json(body: unknown, status: number): Response {
