@@ -109,7 +109,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
                 : "bg-[var(--surface)] text-[var(--text-primary)]"
             }`}
           >
-            {m.content}
+            {m.role === "assistant" ? formatCoachText(m.content) : m.content}
           </div>
         ))}
 
@@ -177,5 +177,35 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         </button>
       </form>
     </div>
+  );
+}
+
+// The coach's replies are plain text from Gemini, which reliably uses
+// markdown-style "**bold**" and "* " bullets even though we never asked for
+// markdown output. Rendered as a single unbroken string these come out as
+// literal asterisks with no line breaks — parse just enough of it (bold
+// spans, bullet lines, blank-line paragraphs) to read naturally, without
+// pulling in a full markdown renderer for a chat bubble.
+function formatCoachText(text: string) {
+  return text.split("\n").map((line, i) => {
+    const trimmed = line.trim();
+    const isBullet = trimmed.startsWith("* ") || trimmed.startsWith("- ");
+    if (trimmed === "") return <p key={i} className="h-2" aria-hidden="true" />;
+    return (
+      <p key={i} className={isBullet ? "pl-3" : undefined}>
+        {isBullet ? "• " : null}
+        {renderBoldSpans(isBullet ? trimmed.slice(2) : line)}
+      </p>
+    );
+  });
+}
+
+function renderBoldSpans(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={i}>{part.slice(2, -2)}</strong>
+    ) : (
+      part
+    ),
   );
 }
