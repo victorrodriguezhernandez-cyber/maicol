@@ -146,7 +146,7 @@ export default function EtiquetaCapturaPage() {
         <button
           type="button"
           onClick={confirmAndContinue}
-          className="rounded-xl bg-[var(--accent)] py-3 text-sm font-medium text-[var(--accent-fg)]"
+          className="rounded-xl btn-primary py-3 text-sm font-medium text-[var(--accent-fg)]"
         >
           Guardar producto y continuar
         </button>

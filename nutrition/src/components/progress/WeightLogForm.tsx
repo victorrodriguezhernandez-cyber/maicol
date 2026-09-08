@@ -25,7 +25,7 @@ export function WeightLogForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl bg-[var(--surface-2)] p-4">
+    <form onSubmit={handleSubmit} className="glass-panel rounded-2xl p-4">
       <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">Registrar peso de hoy</p>
       <div className="flex items-center gap-2">
         <input
@@ -41,7 +41,7 @@ export function WeightLogForm() {
         <button
           type="submit"
           disabled={!weight || isPending}
-          className="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
+          className="rounded-xl btn-primary px-4 py-2 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
         >
           {isPending ? "…" : saved ? "✓" : "Guardar"}
         </button>

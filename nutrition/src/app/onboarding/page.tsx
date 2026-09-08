@@ -272,7 +272,7 @@ export default function OnboardingPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 w-full rounded-xl bg-[var(--accent)] py-3 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-60"
+          className="mt-2 w-full rounded-xl btn-primary py-3 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-60"
         >
           {submitting ? "Guardando…" : "Empezar"}
         </button>

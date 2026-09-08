@@ -30,7 +30,7 @@ export default async function RecetaDetailPage({
         <h1 className="text-lg font-semibold text-[var(--text-primary)]">{recipe.name}</h1>
         <Link
           href={`/registrar/receta?recipeId=${recipe.id}`}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)]"
+          className="rounded-lg btn-primary px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)]"
         >
           Registrar
         </Link>

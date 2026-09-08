@@ -19,7 +19,7 @@ export default async function RecetasPage() {
         <h1 className="text-lg font-semibold text-[var(--text-primary)]">Recetas</h1>
         <Link
           href="/recetas/nueva"
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)]"
+          className="rounded-lg btn-primary px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)]"
         >
           Nueva receta
         </Link>

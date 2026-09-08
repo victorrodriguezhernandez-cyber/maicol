@@ -59,14 +59,14 @@ export function AdaptiveGoalCard({
           type="button"
           disabled={isPending}
           onClick={apply}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)] disabled:opacity-50"
+          className="rounded-lg btn-primary px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)] disabled:opacity-50"
         >
           Aplicar
         </button>
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-secondary)]"
+          className="rounded-lg btn-secondary px-3 py-1.5 text-xs text-[var(--text-secondary)]"
         >
           Mantener
         </button>

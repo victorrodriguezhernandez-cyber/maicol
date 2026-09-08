@@ -63,7 +63,7 @@ export function ProgressPhotoUploader() {
             </option>
           ))}
         </select>
-        <label className="flex-1 cursor-pointer rounded-xl bg-[var(--accent)] px-3 py-2 text-center text-sm font-medium text-[var(--accent-fg)]">
+        <label className="flex-1 cursor-pointer rounded-xl btn-primary px-3 py-2 text-center text-sm font-medium text-[var(--accent-fg)]">
           {uploading ? "Subiendo…" : "Añadir foto"}
           <input
             type="file"

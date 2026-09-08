@@ -116,12 +116,64 @@ body {
 }
 
 body {
+  position: relative;
   background: var(--app-bg);
   color: var(--text-primary);
   font-family: var(--font-plex-sans), -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+}
+
+/* A quiet, two-tone atmosphere behind every screen — not a loud decorative
+   gradient hero, just enough color life that the app's black isn't flat
+   void. Two of the palette's own hues (accent teal, metric-weight blue),
+   never a third invented color. A fixed pseudo-element instead of a body
+   background-attachment:fixed — iOS Safari resizes the viewport on scroll
+   (URL bar show/hide) and a fixed background on body itself visibly jumps
+   there; a position:fixed layer behind everything doesn't. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 500px at 12% -8%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+    radial-gradient(700px 420px at 100% 6%, color-mix(in srgb, var(--metric-weight) 10%, transparent), transparent 55%);
+}
+
+/* The two button voices used everywhere an action lives — a considered
+   gradient-and-lift primary vs. a translucent glass secondary — instead of
+   every screen inventing its own flat-fill button. Deliberately no
+   border-radius/padding/font-size here: those stay per-instance Tailwind
+   utilities so this never fights a screen's own sizing. */
+.btn-primary {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 85%, white), var(--accent) 70%);
+  color: var(--accent-fg);
+  box-shadow: var(--shadow-md);
+}
+.btn-primary:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-soft);
+  color: var(--text-primary);
+}
+
+/* A panel that reads as glass — frosted, faintly bordered — instead of a
+   flat surface-2 fill. Used for the handful of blocks meant to feel like
+   they're floating over the page atmosphere (Volumen, decision cards). */
+.glass-panel {
+  background: color-mix(in srgb, var(--surface-2) 65%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
 }
 
 * {

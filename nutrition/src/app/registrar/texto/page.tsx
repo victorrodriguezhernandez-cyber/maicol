@@ -86,7 +86,7 @@ export default function TextoEntryPage() {
         type="button"
         disabled={!text.trim() || state.kind === "analyzing"}
         onClick={analyze}
-        className="rounded-xl bg-[var(--accent)] py-3 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
+        className="rounded-xl btn-primary py-3 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
       >
         {state.kind === "analyzing" ? "Analizando…" : "Analizar"}
       </button>

@@ -70,7 +70,7 @@ export function MeasurementForm() {
       <button
         type="submit"
         disabled={!value || isPending}
-        className="mt-2 w-full rounded-xl bg-[var(--accent)] py-2 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
+        className="mt-2 w-full rounded-xl btn-primary py-2 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
       >
         Guardar medida
       </button>

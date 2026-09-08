@@ -123,7 +123,7 @@ export default async function TodayPage() {
 
       {/* Volumen: its own soft surface (not a bordered card) so it reads as
           a distinct concept from the macro chips above it. */}
-      <section className="flex items-center justify-between rounded-2xl bg-[var(--surface-2)] px-4 py-3.5">
+      <section className="glass-panel flex items-center justify-between rounded-2xl px-4 py-3.5">
         <p className="text-xs font-medium text-[var(--text-secondary)]">Volumen</p>
         {!lastTrend ? (
           <p className="text-sm text-[var(--text-primary)]">Sin pesajes todavía</p>

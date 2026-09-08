@@ -34,7 +34,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-[var(--app-bg)] px-6 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent)] text-xl font-semibold text-white">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl btn-primary text-xl font-semibold">
           M
         </div>
         <h1 className="text-xl font-semibold text-[var(--text-primary)]">
@@ -46,7 +46,7 @@ export default function LoginPage() {
       </div>
 
       {status === "sent" ? (
-        <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 text-center">
+        <div className="glass-panel w-full max-w-sm rounded-2xl p-5 text-center">
           <p className="text-sm text-[var(--text-primary)]">
             Te hemos enviado un enlace de acceso a
           </p>
@@ -60,7 +60,7 @@ export default function LoginPage() {
       ) : (
         <form
           onSubmit={handleSubmit}
-          className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
+          className="glass-panel w-full max-w-sm rounded-2xl p-5"
         >
           <label
             htmlFor="email"
@@ -85,7 +85,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={status === "sending"}
-            className="mt-4 w-full rounded-xl bg-[var(--accent)] py-2.5 text-sm font-medium text-white disabled:opacity-60"
+            className="mt-4 w-full rounded-xl btn-primary py-2.5 text-sm font-medium disabled:opacity-60"
           >
             {status === "sending" ? "Enviando…" : "Enviar enlace de acceso"}
           </button>

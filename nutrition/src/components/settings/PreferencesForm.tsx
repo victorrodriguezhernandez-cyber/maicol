@@ -123,7 +123,7 @@ export function PreferencesForm(props: Props) {
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-xl bg-[var(--accent)] py-2.5 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
+        className="rounded-xl btn-primary py-2.5 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
       >
         {isPending ? "Guardando…" : saved ? "Guardado ✓" : "Guardar cambios"}
       </button>

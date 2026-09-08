@@ -205,10 +205,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
       ) : (
         <ul className="flex flex-col gap-2.5">
           {items.map((item) => (
-            <li
-              key={item.key}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3.5"
-            >
+            <li key={item.key} className="glass-panel rounded-2xl p-3.5">
               <div className="flex items-start justify-between gap-2">
                 <input
                   value={item.name}
@@ -257,7 +254,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
       )}
 
       {showAddForm ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3.5">
+        <div className="glass-panel rounded-2xl p-3.5">
           <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">Añadir ingrediente</p>
           <div className="grid grid-cols-2 gap-2">
             <input placeholder="Nombre" value={draftName} onChange={(e) => setDraftName(e.target.value)} className="col-span-2 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1.5 text-sm text-[var(--text-primary)]" />
@@ -267,7 +264,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
             <input placeholder="Carbohidratos g" type="number" value={draftCarbs} onChange={(e) => setDraftCarbs(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1.5 text-sm text-[var(--text-primary)]" />
             <input placeholder="Grasas g" type="number" value={draftFat} onChange={(e) => setDraftFat(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1.5 text-sm text-[var(--text-primary)]" />
           </div>
-          <button type="button" onClick={addManualItem} className="mt-2 w-full rounded-lg bg-[var(--accent)] py-2 text-xs font-medium text-[var(--accent-fg)]">
+          <button type="button" onClick={addManualItem} className="mt-2 w-full rounded-lg btn-primary py-2 text-xs font-medium text-[var(--accent-fg)]">
             Añadir
           </button>
         </div>
@@ -281,7 +278,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
         </button>
       )}
 
-      <div className="flex flex-col gap-3 rounded-2xl bg-[var(--surface-2)] p-4">
+      <div className="glass-panel flex flex-col gap-3 rounded-2xl p-4">
         <div className="flex items-baseline justify-between">
           <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
             Total de la comida
@@ -303,7 +300,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
         type="button"
         disabled={items.length === 0 || isPending}
         onClick={handleSave}
-        className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+16px)] mx-auto max-w-lg rounded-xl bg-[var(--accent)] py-3.5 text-sm font-semibold text-[var(--accent-fg)] shadow-[var(--shadow-md)] disabled:opacity-50"
+        className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+16px)] mx-auto max-w-lg rounded-xl btn-primary py-3.5 text-sm font-semibold text-[var(--accent-fg)] shadow-[var(--shadow-md)] disabled:opacity-50"
       >
         {isPending ? "Guardando…" : "Guardar comida"}
       </button>

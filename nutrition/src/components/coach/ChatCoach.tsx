@@ -301,7 +301,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
                 key={p}
                 type="button"
                 onClick={() => send(p)}
-                className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-secondary)]"
+                className="rounded-full btn-secondary px-3 py-1.5 text-xs text-[var(--text-secondary)]"
               >
                 {p}
               </button>
@@ -313,7 +313,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
           m.role === "user" ? (
             <div
               key={i}
-              className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-[var(--accent)] px-3.5 py-2.5 text-sm text-[var(--accent-fg)]"
+              className="ml-auto max-w-[85%] rounded-2xl rounded-br-md btn-primary px-3.5 py-2.5 text-sm text-[var(--accent-fg)]"
             >
               {m.content}
             </div>
@@ -376,14 +376,14 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
                 type="button"
                 disabled={isApplying}
                 onClick={confirmProposal}
-                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)]"
+                className="rounded-lg btn-primary px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)]"
               >
                 Confirmar
               </button>
               <button
                 type="button"
                 onClick={() => setProposedAction(null)}
-                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-secondary)]"
+                className="rounded-lg btn-secondary px-3 py-1.5 text-xs text-[var(--text-secondary)]"
               >
                 Cancelar
               </button>
@@ -408,7 +408,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         <button
           type="submit"
           disabled={!input.trim() || isPending}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-fg)] disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-full btn-primary text-[var(--accent-fg)] disabled:opacity-40"
           aria-label="Enviar"
         >
           <SendIcon />

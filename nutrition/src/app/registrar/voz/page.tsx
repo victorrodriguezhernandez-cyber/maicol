@@ -113,7 +113,7 @@ export default function VozEntryPage() {
         <button
           type="button"
           onClick={startRecording}
-          className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--accent)] text-3xl text-[var(--accent-fg)]"
+          className="flex h-24 w-24 items-center justify-center rounded-full btn-primary text-3xl text-[var(--accent-fg)]"
         >
           🎙️
         </button>
@@ -138,7 +138,7 @@ export default function VozEntryPage() {
             <button
               type="button"
               onClick={finishRecording}
-              className="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-fg)]"
+              className="rounded-xl btn-primary px-4 py-2 text-sm font-medium text-[var(--accent-fg)]"
             >
               Finalizar
             </button>

@@ -137,7 +137,7 @@ export default function BarcodeScannerPage() {
           <button
             type="button"
             onClick={addToMeal}
-            className="mt-3 w-full rounded-xl bg-[var(--accent)] py-2.5 text-sm font-medium text-[var(--accent-fg)]"
+            className="mt-3 w-full rounded-xl btn-primary py-2.5 text-sm font-medium text-[var(--accent-fg)]"
           >
             Continuar
           </button>

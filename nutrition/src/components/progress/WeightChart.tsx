@@ -93,7 +93,7 @@ export function WeightChart({ points }: { points: WeightChartPoint[] }) {
             onClick={() => setRangeDays(r.days)}
             className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
               rangeDays === r.days
-                ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                ? "btn-primary text-[var(--accent-fg)]"
                 : "bg-[var(--surface-2)] text-[var(--text-secondary)]"
             }`}
           >
