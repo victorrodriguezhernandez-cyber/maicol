@@ -33,6 +33,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
   const [input, setInput] = useState("");
   const [proposedAction, setProposedAction] = useState<ProposedGoalChange | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isApplying, startApplying] = useTransition();
 
@@ -41,14 +42,23 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
     setMessages((prev) => [...prev, { role: "user", content: message }]);
     setInput("");
     setUnavailable(false);
+    setErrorMessage(null);
 
     startTransition(async () => {
       const supabase = createClient();
       const { data, error } = await supabase.functions.invoke("ai-coach", {
         body: { conversationId, message },
       });
-      if (error || data?.error === "ai_unavailable") {
+      // Only "ai_unavailable" means the GEMINI_API_KEY secret is actually
+      // missing. Any other failure (network hiccup, a transient error from
+      // Gemini, a bug) is a different problem and must say so honestly
+      // instead of pointing the user at a config issue that isn't real.
+      if (data?.error === "ai_unavailable") {
         setUnavailable(true);
+        return;
+      }
+      if (error || data?.error) {
+        setErrorMessage("Hubo un error al hablar con el Coach IA. Inténtalo de nuevo en unos segundos.");
         return;
       }
       setConversationId(data.conversationId);
@@ -114,6 +124,8 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
             El Coach IA no está disponible ahora mismo (falta configurar GEMINI_API_KEY).
           </p>
         ) : null}
+
+        {errorMessage ? <p className="text-xs text-[var(--danger)]">{errorMessage}</p> : null}
 
         {proposedAction ? (
           <div className="rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] p-3 text-sm text-[var(--text-primary)]">
