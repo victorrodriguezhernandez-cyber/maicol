@@ -6,11 +6,11 @@
  * and because Gemini needs far less than a 12 MP original to read a plate
  * of food or a nutrition label.
  */
-export async function compressImageToBase64(
+export async function compressImageToBlob(
   file: File,
   maxDimension = 1280,
   quality = 0.82,
-): Promise<{ data: string; mimeType: string }> {
+): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
   const width = Math.round(bitmap.width * scale);
@@ -23,10 +23,17 @@ export async function compressImageToBase64(
   if (!ctx) throw new Error("canvas_unsupported");
   ctx.drawImage(bitmap, 0, 0, width, height);
 
-  const blob: Blob = await new Promise((resolve, reject) =>
+  return new Promise((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("compression_failed"))), "image/jpeg", quality),
   );
+}
 
+export async function compressImageToBase64(
+  file: File,
+  maxDimension = 1280,
+  quality = 0.82,
+): Promise<{ data: string; mimeType: string }> {
+  const blob = await compressImageToBlob(file, maxDimension, quality);
   const base64 = await blobToBase64(blob);
   return { data: base64, mimeType: "image/jpeg" };
 }
