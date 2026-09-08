@@ -1,18 +1,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addNutrients, ZERO_NUTRIENTS, type NutrientSet } from "@/lib/nutrition/types";
+import { localDayBoundsUtc } from "@/lib/format";
 import type { MealItemRow, MealRow, NutritionGoalRow } from "@/lib/supabase/types";
 
 export interface MealWithItems extends MealRow {
   meal_items: MealItemRow[];
   meal_images: { id: string; storage_path: string; thumbnail_path: string | null }[];
-}
-
-/** UTC day bounds for a given local calendar date string (YYYY-MM-DD). */
-function dayRange(date: string) {
-  const start = new Date(`${date}T00:00:00`);
-  const end = new Date(`${date}T23:59:59.999`);
-  return { start: start.toISOString(), end: end.toISOString() };
 }
 
 export async function getCurrentGoal(
@@ -34,7 +28,7 @@ export async function getMealsForDate(
   userId: string,
   date: string,
 ): Promise<MealWithItems[]> {
-  const { start, end } = dayRange(date);
+  const { start, end } = localDayBoundsUtc(date);
   const { data, error } = await supabase
     .from("meals")
     .select("*, meal_items(*), meal_images(id, storage_path, thumbnail_path)")

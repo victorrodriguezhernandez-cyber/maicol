@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MeasurementForm } from "@/components/progress/MeasurementForm";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { formatDateShort } from "@/lib/format";
 
 const TYPE_LABEL: Record<string, string> = {
   waist: "Cintura",
@@ -42,7 +43,7 @@ export default async function MedidasPage() {
                 {m.measurement_type === "custom" ? m.custom_label : TYPE_LABEL[m.measurement_type]}
               </span>
               <span className="text-[var(--text-tertiary)]">
-                {new Date(m.measured_at).toLocaleDateString("es-ES")}
+                {formatDateShort(m.measured_at)}
               </span>
               <span className="font-numeric font-semibold text-[var(--text-primary)]">{m.value_cm} cm</span>
             </li>

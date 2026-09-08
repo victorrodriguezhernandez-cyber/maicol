@@ -8,6 +8,7 @@ import { handleOptions, corsHeaders } from "../_shared/cors.ts";
 import { requireUser } from "../_shared/auth.ts";
 import { GeminiUnavailableError, getGeminiModel, withGeminiRetry } from "../_shared/gemini.ts";
 import { computeTrend, weeklyRate } from "../_shared/trend.ts";
+import { todayIso, toLocalDateKey, localDayBoundsUtc } from "../_shared/date.ts";
 import { GoogleGenAI, type FunctionDeclaration, Type } from "npm:@google/genai@^1.0.0";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@^2.45.0";
 
@@ -194,7 +195,8 @@ Reglas:
 - Si los datos son insuficientes para responder, o si lo que pide el usuario podría referirse a más de un registro (p.ej. "el desayuno de siempre" sin un patrón claro, o varias comidas que podrían ser la referida), dilo explícitamente y pregunta para confirmar en vez de actuar sobre el registro equivocado.
 - Puedes actuar de verdad sobre los datos del usuario con las herramientas "propose_*", no solo explicar cómo hacerlo. Añadir un alimento, duplicar una comida y corregir un peso son acciones de bajo riesgo que la aplicación ejecuta en cuanto las propones. Borrar una comida y cambiar el objetivo son acciones importantes: la aplicación siempre pide confirmación explícita al usuario antes de ejecutarlas, así que puedes proponerlas igualmente en cuanto el usuario lo pida o lo acepte.
 - Nunca propongas más de una acción por turno.
-- Nunca modifiques nada por tu cuenta fuera de esas herramientas "propose_*" — son el único camino de escritura.`;
+- Nunca modifiques nada por tu cuenta fuera de esas herramientas "propose_*" — son el único camino de escritura.
+- Cuando menciones proteína, carbohidratos o grasas en tu respuesta, escribe siempre la palabra (o "prot."/"carb."/"grasa", que es como los abrevia la propia app) — nunca una sola letra suelta como "P", "C" o "G".`;
 }
 
 Deno.serve(async (req) => {
@@ -420,25 +422,25 @@ async function runTool(
     }
 
     case "get_meals_on_date": {
-      const date = String(args.date);
+      const { start, end } = localDayBoundsUtc(String(args.date));
       const { data } = await supabase
         .from("meals")
         .select("id, occurred_at, meal_type, name, notes, meal_items(*)")
         .eq("user_id", userId)
-        .gte("occurred_at", `${date}T00:00:00`)
-        .lte("occurred_at", `${date}T23:59:59.999`)
+        .gte("occurred_at", start)
+        .lte("occurred_at", end)
         .order("occurred_at", { ascending: true });
       return (data ?? []).map((meal) => ({ meal_id: meal.id, ...toMealSnapshot(meal) }));
     }
 
     case "get_weight_entry_on_date": {
-      const date = String(args.date);
+      const { start, end } = localDayBoundsUtc(String(args.date));
       const { data } = await supabase
         .from("weight_entries")
         .select("id, measured_at, weight_kg, is_usual_conditions, notes")
         .eq("user_id", userId)
-        .gte("measured_at", `${date}T00:00:00`)
-        .lte("measured_at", `${date}T23:59:59.999`)
+        .gte("measured_at", start)
+        .lte("measured_at", end)
         .order("measured_at", { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -459,12 +461,13 @@ async function runTool(
 }
 
 async function dayNutrition(supabase: SupabaseClient, userId: string, date: string) {
+  const { start, end } = localDayBoundsUtc(date);
   const { data: meals } = await supabase
     .from("meals")
     .select("meal_items(energy_kcal, protein_g, carbohydrates_g, fat_g)")
     .eq("user_id", userId)
-    .gte("occurred_at", `${date}T00:00:00`)
-    .lte("occurred_at", `${date}T23:59:59.999`);
+    .gte("occurred_at", start)
+    .lte("occurred_at", end);
   const items = (meals ?? []).flatMap((m) => m.meal_items as Array<{ energy_kcal: number; protein_g: number; carbohydrates_g: number; fat_g: number }>);
   return {
     kcal: sum(items, (i) => i.energy_kcal),
@@ -475,17 +478,24 @@ async function dayNutrition(supabase: SupabaseClient, userId: string, date: stri
 }
 
 async function dailyMacroSeries(supabase: SupabaseClient, userId: string, days: number) {
-  const since = new Date();
-  since.setDate(since.getDate() - days + 1);
+  // Anchored on todayIso() (Europe/Madrid) and walked with UTC-suffixed
+  // Date methods — see diary.ts's getRecentDaysSummary (same fix,
+  // duplicated here because this Edge Function can't import from src/).
+  const todayKey = todayIso();
+  const [ty, tm, td] = todayKey.split("-").map(Number);
+  const sinceUtc = new Date(Date.UTC(ty, tm - 1, td));
+  sinceUtc.setUTCDate(sinceUtc.getUTCDate() - (days - 1));
+  const queryFromIso = new Date(sinceUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
   const { data: meals } = await supabase
     .from("meals")
     .select("occurred_at, meal_items(energy_kcal, protein_g, carbohydrates_g, fat_g)")
     .eq("user_id", userId)
-    .gte("occurred_at", since.toISOString());
+    .gte("occurred_at", queryFromIso);
 
   const byDay = new Map<string, { kcal: number; protein_g: number; carbohydrates_g: number; fat_g: number }>();
   for (const meal of meals ?? []) {
-    const day = (meal.occurred_at as string).slice(0, 10);
+    const day = toLocalDateKey(meal.occurred_at as string);
     const acc = byDay.get(day) ?? { kcal: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0 };
     for (const item of meal.meal_items as Array<{ energy_kcal: number; protein_g: number; carbohydrates_g: number; fat_g: number }>) {
       acc.kcal += item.energy_kcal;
@@ -498,8 +508,8 @@ async function dailyMacroSeries(supabase: SupabaseClient, userId: string, days: 
 
   const result = [];
   for (let i = 0; i < days; i++) {
-    const d = new Date(since);
-    d.setDate(d.getDate() + i);
+    const d = new Date(sinceUtc);
+    d.setUTCDate(d.getUTCDate() + i);
     const key = d.toISOString().slice(0, 10);
     result.push({ date: key, ...(byDay.get(key) ?? { kcal: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0 }) });
   }
@@ -507,20 +517,22 @@ async function dailyMacroSeries(supabase: SupabaseClient, userId: string, days: 
 }
 
 async function periodSummary(supabase: SupabaseClient, userId: string, start: string, end: string) {
+  const startBounds = localDayBoundsUtc(start);
+  const endBounds = localDayBoundsUtc(end);
   const { data: meals } = await supabase
     .from("meals")
     .select("meal_items(energy_kcal, protein_g)")
     .eq("user_id", userId)
-    .gte("occurred_at", `${start}T00:00:00`)
-    .lte("occurred_at", `${end}T23:59:59.999`);
+    .gte("occurred_at", startBounds.start)
+    .lte("occurred_at", endBounds.end);
   const items = (meals ?? []).flatMap((m) => m.meal_items as Array<{ energy_kcal: number; protein_g: number }>);
 
   const { data: weights } = await supabase
     .from("weight_entries")
     .select("measured_at, weight_kg")
     .eq("user_id", userId)
-    .gte("measured_at", `${start}T00:00:00`)
-    .lte("measured_at", `${end}T23:59:59.999`);
+    .gte("measured_at", startBounds.start)
+    .lte("measured_at", endBounds.end);
   const points = computeTrend((weights ?? []).map((w) => ({ measuredAt: w.measured_at, weightKg: w.weight_kg })));
 
   return {
@@ -550,9 +562,6 @@ function average(values: number[]): number {
 }
 function daysBetween(a: string, b: string): number {
   return Math.max(1, Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000));
-}
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 // ---------------------------------------------------------------------
@@ -711,7 +720,7 @@ async function buildAction(
         action: {
           kind: "delete_meal",
           risk: "destructive",
-          summary: `Borrar ${MEAL_TYPE_LABEL[meal.meal_type] ?? meal.meal_type} del ${meal.occurred_at.slice(0, 10)} (${meal.meal_items.length} alimento${meal.meal_items.length === 1 ? "" : "s"})`,
+          summary: `Borrar ${MEAL_TYPE_LABEL[meal.meal_type] ?? meal.meal_type} del ${toLocalDateKey(meal.occurred_at)} (${meal.meal_items.length} alimento${meal.meal_items.length === 1 ? "" : "s"})`,
           payload: { mealId: meal.id, snapshot: toMealSnapshot(meal) },
         },
       };

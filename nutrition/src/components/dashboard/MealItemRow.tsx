@@ -4,17 +4,12 @@ import { useTransition } from "react";
 import { deleteMealItem } from "@/lib/actions/meals";
 import { formatKcal } from "@/lib/format";
 import { MacroInline } from "@/components/ui/MacroInline";
+import { estimateQuality, estimateQualityColor } from "@/lib/nutrition/estimate-quality";
 import type { MealItemRow as MealItemRowType } from "@/lib/supabase/types";
-
-const PRECISION_LABEL: Record<string, string> = {
-  exact: "Alta",
-  calculated: "Media",
-  estimated: "Media/Baja",
-  unknown: "Desconocida",
-};
 
 export function MealItemRow({ item }: { item: MealItemRowType }) {
   const [isPending, startTransition] = useTransition();
+  const { label, tier } = estimateQuality(item.precision_level, item.confidence);
 
   return (
     <li className="glass-panel rounded-2xl p-3.5">
@@ -41,8 +36,11 @@ export function MealItemRow({ item }: { item: MealItemRowType }) {
           </span>
           <MacroInline protein={item.protein_g} carbs={item.carbohydrates_g} fat={item.fat_g} />
         </div>
-        <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--accent)]">
-          {PRECISION_LABEL[item.precision_level]}
+        <span
+          className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-medium"
+          style={{ color: estimateQualityColor(tier) }}
+        >
+          {label}
         </span>
       </div>
     </li>

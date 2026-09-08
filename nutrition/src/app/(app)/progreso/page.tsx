@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentGoal, getWeightEntriesSince } from "@/lib/data/nutrition";
 import { computeWeightTrend, computeWeeklyRate } from "@/lib/nutrition/trend";
-import { formatKg, formatSignedKgPerWeek } from "@/lib/format";
+import { formatKg, formatSignedKgPerWeek, formatDateTimeShort } from "@/lib/format";
 import { WeightChart } from "@/components/progress/WeightChart";
 import { WeightLogForm } from "@/components/progress/WeightLogForm";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -30,7 +30,7 @@ export default async function ProgresoPage() {
   const lastObserved = entries.at(-1);
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Progreso</h1>
 
       <WeightLogForm />
@@ -89,12 +89,7 @@ export default async function ProgresoPage() {
               .map((e) => (
                 <li key={e.id} className="flex items-center justify-between py-2.5 text-sm">
                   <span className="text-[var(--text-tertiary)]">
-                    {new Date(e.measured_at).toLocaleString("es-ES", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatDateTimeShort(e.measured_at)}
                   </span>
                   <span className="font-numeric font-semibold text-[var(--text-primary)]">{formatKg(e.weight_kg)}</span>
                   <DeleteWeightButton id={e.id} />

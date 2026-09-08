@@ -12,7 +12,7 @@ import {
   type AddMealItemForDateInput,
 } from "@/lib/actions/meals";
 import { setWeightEntryForDate, deleteWeightEntry } from "@/lib/actions/weight";
-import { formatKcal } from "@/lib/format";
+import { formatKcal, formatDateTimeShort } from "@/lib/format";
 import type { NutritionGoalRow } from "@/lib/supabase/types";
 
 interface ChatMessage {
@@ -289,7 +289,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
               >
                 <p className="truncate">{c.title || "Conversación sin título"}</p>
                 <p className="text-[11px] text-[var(--text-tertiary)]">
-                  {new Date(c.updated_at).toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                  {formatDateTimeShort(c.updated_at)}
                 </p>
               </button>
             ))
@@ -299,15 +299,15 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
 
       <div className="flex flex-col gap-3">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 py-8 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full btn-primary">
+          <div className="flex flex-col items-center gap-3 py-5 text-center">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full btn-primary">
               <SparkleIcon />
             </span>
             <div>
               <p className="text-sm font-semibold text-[var(--text-primary)]">
                 Pregúntame lo que quieras
               </p>
-              <p className="mx-auto mt-1 max-w-[260px] text-xs text-[var(--text-secondary)]">
+              <p className="mx-auto mt-1 max-w-[240px] text-xs text-[var(--text-secondary)]">
                 Leo tus datos reales de nutrición y peso, y puedo registrar o
                 corregir cosas por ti cuando lo pidas.
               </p>
@@ -453,7 +453,7 @@ function CoachAvatar() {
 
 function SparkleIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
       <path
         d="M12 3.5c.4 2.6 1 4.1 2 5.1s2.5 1.6 5.1 2c-2.6.4-4.1 1-5.1 2s-1.6 2.5-2 5.1c-.4-2.6-1-4.1-2-5.1s-2.5-1.6-5.1-2c2.6-.4 4.1-1 5.1-2s1.6-2.5 2-5.1Z"
         stroke="var(--accent-fg)"

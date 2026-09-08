@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ProgressPhotoUploader } from "@/components/progress/ProgressPhotoUploader";
 import { DeleteProgressPhotoButton } from "@/components/progress/DeleteProgressPhotoButton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { formatDateShort } from "@/lib/format";
 
 const CATEGORY_LABEL: Record<string, string> = {
   front: "Frontal",
@@ -55,7 +56,7 @@ export default async function FotosProgresoPage() {
               )}
               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/50 px-2 py-1">
                 <span className="text-[11px] text-white">
-                  {CATEGORY_LABEL[p.category]} · {new Date(p.taken_at).toLocaleDateString("es-ES")}
+                  {CATEGORY_LABEL[p.category]} · {formatDateShort(p.taken_at)}
                 </span>
                 <DeleteProgressPhotoButton id={p.id} storagePath={p.storage_path} />
               </div>

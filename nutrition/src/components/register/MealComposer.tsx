@@ -6,6 +6,7 @@ import { createMeal, type CreateMealInput } from "@/lib/actions/meals";
 import type { MealItemSource, PrecisionLevel } from "@/lib/nutrition/types";
 import { formatKcal, formatGrams, MEAL_TYPE_LABELS } from "@/lib/format";
 import { MacroInline } from "@/components/ui/MacroInline";
+import { estimateQuality, estimateQualityColor } from "@/lib/nutrition/estimate-quality";
 
 export interface DraftItem {
   key: string;
@@ -319,26 +320,11 @@ function TotalChip({ label, value, color }: { label: string; value: number; colo
 }
 
 function ConfidenceBadge({ item }: { item: DraftItem }) {
-  const label =
-    item.precisionLevel === "exact"
-      ? "Alta"
-      : item.precisionLevel === "calculated"
-        ? "Media"
-        : item.precisionLevel === "estimated"
-          ? item.confidence === "low"
-            ? "Baja"
-            : "Media/Baja"
-          : "Desconocida";
-  const color =
-    item.precisionLevel === "exact"
-      ? "var(--success)"
-      : item.precisionLevel === "calculated"
-        ? "var(--accent)"
-        : "var(--warning)";
+  const { label, tier } = estimateQuality(item.precisionLevel, item.confidence);
   return (
     <span
       className="rounded-full px-2 py-0.5 text-[11px] font-medium"
-      style={{ color, backgroundColor: "var(--surface-2)" }}
+      style={{ color: estimateQualityColor(tier), backgroundColor: "var(--surface-2)" }}
     >
       {label}
     </span>

@@ -11,17 +11,17 @@ import {
 import { computeWeightTrend, computeWeeklyRate } from "@/lib/nutrition/trend";
 import {
   formatKcal,
-  formatGrams,
   formatKg,
   formatSignedKgPerWeek,
   formatTime,
   todayLocalDateString,
   MEAL_TYPE_LABELS,
 } from "@/lib/format";
-import { ProgressBar } from "@/components/ui/ProgressBar";
 import { RingProgress } from "@/components/ui/RingProgress";
 import { MealTypeIcon } from "@/components/ui/MealTypeIcon";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MacroChip } from "@/components/ui/MacroChip";
+import { MacroInline } from "@/components/ui/MacroInline";
 
 export default async function TodayPage() {
   const supabase = await createClient();
@@ -65,7 +65,7 @@ export default async function TodayPage() {
   const remaining = goal.kcal - totals.energy_kcal;
 
   return (
-    <div className="relative flex flex-col gap-7">
+    <div className="relative flex flex-col gap-6">
       {/* A soft wash of the accent color behind the greeting/hero — not a
           decorative gradient hero, just enough atmosphere that the screen
           doesn't read as flat void behind flat text. Clipped to this page
@@ -73,25 +73,25 @@ export default async function TodayPage() {
           not the shared layout), so it's Hoy's own signature, not global. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-8 left-1/2 h-64 w-full max-w-md -translate-x-1/2 rounded-full blur-3xl"
+        className="pointer-events-none absolute -top-8 left-1/2 h-56 w-full max-w-md -translate-x-1/2 rounded-full blur-3xl"
         style={{
-          background: "radial-gradient(closest-side, color-mix(in srgb, var(--accent) 22%, transparent), transparent)",
+          background: "radial-gradient(closest-side, color-mix(in srgb, var(--accent) 20%, transparent), transparent)",
         }}
       />
 
-      <h1 className="relative text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+      <h1 className="relative text-xl font-semibold tracking-tight text-[var(--text-primary)]">
         {greeting}{firstName ? `, ${firstName}` : ""}
       </h1>
 
       {/* Hero: today's calories dominate the screen — everything else is
           secondary, on purpose (section 3 of the design pass). */}
       <section className="relative flex items-center justify-between gap-4">
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
             Calorías de hoy
           </p>
           <div className="flex items-baseline gap-2.5">
-            <span className="font-numeric text-[3.25rem] font-semibold leading-none text-[var(--text-primary)]">
+            <span className="font-numeric text-[2.5rem] font-semibold leading-none text-[var(--text-primary)]">
               {Math.round(totals.energy_kcal)}
             </span>
             <span className="text-sm font-medium text-[var(--text-secondary)]">
@@ -104,15 +104,15 @@ export default async function TodayPage() {
               : `${formatKcal(Math.abs(remaining))} por encima del objetivo`}
           </p>
         </div>
-        <RingProgress value={totals.energy_kcal} max={goal.kcal} size={78} strokeWidth={7}>
-          <span className="font-numeric text-base font-semibold text-[var(--text-primary)]">
+        <RingProgress value={totals.energy_kcal} max={goal.kcal} size={64} strokeWidth={6}>
+          <span className="font-numeric text-sm font-semibold text-[var(--text-primary)]">
             {Math.round(Math.min(100, goal.kcal > 0 ? (totals.energy_kcal / goal.kcal) * 100 : 0))}%
           </span>
         </RingProgress>
       </section>
 
       {/* Macros: compact chips instead of four equal full-width bars. */}
-      <section className="grid grid-cols-3 gap-x-4 gap-y-4 border-t border-[var(--border-soft)] pt-5">
+      <section className="grid grid-cols-3 gap-x-4 gap-y-3 border-t border-[var(--border-soft)] pt-4">
         <MacroChip label="Proteína" value={totals.protein_g} goal={goal.protein_g} color="var(--metric-protein)" />
         <MacroChip label="Carbos" value={totals.carbohydrates_g} goal={goal.carbohydrates_g} color="var(--metric-carbs)" />
         <MacroChip label="Grasas" value={totals.fat_g} goal={goal.fat_g} color="var(--metric-fat)" />
@@ -169,28 +169,31 @@ export default async function TodayPage() {
                 <li key={meal.id}>
                   <Link
                     href={`/diario/comida/${meal.id}`}
-                    className="flex items-center gap-3 py-3 active:opacity-70"
+                    className="flex flex-col gap-2 py-3 active:opacity-70"
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-secondary)]">
-                      <MealTypeIcon type={meal.meal_type} />
-                    </span>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-[var(--text-primary)]">
-                        {formatTime(meal.occurred_at)} — {MEAL_TYPE_LABELS[meal.meal_type]}
-                      </p>
-                      <p className="text-xs text-[var(--text-tertiary)]">
-                        {meal.meal_items.length} alimento
-                        {meal.meal_items.length === 1 ? "" : "s"}
-                      </p>
-                    </div>
-                    <div className="text-right">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-secondary)]">
+                        <MealTypeIcon type={meal.meal_type} />
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-[var(--text-primary)]">
+                          {formatTime(meal.occurred_at)} — {MEAL_TYPE_LABELS[meal.meal_type]}
+                        </p>
+                        <p className="text-xs text-[var(--text-tertiary)]">
+                          {meal.meal_items.length} alimento
+                          {meal.meal_items.length === 1 ? "" : "s"}
+                        </p>
+                      </div>
                       <p className="font-numeric text-sm font-semibold text-[var(--text-primary)]">
                         {formatKcal(mealTotals.energy_kcal)}
                       </p>
-                      <p className="text-xs text-[var(--text-tertiary)]">
-                        {formatGrams(mealTotals.protein_g)} prot.
-                      </p>
                     </div>
+                    <MacroInline
+                      className="pl-12"
+                      protein={mealTotals.protein_g}
+                      carbs={mealTotals.carbohydrates_g}
+                      fat={mealTotals.fat_g}
+                    />
                   </Link>
                 </li>
               );
@@ -198,32 +201,6 @@ export default async function TodayPage() {
           </ul>
         )}
       </section>
-    </div>
-  );
-}
-
-function MacroChip({
-  label,
-  value,
-  goal,
-  color,
-}: {
-  label: string;
-  value: number;
-  goal: number;
-  color: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-1.5">
-        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
-        <span className="text-[11px] text-[var(--text-secondary)]">{label}</span>
-      </div>
-      <p className="font-numeric text-base font-semibold text-[var(--text-primary)]">
-        {formatGrams(value)}
-        <span className="text-xs font-normal text-[var(--text-tertiary)]"> /{formatGrams(goal)}</span>
-      </p>
-      <ProgressBar value={value} max={goal} color={color} />
     </div>
   );
 }
