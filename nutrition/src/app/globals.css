@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --app-bg: #f7f8fa;
+  --surface: #ffffff;
+  --surface-2: #f1f3f5;
+  --border: #e5e7eb;
+  --text-primary: #12161c;
+  --text-secondary: #6b7280;
+  --accent: #0f766e;
+  --accent-fg: #ffffff;
+  --accent-soft: #ccfbf1;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --app-bg: #0b0d10;
+    --surface: #15181d;
+    --surface-2: #1d2127;
+    --border: #262b33;
+    --text-primary: #f5f7fa;
+    --text-secondary: #9aa3ae;
+    --accent: #5eead4;
+    --accent-fg: #04201c;
+    --accent-soft: #113330;
+  }
+}
+
+:root[data-theme="dark"] {
+  --app-bg: #0b0d10;
+  --surface: #15181d;
+  --surface-2: #1d2127;
+  --border: #262b33;
+  --text-primary: #f5f7fa;
+  --text-secondary: #9aa3ae;
+  --accent: #5eead4;
+  --accent-fg: #04201c;
+  --accent-soft: #113330;
+}
+
+@theme inline {
+  --color-app-bg: var(--app-bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* iOS PWA safe-area helpers */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-x {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
