@@ -72,6 +72,58 @@ export function sumMeals(meals: MealWithItems[]): NutrientSet {
   );
 }
 
+export interface DailyMacros {
+  date: string;
+  kcal: number;
+  proteinG: number;
+  carbohydratesG: number;
+  fatG: number;
+}
+
+/** One row per calendar day in the window, zero-filled for days with no
+ * logged meals — used by the adaptive-goal check and weekly summaries. */
+export async function getDailyMacroSeries(
+  supabase: SupabaseClient,
+  userId: string,
+  days: number,
+): Promise<DailyMacros[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - days + 1);
+  const { data: meals, error } = await supabase
+    .from("meals")
+    .select("occurred_at, meal_items(energy_kcal, protein_g, carbohydrates_g, fat_g)")
+    .eq("user_id", userId)
+    .gte("occurred_at", since.toISOString());
+  if (error) throw error;
+
+  const byDay = new Map<string, DailyMacros>();
+  for (const meal of meals ?? []) {
+    const day = (meal.occurred_at as string).slice(0, 10);
+    const acc = byDay.get(day) ?? { date: day, kcal: 0, proteinG: 0, carbohydratesG: 0, fatG: 0 };
+    for (const item of meal.meal_items as Array<{
+      energy_kcal: number;
+      protein_g: number;
+      carbohydrates_g: number;
+      fat_g: number;
+    }>) {
+      acc.kcal += item.energy_kcal;
+      acc.proteinG += item.protein_g;
+      acc.carbohydratesG += item.carbohydrates_g;
+      acc.fatG += item.fat_g;
+    }
+    byDay.set(day, acc);
+  }
+
+  const result: DailyMacros[] = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date(since);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    result.push(byDay.get(key) ?? { date: key, kcal: 0, proteinG: 0, carbohydratesG: 0, fatG: 0 });
+  }
+  return result;
+}
+
 export async function getWeightEntriesSince(
   supabase: SupabaseClient,
   userId: string,
