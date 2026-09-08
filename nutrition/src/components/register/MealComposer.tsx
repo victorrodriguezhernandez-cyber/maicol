@@ -170,6 +170,12 @@ export const MealComposer = forwardRef<MealComposerHandle, {
         await createMeal(payload);
         router.push("/");
       } catch (e) {
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          const { queueMealOffline } = await import("@/lib/offline/sync");
+          await queueMealOffline(crypto.randomUUID(), payload);
+          router.push("/");
+          return;
+        }
         setError(e instanceof Error ? e.message : "No se pudo guardar la comida.");
       }
     });
