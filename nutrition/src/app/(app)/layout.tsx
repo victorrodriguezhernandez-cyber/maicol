@@ -22,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="safe-top safe-x sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border)] bg-[var(--app-bg)]/90 px-4 py-3 backdrop-blur">
+      <header className="safe-top safe-x sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border-soft)] bg-[var(--app-bg)]/65 px-4 py-3 backdrop-blur-xl">
         <p className="text-sm font-medium text-[var(--text-secondary)]">
           {formatDateHeader(new Date())}
         </p>

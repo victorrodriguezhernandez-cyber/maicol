@@ -33,6 +33,15 @@ export default async function TodayPage() {
   const goal = await getCurrentGoal(supabase, user.id);
   if (!goal) redirect("/onboarding");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  const firstName = profile?.display_name?.split(" ")[0] ?? null;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
+
   const today = todayLocalDateString();
   const meals = await getMealsForDate(supabase, user.id, today);
   const totals = sumMeals(meals);
@@ -56,10 +65,27 @@ export default async function TodayPage() {
   const remaining = goal.kcal - totals.energy_kcal;
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="relative flex flex-col gap-7">
+      {/* A soft wash of the accent color behind the greeting/hero — not a
+          decorative gradient hero, just enough atmosphere that the screen
+          doesn't read as flat void behind flat text. Clipped to this page
+          only (relative+overflow-hidden on the wrapper below it belongs to,
+          not the shared layout), so it's Hoy's own signature, not global. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-8 left-1/2 h-64 w-full max-w-md -translate-x-1/2 rounded-full blur-3xl"
+        style={{
+          background: "radial-gradient(closest-side, color-mix(in srgb, var(--accent) 22%, transparent), transparent)",
+        }}
+      />
+
+      <h1 className="relative text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+        {greeting}{firstName ? `, ${firstName}` : ""}
+      </h1>
+
       {/* Hero: today's calories dominate the screen — everything else is
           secondary, on purpose (section 3 of the design pass). */}
-      <section className="flex items-center justify-between gap-4 pt-1">
+      <section className="relative flex items-center justify-between gap-4">
         <div className="flex flex-col gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
             Calorías de hoy

@@ -19,7 +19,7 @@ export function BottomNav() {
   return (
     <>
       <nav
-        className="safe-bottom safe-x fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur"
+        className="safe-bottom safe-x fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border-soft)] bg-[var(--surface)]/70 backdrop-blur-xl"
         aria-label="Navegación principal"
       >
         <div className="mx-auto flex max-w-lg items-center justify-between px-2">
@@ -33,7 +33,13 @@ export function BottomNav() {
             className="flex flex-col items-center gap-1 px-3 py-2"
             aria-label="Registrar"
           >
-            <span className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-fg)] shadow-[var(--shadow-md)]">
+            <span
+              className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full text-[var(--accent-fg)] shadow-[var(--shadow-md)]"
+              style={{
+                background:
+                  "linear-gradient(135deg, color-mix(in srgb, var(--accent) 85%, white), var(--accent) 65%)",
+              }}
+            >
               <PlusIcon />
             </span>
             <span className="text-[11px] font-medium text-[var(--text-secondary)]">
