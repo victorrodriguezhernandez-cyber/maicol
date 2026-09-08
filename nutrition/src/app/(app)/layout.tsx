@@ -29,7 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Link
           href="/ajustes"
           aria-label="Ajustes"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-2)] text-xs font-semibold text-[var(--text-primary)]"
+          className="flex h-8 w-8 items-center justify-center rounded-full btn-primary text-xs font-semibold"
         >
           {initial}
         </Link>

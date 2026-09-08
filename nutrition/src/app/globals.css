@@ -125,13 +125,19 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* A quiet, two-tone atmosphere behind every screen — not a loud decorative
-   gradient hero, just enough color life that the app's black isn't flat
-   void. Two of the palette's own hues (accent teal, metric-weight blue),
-   never a third invented color. A fixed pseudo-element instead of a body
-   background-attachment:fixed — iOS Safari resizes the viewport on scroll
-   (URL bar show/hide) and a fixed background on body itself visibly jumps
-   there; a position:fixed layer behind everything doesn't. */
+/* A quiet atmosphere behind every screen — not a loud decorative gradient
+   hero, just enough color life that the app's black isn't flat void. Three
+   of the palette's own hues (accent teal, metric-weight blue, metric-fat
+   violet), never an invented color. A fixed pseudo-element instead of a
+   body background-attachment:fixed — iOS Safari resizes the viewport on
+   scroll (URL bar show/hide) and a fixed background on body itself visibly
+   jumps there; a position:fixed layer behind everything doesn't.
+   Deliberately large radii reaching from both the top AND the bottom of
+   the viewport — an earlier version only glowed near the very top, so
+   anything below the first screenful (Volumen on Hoy, all of Coach IA,
+   any glass-panel not right under the header) had no color behind it for
+   backdrop-filter to catch and just read as a flat grey box. This is the
+   fix for that, not a cosmetic tweak. */
 body::before {
   content: "";
   position: fixed;
@@ -139,8 +145,9 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(900px 500px at 12% -8%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
-    radial-gradient(700px 420px at 100% 6%, color-mix(in srgb, var(--metric-weight) 10%, transparent), transparent 55%);
+    radial-gradient(1100px 900px at 12% -10%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 65%),
+    radial-gradient(900px 800px at 105% 10%, color-mix(in srgb, var(--metric-weight) 11%, transparent), transparent 62%),
+    radial-gradient(1000px 750px at 45% 115%, color-mix(in srgb, var(--metric-fat) 9%, transparent), transparent 65%);
 }
 
 /* The two button voices used everywhere an action lives — a considered
@@ -168,7 +175,11 @@ body::before {
 }
 
 .btn-secondary {
-  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--surface-2) 82%, var(--accent) 5%),
+    color-mix(in srgb, var(--surface-2) 60%, transparent)
+  );
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-soft);
@@ -177,12 +188,22 @@ body::before {
 
 /* A panel that reads as glass — frosted, faintly bordered — instead of a
    flat surface-2 fill. Used for the handful of blocks meant to feel like
-   they're floating over the page atmosphere (Volumen, decision cards). */
+   they're floating over the page atmosphere (Volumen, decision cards).
+   The gradient fill (not a flat color-mix) is deliberate: backdrop-filter
+   alone only looks like anything when there's colorful content behind the
+   panel to blur, and most of a scrolled page has none. Baking a faint
+   accent-tinted gradient into the panel itself means it has real visual
+   presence anywhere on the page — the ambient blur is a bonus on top,
+   not the only source of it. */
 .glass-panel {
-  background: color-mix(in srgb, var(--surface-2) 65%, transparent);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--surface-2) 80%, var(--accent) 6%),
+    color-mix(in srgb, var(--surface-2) 55%, transparent)
+  );
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 8%, transparent);
 }
 
 /* A tappable row inside a divided list (settings links, recipe list,

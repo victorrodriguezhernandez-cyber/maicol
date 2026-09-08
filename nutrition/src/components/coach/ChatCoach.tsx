@@ -257,18 +257,22 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         <button
           type="button"
           onClick={openHistory}
-          className="flex items-center gap-1 text-xs font-medium text-[var(--text-secondary)]"
+          className="flex items-center gap-1 text-xs font-medium text-[var(--text-secondary)] transition-opacity duration-150 active:opacity-60"
         >
           <HistoryIcon />
           Chats
         </button>
-        <button type="button" onClick={startNewChat} className="text-xs font-medium text-[var(--accent)]">
+        <button
+          type="button"
+          onClick={startNewChat}
+          className="text-xs font-medium text-[var(--accent)] transition-opacity duration-150 active:opacity-60"
+        >
           + Nuevo chat
         </button>
       </div>
 
       {historyOpen ? (
-        <div className="flex max-h-56 flex-col gap-0.5 overflow-y-auto rounded-2xl bg-[var(--surface-2)] p-1.5">
+        <div className="glass-panel flex max-h-56 flex-col gap-0.5 overflow-y-auto rounded-2xl p-1.5">
           {isLoadingHistory ? (
             <p className="p-2 text-xs text-[var(--text-tertiary)]">Cargando…</p>
           ) : conversations.length === 0 ? (
@@ -279,7 +283,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
                 key={c.id}
                 type="button"
                 onClick={() => openConversation(c.id)}
-                className={`rounded-xl px-3 py-2 text-left text-sm active:bg-[var(--surface-raised)] ${
+                className={`tap-row rounded-xl px-3 py-2 text-left text-sm ${
                   c.id === conversationId ? "bg-[var(--surface-raised)] font-medium" : ""
                 } text-[var(--text-primary)]`}
               >
@@ -295,17 +299,31 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
 
       <div className="flex flex-col gap-3">
         {messages.length === 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {SUGGESTED_PROMPTS.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => send(p)}
-                className="rounded-full btn-secondary px-3 py-1.5 text-xs text-[var(--text-secondary)]"
-              >
-                {p}
-              </button>
-            ))}
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full btn-primary">
+              <SparkleIcon />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                Pregúntame lo que quieras
+              </p>
+              <p className="mx-auto mt-1 max-w-[260px] text-xs text-[var(--text-secondary)]">
+                Leo tus datos reales de nutrición y peso, y puedo registrar o
+                corregir cosas por ti cuando lo pidas.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {SUGGESTED_PROMPTS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => send(p)}
+                  className="rounded-full btn-secondary px-3 py-1.5 text-xs text-[var(--text-secondary)]"
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
 
@@ -320,7 +338,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
           ) : (
             <div key={i} className="flex max-w-[90%] items-start gap-2">
               <CoachAvatar />
-              <div className="rounded-2xl rounded-tl-md bg-[var(--surface-2)] px-3.5 py-2.5 text-sm text-[var(--text-primary)]">
+              <div className="glass-panel rounded-2xl rounded-tl-md px-3.5 py-2.5 text-sm text-[var(--text-primary)]">
                 {formatCoachText(m.content)}
               </div>
             </div>
@@ -330,7 +348,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         {isPending ? (
           <div className="flex items-center gap-2">
             <CoachAvatar />
-            <div className="flex gap-1 rounded-2xl rounded-tl-md bg-[var(--surface-2)] px-3.5 py-3">
+            <div className="glass-panel flex gap-1 rounded-2xl rounded-tl-md px-3.5 py-3">
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)] [animation-delay:-0.2s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)] [animation-delay:0.2s]" />
@@ -347,7 +365,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         {errorMessage ? <p className="text-xs text-[var(--danger)]">{errorMessage}</p> : null}
 
         {lastExecuted ? (
-          <div className="flex items-center justify-between rounded-2xl bg-[var(--accent-soft)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] shadow-[var(--shadow-sm)]">
+          <div className="flex items-center justify-between rounded-2xl bg-[var(--accent-soft)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] shadow-[var(--shadow-sm)] backdrop-blur-xl">
             <span>✅ {lastExecuted.summary}</span>
             {lastExecuted.undo ? (
               <button
@@ -363,7 +381,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         ) : null}
 
         {proposedAction ? (
-          <div className="rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] p-3 text-sm text-[var(--text-primary)] shadow-[var(--shadow-sm)]">
+          <div className="rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] p-3 text-sm text-[var(--text-primary)] shadow-[var(--shadow-sm)] backdrop-blur-xl">
             <p className="font-medium">Confirmar acción</p>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">{proposedAction.summary}</p>
             {proposedAction.kind === "goal_change" && (proposedAction.payload as { kcal?: number }).kcal ? (
@@ -397,7 +415,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
           e.preventDefault();
           send(input);
         }}
-        className="sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] flex items-center gap-1.5 rounded-full bg-[var(--surface-raised)] p-1.5 shadow-[var(--shadow-md)]"
+        className="glass-panel sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] flex items-center gap-1.5 rounded-full p-1.5 shadow-[var(--shadow-md)]"
       >
         <input
           value={input}
@@ -430,6 +448,19 @@ function CoachAvatar() {
         />
       </svg>
     </span>
+  );
+}
+
+function SparkleIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 3.5c.4 2.6 1 4.1 2 5.1s2.5 1.6 5.1 2c-2.6.4-4.1 1-5.1 2s-1.6 2.5-2 5.1c-.4-2.6-1-4.1-2-5.1s-2.5-1.6-5.1-2c2.6-.4 4.1-1 5.1-2s1.6-2.5 2-5.1Z"
+        stroke="var(--accent-fg)"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
