@@ -35,7 +35,7 @@ export function MeasurementForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+    <form onSubmit={handleSubmit} className="glass-panel rounded-2xl p-4">
       <div className="grid grid-cols-2 gap-2">
         <select
           value={type}

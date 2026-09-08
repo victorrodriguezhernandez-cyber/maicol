@@ -102,16 +102,16 @@ export default function NuevaRecetaPage() {
         className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
       />
       {results.length > 0 ? (
-        <ul className="flex flex-col gap-1">
+        <ul className="glass-panel flex flex-col divide-y divide-[var(--border-soft)] overflow-hidden rounded-2xl">
           {results.map((food) => (
             <li key={food.id}>
               <button
                 type="button"
                 onClick={() => addIngredient(food)}
-                className="flex w-full items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-left text-sm"
+                className="tap-row flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-[var(--text-primary)]"
               >
                 <span>{food.name}</span>
-                <span className="text-xs text-[var(--text-secondary)]">
+                <span className="font-numeric text-xs text-[var(--text-secondary)]">
                   {formatKcal(food.energy_kcal)}/100g
                 </span>
               </button>
@@ -123,22 +123,19 @@ export default function NuevaRecetaPage() {
       {ingredients.length > 0 ? (
         <ul className="flex flex-col gap-2">
           {ingredients.map((ing) => (
-            <li
-              key={ing.key}
-              className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
-            >
+            <li key={ing.key} className="glass-panel flex items-center gap-2 rounded-xl px-3 py-2.5">
               <span className="flex-1 text-sm text-[var(--text-primary)]">{ing.name}</span>
               <input
                 type="number"
                 value={ing.gramsEquivalent}
                 onChange={(e) => updateGrams(ing.key, Number(e.target.value) || 0)}
-                className="w-20 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1 text-sm text-[var(--text-primary)]"
+                className="w-16 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1 text-sm text-[var(--text-primary)]"
               />
               <span className="text-xs text-[var(--text-secondary)]">g</span>
               <button
                 type="button"
                 onClick={() => removeIngredient(ing.key)}
-                className="text-xs text-[var(--danger)]"
+                className="text-xs font-medium text-[var(--danger)] active:opacity-60"
               >
                 Quitar
               </button>

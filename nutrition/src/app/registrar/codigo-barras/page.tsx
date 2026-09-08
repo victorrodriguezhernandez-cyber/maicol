@@ -94,7 +94,7 @@ export default function BarcodeScannerPage() {
       ) : null}
 
       {state.kind === "not_found" ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <div className="glass-panel rounded-2xl p-4">
           <p className="text-sm text-[var(--text-primary)]">
             No encontramos el código {state.code} en Open Food Facts.
           </p>
@@ -115,7 +115,7 @@ export default function BarcodeScannerPage() {
       ) : null}
 
       {state.kind === "found" ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <div className="glass-panel rounded-2xl p-4">
           <p className="text-sm font-medium text-[var(--text-primary)]">
             {state.food.name} {state.food.brand ? `· ${state.food.brand}` : ""}
           </p>

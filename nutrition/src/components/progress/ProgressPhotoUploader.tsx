@@ -47,7 +47,7 @@ export function ProgressPhotoUploader() {
   }
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+    <div className="glass-panel rounded-2xl p-4">
       <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">
         Estas fotografías son privadas y nunca se envían a la IA.
       </p>

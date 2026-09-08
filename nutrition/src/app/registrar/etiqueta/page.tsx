@@ -6,6 +6,7 @@ import { compressImageToBase64 } from "@/lib/image";
 import { createCustomFood } from "@/lib/actions/foods";
 import { MealComposer, type DraftItem } from "@/components/register/MealComposer";
 import { formatKcal } from "@/lib/format";
+import { MacroInline } from "@/components/ui/MacroInline";
 
 interface LabelEstimate {
   name: string | null;
@@ -122,12 +123,17 @@ export default function EtiquetaCapturaPage() {
           </p>
         ) : null}
 
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--text-primary)]">
-          <p className="font-medium">{e.name ?? "Sin nombre detectado"}</p>
-          <p className="text-xs text-[var(--text-secondary)]">
-            {e.brand ?? ""} · {e.basis === "per_100g" ? "por 100 g" : e.basis === "per_100ml" ? "por 100 ml" : `por ración (${e.serving_size_g ?? "?"} g)`}
-          </p>
-          <p className="mt-2">{formatKcal(e.energy_kcal)} · P {e.protein_g}g · C {e.carbohydrates_g}g · G {e.fat_g}g</p>
+        <div className="glass-panel flex flex-col gap-2 rounded-2xl p-4 text-sm text-[var(--text-primary)]">
+          <div>
+            <p className="font-medium">{e.name ?? "Sin nombre detectado"}</p>
+            <p className="text-xs text-[var(--text-secondary)]">
+              {e.brand ?? ""} · {e.basis === "per_100g" ? "por 100 g" : e.basis === "per_100ml" ? "por 100 ml" : `por ración (${e.serving_size_g ?? "?"} g)`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <span className="font-numeric text-base font-semibold">{formatKcal(e.energy_kcal)}</span>
+            <MacroInline protein={e.protein_g} carbs={e.carbohydrates_g} fat={e.fat_g} fiber={e.fiber_g} />
+          </div>
         </div>
 
         <label className="flex items-center gap-2">
@@ -157,7 +163,7 @@ export default function EtiquetaCapturaPage() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-lg font-semibold text-[var(--text-primary)]">Fotografiar etiqueta</h1>
-      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--border)] px-6 py-10 text-center">
+      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--border)] px-6 py-10 text-center transition-colors duration-150 active:bg-[var(--surface-2)]">
         <span className="text-3xl">🏷️</span>
         <span className="text-sm font-medium text-[var(--accent)]">Fotografiar tabla nutricional</span>
         <input

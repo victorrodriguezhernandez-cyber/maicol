@@ -31,18 +31,17 @@ export default async function ObjetivosPage() {
       )}
 
       {history && history.length > 1 ? (
-        <section className="flex flex-col gap-1.5">
-          <p className="text-xs font-medium text-[var(--text-secondary)]">Historial de objetivos</p>
-          <ul className="flex flex-col gap-1.5">
+        <section className="flex flex-col gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+            Historial de objetivos
+          </p>
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
             {history.map((g) => (
-              <li
-                key={g.id}
-                className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
-              >
+              <li key={g.id} className="flex items-center justify-between py-2.5 text-xs">
                 <span className="text-[var(--text-secondary)]">
                   {g.effective_from} – {g.effective_to ?? "actualidad"}
                 </span>
-                <span className="font-medium text-[var(--text-primary)]">{g.kcal} kcal</span>
+                <span className="font-numeric font-semibold text-[var(--text-primary)]">{g.kcal} kcal</span>
               </li>
             ))}
           </ul>

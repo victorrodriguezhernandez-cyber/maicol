@@ -72,7 +72,7 @@ export default function OnboardingPage() {
         </p>
       </div>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      <section className="glass-panel rounded-2xl p-4">
         <p className="mb-1 text-xs font-medium text-[var(--text-secondary)]">
           Protocolo de pesaje
         </p>

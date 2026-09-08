@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createMeal, type CreateMealInput } from "@/lib/actions/meals";
 import type { MealItemSource, PrecisionLevel } from "@/lib/nutrition/types";
 import { formatKcal, formatGrams, MEAL_TYPE_LABELS } from "@/lib/format";
+import { MacroInline } from "@/components/ui/MacroInline";
 
 export interface DraftItem {
   key: string;
@@ -190,7 +191,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
         <select
           value={mealType}
           onChange={(e) => setMealType(e.target.value as typeof mealType)}
-          className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+          className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
         >
           {Object.entries(MEAL_TYPE_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -210,13 +211,13 @@ export const MealComposer = forwardRef<MealComposerHandle, {
                 <input
                   value={item.name}
                   onChange={(e) => updateItem(item.key, { name: e.target.value })}
-                  className="flex-1 bg-transparent text-sm font-medium text-[var(--text-primary)] outline-none"
+                  className="flex-1 border-0 border-b border-transparent bg-transparent text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
                 />
                 <button
                   type="button"
                   onClick={() => removeItem(item.key)}
                   aria-label="Eliminar"
-                  className="text-xs text-[var(--danger)]"
+                  className="shrink-0 text-xs font-medium text-[var(--danger)] active:opacity-60"
                 >
                   Eliminar
                 </button>
@@ -235,11 +236,8 @@ export const MealComposer = forwardRef<MealComposerHandle, {
                 </span>
               </div>
 
-              <div className="mt-1 flex items-center justify-between text-xs text-[var(--text-secondary)]">
-                <span>
-                  P {formatGrams(item.proteinG)} · C {formatGrams(item.carbohydratesG)} · G{" "}
-                  {formatGrams(item.fatG)}
-                </span>
+              <div className="mt-1.5 flex items-center justify-between gap-2">
+                <MacroInline protein={item.proteinG} carbs={item.carbohydratesG} fat={item.fatG} />
                 <ConfidenceBadge item={item} />
               </div>
 
@@ -272,7 +270,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
         <button
           type="button"
           onClick={() => setShowAddForm(true)}
-          className="rounded-2xl border border-dashed border-[var(--border)] py-3 text-sm font-medium text-[var(--accent)]"
+          className="rounded-2xl border border-dashed border-[var(--border)] py-3 text-sm font-medium text-[var(--accent)] transition-colors duration-150 active:bg-[var(--surface-2)]"
         >
           + Añadir ingrediente
         </button>

@@ -31,16 +31,16 @@ export default async function RecetasPage() {
           description="Crea tu primera receta a partir de alimentos de tu biblioteca."
         />
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
           {recipes.map((r) => (
             <li key={r.id}>
-              <Link
-                href={`/recetas/${r.id}`}
-                className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
-              >
+              <Link href={`/recetas/${r.id}`} className="tap-row flex items-center justify-between py-3">
                 <span className="text-sm font-medium text-[var(--text-primary)]">{r.name}</span>
-                <span className="text-xs text-[var(--text-secondary)]">
-                  {r.servings} ración{r.servings === 1 ? "" : "es"}
+                <span className="flex items-center gap-2">
+                  <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
+                    {r.servings} ración{r.servings === 1 ? "" : "es"}
+                  </span>
+                  <ChevronIcon />
                 </span>
               </Link>
             </li>
@@ -48,5 +48,13 @@ export default async function RecetasPage() {
         </ul>
       )}
     </div>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[var(--text-tertiary)]">
+      <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

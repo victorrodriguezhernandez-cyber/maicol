@@ -35,19 +35,16 @@ export default async function MedidasPage() {
       {!measurements?.length ? (
         <EmptyState title="Todavía no tienes medidas registradas" />
       ) : (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
           {measurements.map((m) => (
-            <li
-              key={m.id}
-              className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-            >
-              <span className="text-[var(--text-primary)]">
+            <li key={m.id} className="flex items-center justify-between py-2.5 text-sm">
+              <span className="font-medium text-[var(--text-primary)]">
                 {m.measurement_type === "custom" ? m.custom_label : TYPE_LABEL[m.measurement_type]}
               </span>
-              <span className="text-[var(--text-secondary)]">
+              <span className="text-[var(--text-tertiary)]">
                 {new Date(m.measured_at).toLocaleDateString("es-ES")}
               </span>
-              <span className="font-medium text-[var(--text-primary)]">{m.value_cm} cm</span>
+              <span className="font-numeric font-semibold text-[var(--text-primary)]">{m.value_cm} cm</span>
             </li>
           ))}
         </ul>

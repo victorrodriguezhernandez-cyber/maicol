@@ -25,6 +25,14 @@ export default function RegistrarRecetaPage() {
   );
 }
 
+function ChevronIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[var(--text-tertiary)]">
+      <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function RegistrarRecetaInner() {
   const searchParams = useSearchParams();
   const recipeId = searchParams.get("recipeId");
@@ -92,14 +100,15 @@ function RegistrarRecetaInner() {
         {recipes.length === 0 ? (
           <EmptyState title="No tienes recetas guardadas" description="Crea una desde la pestaña Recetas." />
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
             {recipes.map((r) => (
               <li key={r.id}>
                 <a
                   href={`/registrar/receta?recipeId=${r.id}`}
-                  className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm"
+                  className="tap-row flex items-center justify-between py-3 text-sm font-medium text-[var(--text-primary)]"
                 >
                   {r.name}
+                  <ChevronIcon />
                 </a>
               </li>
             ))}
@@ -140,7 +149,7 @@ function RegistrarRecetaInner() {
       <button
         type="button"
         onClick={applyPortion}
-        className="rounded-xl border border-dashed border-[var(--border)] py-2.5 text-sm font-medium text-[var(--accent)]"
+        className="rounded-xl border border-dashed border-[var(--border)] py-2.5 text-sm font-medium text-[var(--accent)] transition-colors duration-150 active:bg-[var(--surface-2)]"
       >
         Calcular
       </button>

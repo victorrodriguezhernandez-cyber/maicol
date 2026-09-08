@@ -28,17 +28,14 @@ export default async function BibliotecaAlimentosPage() {
       {!foods?.length ? (
         <EmptyState title="Todavía no tienes alimentos personalizados" />
       ) : (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
           {foods.map((f) => (
-            <li
-              key={f.id}
-              className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5"
-            >
+            <li key={f.id} className="flex items-center justify-between py-2.5">
               <div>
                 <p className="text-sm font-medium text-[var(--text-primary)]">
                   {f.name} {f.brand ? `· ${f.brand}` : ""}
                 </p>
-                <p className="text-xs text-[var(--text-secondary)]">
+                <p className="font-numeric text-xs text-[var(--text-secondary)]">
                   {formatKcal(f.energy_kcal)} / {f.basis === "per_100ml" ? "100 ml" : "100 g"}
                 </p>
               </div>

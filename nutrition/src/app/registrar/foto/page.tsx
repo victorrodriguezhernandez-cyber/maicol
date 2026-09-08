@@ -71,7 +71,7 @@ function FotoCapturaInner() {
     return (
       <div className="flex flex-col gap-4">
         {state.result.unable_to_estimate ? (
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <div className="glass-panel rounded-2xl p-4">
             <p className="text-sm font-medium text-[var(--text-primary)]">
               No hemos podido estimar esta comida con esta fotografía.
             </p>
@@ -95,7 +95,7 @@ function FotoCapturaInner() {
       <h1 className="text-lg font-semibold text-[var(--text-primary)]">Fotografiar comida</h1>
 
       {photos.length === 0 ? (
-        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--border)] px-6 py-10 text-center">
+        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--border)] px-6 py-10 text-center transition-colors duration-150 active:bg-[var(--surface-2)]">
           <span className="text-3xl">📷</span>
           <span className="text-sm font-medium text-[var(--accent)]">Hacer fotografía(s)</span>
           <input

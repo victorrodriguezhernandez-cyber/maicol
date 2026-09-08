@@ -148,6 +148,15 @@ body::before {
    every screen inventing its own flat-fill button. Deliberately no
    border-radius/padding/font-size here: those stay per-instance Tailwind
    utilities so this never fights a screen's own sizing. */
+.btn-primary,
+.btn-secondary {
+  transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease, filter 150ms ease;
+}
+.btn-primary:active:not(:disabled),
+.btn-secondary:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
 .btn-primary {
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 85%, white), var(--accent) 70%);
   color: var(--accent-fg);
@@ -174,6 +183,31 @@ body::before {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+/* A tappable row inside a divided list (settings links, recipe list,
+   export actions) — one shared press feel instead of every screen
+   reinventing active-state opacity by hand. */
+.tap-row {
+  transition: opacity 150ms ease, background-color 150ms ease;
+}
+.tap-row:active {
+  opacity: 0.55;
+}
+
+/* Shared focus feel for plain bordered inputs/selects across forms —
+   the accent border brightens instead of snapping, and text/number
+   inputs don't feel like a different, older part of the app. */
+input,
+select,
+textarea {
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
 * {

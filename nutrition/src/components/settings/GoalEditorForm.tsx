@@ -40,7 +40,7 @@ export function GoalEditorForm({ goal }: { goal: NutritionGoalRow }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+    <form onSubmit={handleSubmit} className="glass-panel flex flex-col gap-3.5 rounded-2xl p-4">
       <label className="flex flex-col gap-1">
         <span className="text-xs text-[var(--text-secondary)]">Objetivo</span>
         <select

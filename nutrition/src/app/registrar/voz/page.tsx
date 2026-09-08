@@ -91,7 +91,7 @@ export default function VozEntryPage() {
     return (
       <div className="flex flex-col gap-4">
         {state.result.unable_to_estimate ? (
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--text-primary)]">
+          <div className="glass-panel rounded-2xl p-4 text-sm text-[var(--text-primary)]">
             <p className="font-medium">No hemos entendido bien el audio.</p>
             <ul className="mt-2 list-disc pl-4 text-xs text-[var(--text-secondary)]">
               {state.result.clarifying_questions.map((q, i) => (
@@ -131,7 +131,7 @@ export default function VozEntryPage() {
             <button
               type="button"
               onClick={cancelRecording}
-              className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)]"
+              className="rounded-xl btn-secondary px-4 py-2 text-sm font-medium"
             >
               Cancelar
             </button>

@@ -57,13 +57,13 @@ export default function BuscarAlimentoPage() {
       {loading ? <p className="text-xs text-[var(--text-secondary)]">Buscando…</p> : null}
 
       {results.length > 0 ? (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="glass-panel flex flex-col divide-y divide-[var(--border-soft)] overflow-hidden rounded-2xl">
           {results.map((food) => (
             <li key={food.id}>
               <button
                 type="button"
                 onClick={() => addFood(food)}
-                className="flex w-full items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-left"
+                className="tap-row flex w-full items-center justify-between px-4 py-3 text-left"
               >
                 <div>
                   <p className="text-sm font-medium text-[var(--text-primary)]">
@@ -75,7 +75,9 @@ export default function BuscarAlimentoPage() {
                     {food.basis === "per_100ml" ? "ml" : "g"}
                   </p>
                 </div>
-                <span className="text-lg text-[var(--accent)]">+</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full btn-primary text-base leading-none">
+                  +
+                </span>
               </button>
             </li>
           ))}
