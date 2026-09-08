@@ -233,7 +233,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
                   className="w-20 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1 text-sm text-[var(--text-primary)]"
                 />
                 <span className="text-sm text-[var(--text-secondary)]">{item.quantityUnit}</span>
-                <span className="ml-auto text-sm font-medium text-[var(--text-primary)]">
+                <span className="font-numeric ml-auto text-base font-semibold text-[var(--text-primary)]">
                   {formatKcal(item.energyKcal)}
                 </span>
               </div>
@@ -281,9 +281,20 @@ export const MealComposer = forwardRef<MealComposerHandle, {
         </button>
       )}
 
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-primary)]">
-        Total: <strong>{formatKcal(totals.kcal)}</strong> · P {formatGrams(totals.protein)} · C{" "}
-        {formatGrams(totals.carbs)} · G {formatGrams(totals.fat)}
+      <div className="flex flex-col gap-3 rounded-2xl bg-[var(--surface-2)] p-4">
+        <div className="flex items-baseline justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+            Total de la comida
+          </p>
+          <p className="font-numeric text-2xl font-semibold text-[var(--text-primary)]">
+            {formatKcal(totals.kcal)}
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <TotalChip label="Proteína" value={totals.protein} color="var(--metric-protein)" />
+          <TotalChip label="Carbos" value={totals.carbs} color="var(--metric-carbs)" />
+          <TotalChip label="Grasas" value={totals.fat} color="var(--metric-fat)" />
+        </div>
       </div>
 
       {error ? <p className="text-xs text-[var(--danger)]">{error}</p> : null}
@@ -299,6 +310,18 @@ export const MealComposer = forwardRef<MealComposerHandle, {
     </div>
   );
 });
+
+function TotalChip({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
+        <span className="text-[11px] text-[var(--text-secondary)]">{label}</span>
+      </div>
+      <p className="font-numeric text-sm font-semibold text-[var(--text-primary)]">{formatGrams(value)}</p>
+    </div>
+  );
+}
 
 function ConfidenceBadge({ item }: { item: DraftItem }) {
   const label =
@@ -318,7 +341,10 @@ function ConfidenceBadge({ item }: { item: DraftItem }) {
         ? "var(--accent)"
         : "var(--warning)";
   return (
-    <span className="font-medium" style={{ color }}>
+    <span
+      className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+      style={{ color, backgroundColor: "var(--surface-2)" }}
+    >
       {label}
     </span>
   );

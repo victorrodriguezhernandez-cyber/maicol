@@ -38,8 +38,9 @@ export default async function MealDetailPage({
         <DeleteMealButton mealId={meal.id} />
       </div>
 
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-primary)]">
-        Total: <strong>{formatKcal(totalKcal)}</strong>
+      <div className="flex items-baseline justify-between rounded-2xl bg-[var(--surface-2)] p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Total</p>
+        <p className="font-numeric text-xl font-semibold text-[var(--text-primary)]">{formatKcal(totalKcal)}</p>
       </div>
 
       <ul className="flex flex-col gap-2">

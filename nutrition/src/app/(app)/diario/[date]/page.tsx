@@ -77,7 +77,7 @@ export default async function DiaryDatePage({
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                    <p className="font-numeric text-sm font-semibold text-[var(--text-primary)]">
                       {formatKcal(mealTotals.energy_kcal)}
                     </p>
                     <p className="text-xs text-[var(--text-secondary)]">

@@ -43,7 +43,7 @@ export default async function ProgresoPage() {
           <div className="flex items-end justify-between">
             <div>
               <p className="text-[11px] text-[var(--text-tertiary)]">Tendencia</p>
-              <p className="text-3xl font-semibold tabular-nums" style={{ color: "var(--metric-weight)" }}>
+              <p className="font-numeric text-3xl font-semibold" style={{ color: "var(--metric-weight)" }}>
                 {last ? formatKg(last.trendKg) : "—"}
               </p>
             </div>
@@ -94,7 +94,7 @@ export default async function ProgresoPage() {
                       minute: "2-digit",
                     })}
                   </span>
-                  <span className="font-semibold tabular-nums text-[var(--text-primary)]">{formatKg(e.weight_kg)}</span>
+                  <span className="font-numeric font-semibold text-[var(--text-primary)]">{formatKg(e.weight_kg)}</span>
                   <DeleteWeightButton id={e.id} />
                 </li>
               ))}

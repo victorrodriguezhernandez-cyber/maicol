@@ -62,7 +62,7 @@ export default async function TodayPage() {
           Calorías de hoy
         </p>
         <div className="flex items-baseline gap-2.5">
-          <span className="text-[3.25rem] font-semibold leading-none tracking-tight tabular-nums text-[var(--text-primary)]">
+          <span className="font-numeric text-[3.25rem] font-semibold leading-none text-[var(--text-primary)]">
             {Math.round(totals.energy_kcal)}
           </span>
           <span className="text-sm font-medium text-[var(--text-secondary)]">
@@ -97,13 +97,13 @@ export default async function TodayPage() {
           <div className="flex items-center gap-5">
             <div className="text-right">
               <p className="text-[11px] text-[var(--text-tertiary)]">Tendencia</p>
-              <p className="text-sm font-semibold tabular-nums" style={{ color: "var(--metric-weight)" }}>
+              <p className="font-numeric text-sm font-semibold" style={{ color: "var(--metric-weight)" }}>
                 {formatKg(lastTrend.trendKg)}
               </p>
             </div>
             <div className="text-right">
               <p className="text-[11px] text-[var(--text-tertiary)]">Ritmo/sem.</p>
-              <p className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+              <p className="font-numeric text-sm font-semibold text-[var(--text-primary)]">
                 {weeklyRate.weeklyRateKg != null ? formatSignedKgPerWeek(weeklyRate.weeklyRateKg) : "—"}
               </p>
             </div>
@@ -147,7 +147,7 @@ export default async function TodayPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+                      <p className="font-numeric text-sm font-semibold text-[var(--text-primary)]">
                         {formatKcal(mealTotals.energy_kcal)}
                       </p>
                       <p className="text-xs text-[var(--text-tertiary)]">
@@ -182,7 +182,7 @@ function MacroChip({
         <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
         <span className="text-[11px] text-[var(--text-secondary)]">{label}</span>
       </div>
-      <p className="text-base font-semibold tabular-nums text-[var(--text-primary)]">
+      <p className="font-numeric text-base font-semibold text-[var(--text-primary)]">
         {formatGrams(value)}
         <span className="text-xs font-normal text-[var(--text-tertiary)]"> /{formatGrams(goal)}</span>
       </p>

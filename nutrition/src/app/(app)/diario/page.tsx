@@ -44,10 +44,10 @@ export default async function DiarioPage() {
                 </p>
               </div>
               <div className="text-right text-xs text-[var(--text-secondary)]">
-                <p className="text-sm font-medium text-[var(--text-primary)]">
+                <p className="font-numeric text-sm font-semibold text-[var(--text-primary)]">
                   {formatKcal(day.totalKcal)}
                 </p>
-                {day.weightKg ? <p>{formatKg(day.weightKg)}</p> : null}
+                {day.weightKg ? <p className="font-numeric">{formatKg(day.weightKg)}</p> : null}
               </div>
             </Link>
           </li>
