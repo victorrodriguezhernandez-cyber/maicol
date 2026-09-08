@@ -30,31 +30,26 @@ export default async function ProgresoPage() {
   const lastObserved = entries.at(-1);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Progreso</h1>
+    <div className="flex flex-col gap-7">
+      <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Progreso</h1>
 
       <WeightLogForm />
 
       {points.length === 0 ? (
         <EmptyState title="Todavía no tienes pesajes registrados" />
       ) : (
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="mb-3 flex items-center justify-between">
+        <section className="flex flex-col gap-1">
+          {/* Annotations live right against the chart, not boxed above it. */}
+          <div className="flex items-end justify-between">
             <div>
-              <p className="text-xs text-[var(--text-secondary)]">Hoy</p>
-              <p className="text-lg font-semibold text-[var(--text-primary)]">
-                {lastObserved ? formatKg(lastObserved.weight_kg) : "—"}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-[var(--text-secondary)]">Tendencia</p>
-              <p className="text-lg font-semibold text-[var(--text-primary)]">
+              <p className="text-[11px] text-[var(--text-tertiary)]">Tendencia</p>
+              <p className="text-3xl font-semibold tabular-nums" style={{ color: "var(--metric-weight)" }}>
                 {last ? formatKg(last.trendKg) : "—"}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-[var(--text-secondary)]">Cambio estimado</p>
-              <p className="text-lg font-semibold text-[var(--text-primary)]">
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                Hoy {lastObserved ? formatKg(lastObserved.weight_kg) : "—"} · Cambio/sem.{" "}
                 {weeklyRate.weeklyRateKg != null ? formatSignedKgPerWeek(weeklyRate.weeklyRateKg) : "—"}
               </p>
             </div>
@@ -63,34 +58,35 @@ export default async function ProgresoPage() {
         </section>
       )}
 
-      <div className="grid grid-cols-2 gap-2">
+      <section className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
         <Link
           href="/progreso/medidas"
-          className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--text-primary)]"
+          className="flex items-center justify-between py-3 text-sm font-medium text-[var(--text-primary)] active:opacity-70"
         >
           Medidas corporales
+          <ChevronIcon />
         </Link>
         <Link
           href="/progreso/fotos"
-          className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--text-primary)]"
+          className="flex items-center justify-between py-3 text-sm font-medium text-[var(--text-primary)] active:opacity-70"
         >
           Fotos de progreso
+          <ChevronIcon />
         </Link>
-      </div>
+      </section>
 
       {entries.length > 0 ? (
-        <section className="flex flex-col gap-1.5">
-          <p className="text-xs font-medium text-[var(--text-secondary)]">Pesajes recientes</p>
-          <ul className="flex flex-col gap-1.5">
+        <section className="flex flex-col gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+            Pesajes recientes
+          </p>
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
             {[...entries]
               .reverse()
               .slice(0, 10)
               .map((e) => (
-                <li
-                  key={e.id}
-                  className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-                >
-                  <span className="text-[var(--text-secondary)]">
+                <li key={e.id} className="flex items-center justify-between py-2.5 text-sm">
+                  <span className="text-[var(--text-tertiary)]">
                     {new Date(e.measured_at).toLocaleString("es-ES", {
                       day: "2-digit",
                       month: "2-digit",
@@ -98,7 +94,7 @@ export default async function ProgresoPage() {
                       minute: "2-digit",
                     })}
                   </span>
-                  <span className="font-medium text-[var(--text-primary)]">{formatKg(e.weight_kg)}</span>
+                  <span className="font-semibold tabular-nums text-[var(--text-primary)]">{formatKg(e.weight_kg)}</span>
                   <DeleteWeightButton id={e.id} />
                 </li>
               ))}
@@ -106,5 +102,13 @@ export default async function ProgresoPage() {
         </section>
       ) : null}
     </div>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[var(--text-tertiary)]">
+      <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

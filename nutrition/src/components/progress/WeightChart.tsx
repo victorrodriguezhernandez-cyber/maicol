@@ -29,18 +29,22 @@ export function WeightChart({ points }: { points: WeightChartPoint[] }) {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const isDark = document.documentElement.getAttribute("data-theme") === "dark" ||
-      (!document.documentElement.getAttribute("data-theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    // Read the actual colors from CSS custom properties rather than
+    // duplicating hex values here — keeps the chart in sync with the
+    // shared metric-weight token (and the light/dark pair) instead of
+    // drifting from it.
+    const styles = getComputedStyle(document.documentElement);
+    const cssVar = (name: string) => styles.getPropertyValue(name).trim();
 
     const chart = createChart(containerRef.current, {
-      height: 220,
+      height: 260,
       layout: {
         background: { color: "transparent" },
-        textColor: isDark ? "#9aa3ae" : "#6b7280",
+        textColor: cssVar("--text-secondary"),
       },
       grid: {
         vertLines: { visible: false },
-        horzLines: { color: isDark ? "#262b33" : "#e5e7eb" },
+        horzLines: { color: cssVar("--border-soft") },
       },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
@@ -50,13 +54,13 @@ export function WeightChart({ points }: { points: WeightChartPoint[] }) {
     chartRef.current = chart;
 
     const trendSeries = chart.addSeries(LineSeries, {
-      color: "#0F766E",
+      color: cssVar("--metric-weight"),
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
     });
     const observedSeries = chart.addSeries(LineSeries, {
-      color: isDark ? "#5EEAD4" : "#94A3B8",
+      color: cssVar("--text-tertiary"),
       lineVisible: false,
       pointMarkersVisible: true,
       pointMarkersRadius: 3,

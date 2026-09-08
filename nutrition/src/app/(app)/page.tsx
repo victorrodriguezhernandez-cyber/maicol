@@ -51,95 +51,106 @@ export default async function TodayPage() {
 
   const lastTrend = trendPoints.at(-1);
   const lastObserved = weightEntries.at(-1);
+  const remaining = goal.kcal - totals.energy_kcal;
 
   return (
-    <div className="flex flex-col gap-5">
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-        <div className="flex items-baseline justify-between">
-          <p className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">
-            {Math.round(totals.energy_kcal)}{" "}
-            <span className="text-sm font-normal text-[var(--text-secondary)]">
-              / {goal.kcal} kcal
-            </span>
-          </p>
+    <div className="flex flex-col gap-7">
+      {/* Hero: today's calories dominate the screen — everything else is
+          secondary, on purpose (section 3 of the design pass). */}
+      <section className="flex flex-col gap-3 pt-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+          Calorías de hoy
+        </p>
+        <div className="flex items-baseline gap-2.5">
+          <span className="text-[3.25rem] font-semibold leading-none tracking-tight tabular-nums text-[var(--text-primary)]">
+            {Math.round(totals.energy_kcal)}
+          </span>
+          <span className="text-sm font-medium text-[var(--text-secondary)]">
+            / {goal.kcal} kcal
+          </span>
         </div>
-        <div className="mt-2">
-          <ProgressBar value={totals.energy_kcal} max={goal.kcal} />
-        </div>
-
-        <div className="mt-4 flex flex-col gap-2.5">
-          <MacroRow label="Proteína" value={totals.protein_g} goal={goal.protein_g} color="#0F766E" />
-          <MacroRow label="Carbohidratos" value={totals.carbohydrates_g} goal={goal.carbohydrates_g} color="#B45309" />
-          <MacroRow label="Grasas" value={totals.fat_g} goal={goal.fat_g} color="#7C3AED" />
-          {goal.fiber_g ? (
-            <MacroRow label="Fibra" value={totals.fiber_g ?? 0} goal={goal.fiber_g} color="#15803D" />
-          ) : null}
-        </div>
+        <ProgressBar value={totals.energy_kcal} max={goal.kcal} />
+        <p className="text-xs text-[var(--text-tertiary)]">
+          {remaining >= 0
+            ? `Quedan ${formatKcal(remaining)}`
+            : `${formatKcal(Math.abs(remaining))} por encima del objetivo`}
+        </p>
       </section>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-        <p className="text-xs font-medium text-[var(--text-secondary)]">Estado del volumen</p>
+      {/* Macros: compact chips instead of four equal full-width bars. */}
+      <section className="grid grid-cols-3 gap-x-4 gap-y-4 border-t border-[var(--border-soft)] pt-5">
+        <MacroChip label="Proteína" value={totals.protein_g} goal={goal.protein_g} color="var(--metric-protein)" />
+        <MacroChip label="Carbos" value={totals.carbohydrates_g} goal={goal.carbohydrates_g} color="var(--metric-carbs)" />
+        <MacroChip label="Grasas" value={totals.fat_g} goal={goal.fat_g} color="var(--metric-fat)" />
+        {goal.fiber_g ? (
+          <MacroChip label="Fibra" value={totals.fiber_g ?? 0} goal={goal.fiber_g} color="var(--metric-fiber)" />
+        ) : null}
+      </section>
+
+      {/* Volumen: its own soft surface (not a bordered card) so it reads as
+          a distinct concept from the macro chips above it. */}
+      <section className="flex items-center justify-between rounded-2xl bg-[var(--surface-2)] px-4 py-3.5">
+        <p className="text-xs font-medium text-[var(--text-secondary)]">Volumen</p>
         {!lastTrend ? (
-          <p className="mt-2 text-sm text-[var(--text-primary)]">
-            Todavía no hay pesajes registrados.
-          </p>
+          <p className="text-sm text-[var(--text-primary)]">Sin pesajes todavía</p>
         ) : (
-          <div className="mt-2 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-[var(--text-secondary)]">Tendencia</p>
-              <p className="text-base font-semibold text-[var(--text-primary)]">
+          <div className="flex items-center gap-5">
+            <div className="text-right">
+              <p className="text-[11px] text-[var(--text-tertiary)]">Tendencia</p>
+              <p className="text-sm font-semibold tabular-nums" style={{ color: "var(--metric-weight)" }}>
                 {formatKg(lastTrend.trendKg)}
               </p>
-              {lastObserved ? (
-                <p className="text-xs text-[var(--text-secondary)]">
-                  Hoy: {formatKg(lastObserved.weight_kg)}
-                </p>
-              ) : null}
             </div>
             <div className="text-right">
-              <p className="text-xs text-[var(--text-secondary)]">Ritmo semanal</p>
-              <p className="text-base font-semibold text-[var(--text-primary)]">
-                {weeklyRate.weeklyRateKg != null
-                  ? formatSignedKgPerWeek(weeklyRate.weeklyRateKg)
-                  : "Sin datos suficientes"}
+              <p className="text-[11px] text-[var(--text-tertiary)]">Ritmo/sem.</p>
+              <p className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+                {weeklyRate.weeklyRateKg != null ? formatSignedKgPerWeek(weeklyRate.weeklyRateKg) : "—"}
               </p>
-              <StatusBadge status={weeklyRate.status} mode={goal.mode} />
             </div>
+            <StatusBadge status={weeklyRate.status} mode={goal.mode} />
           </div>
         )}
       </section>
 
+      {/* Diario: a light list of rows, not a stack of identical cards. */}
       <section className="flex flex-col gap-2">
-        <p className="text-xs font-medium text-[var(--text-secondary)]">Diario de hoy</p>
+        <div className="flex items-baseline justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+            Diario de hoy
+          </p>
+          {lastObserved ? (
+            <p className="text-[11px] text-[var(--text-tertiary)]">Hoy: {formatKg(lastObserved.weight_kg)}</p>
+          ) : null}
+        </div>
         {meals.length === 0 ? (
           <EmptyState
             title="Sin comidas registradas todavía"
             description="Usa el botón Registrar para añadir tu primera comida del día."
           />
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
             {meals.map((meal) => {
               const mealTotals = sumMealItems(meal.meal_items);
               return (
                 <li key={meal.id}>
                   <Link
                     href={`/diario/comida/${meal.id}`}
-                    className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 active:bg-[var(--surface-2)]"
+                    className="flex items-center justify-between py-3 active:opacity-70"
                   >
                     <div>
                       <p className="text-sm font-medium text-[var(--text-primary)]">
                         {formatTime(meal.occurred_at)} — {MEAL_TYPE_LABELS[meal.meal_type]}
                       </p>
-                      <p className="text-xs text-[var(--text-secondary)]">
+                      <p className="text-xs text-[var(--text-tertiary)]">
                         {meal.meal_items.length} alimento
                         {meal.meal_items.length === 1 ? "" : "s"}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                      <p className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">
                         {formatKcal(mealTotals.energy_kcal)}
                       </p>
-                      <p className="text-xs text-[var(--text-secondary)]">
+                      <p className="text-xs text-[var(--text-tertiary)]">
                         {formatGrams(mealTotals.protein_g)} prot.
                       </p>
                     </div>
@@ -154,7 +165,7 @@ export default async function TodayPage() {
   );
 }
 
-function MacroRow({
+function MacroChip({
   label,
   value,
   goal,
@@ -166,13 +177,15 @@ function MacroRow({
   color: string;
 }) {
   return (
-    <div>
-      <div className="mb-1 flex items-baseline justify-between text-xs">
-        <span className="text-[var(--text-secondary)]">{label}</span>
-        <span className="tabular-nums text-[var(--text-primary)]">
-          {formatGrams(value)} / {formatGrams(goal)}
-        </span>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
+        <span className="text-[11px] text-[var(--text-secondary)]">{label}</span>
       </div>
+      <p className="text-base font-semibold tabular-nums text-[var(--text-primary)]">
+        {formatGrams(value)}
+        <span className="text-xs font-normal text-[var(--text-tertiary)]"> /{formatGrams(goal)}</span>
+      </p>
       <ProgressBar value={value} max={goal} color={color} />
     </div>
   );
@@ -187,19 +200,22 @@ function StatusBadge({
 }) {
   if (mode === "maintain") return null;
   const labels: Record<typeof status, string> = {
-    insufficient_data: "Datos insuficientes",
-    below_target: "Por debajo del objetivo",
+    insufficient_data: "Sin datos",
+    below_target: "Por debajo",
     on_target: "En objetivo",
-    above_target: "Por encima del objetivo",
+    above_target: "Por encima",
   };
   const colors: Record<typeof status, string> = {
-    insufficient_data: "var(--text-secondary)",
+    insufficient_data: "var(--text-tertiary)",
     below_target: "var(--warning)",
     on_target: "var(--success)",
     above_target: "var(--warning)",
   };
   return (
-    <p className="text-[11px] font-medium" style={{ color: colors[status] }}>
+    <p
+      className="rounded-full px-2 py-1 text-[10px] font-semibold"
+      style={{ color: colors[status], backgroundColor: "var(--surface)" }}
+    >
       {labels[status]}
     </p>
   );

@@ -58,7 +58,10 @@ export default async function CoachIaPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Coach IA</h1>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Coach IA</h1>
+        <p className="text-xs text-[var(--text-tertiary)]">Conoce tus datos reales de nutrición y peso.</p>
+      </div>
       {adaptiveCard}
       <ChatCoach currentGoal={goal} />
     </div>

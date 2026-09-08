@@ -4,15 +4,30 @@
   --app-bg: #f7f8fa;
   --surface: #ffffff;
   --surface-2: #f1f3f5;
+  --surface-raised: #ffffff;
   --border: #e5e7eb;
+  --border-soft: #eef0f2;
   --text-primary: #12161c;
   --text-secondary: #6b7280;
+  --text-tertiary: #9aa1ac;
   --accent: #0f766e;
   --accent-fg: #ffffff;
   --accent-soft: #ccfbf1;
   --danger: #dc2626;
   --success: #16a34a;
   --warning: #d97706;
+
+  /* Semantic metric colors — one hue per concept, used consistently across
+     Hoy/Progreso/Diario instead of the accent teal standing in for
+     everything. Keep these distinct from --accent (reserved for actions/
+     interactive elements) so a screen full of data doesn't read as a wall
+     of buttons. */
+  --metric-protein: #0f766e;
+  --metric-carbs: #b45309;
+  --metric-fat: #7c3aed;
+  --metric-fiber: #15803d;
+  --metric-weight: #2563eb;
+  --metric-weight-soft: #dbeafe;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,12 +35,22 @@
     --app-bg: #0b0d10;
     --surface: #15181d;
     --surface-2: #1d2127;
+    --surface-raised: #1a1e24;
     --border: #262b33;
+    --border-soft: #1c2027;
     --text-primary: #f5f7fa;
     --text-secondary: #9aa3ae;
+    --text-tertiary: #6b7280;
     --accent: #5eead4;
     --accent-fg: #04201c;
     --accent-soft: #113330;
+
+    --metric-protein: #2dd4bf;
+    --metric-carbs: #f59e0b;
+    --metric-fat: #a78bfa;
+    --metric-fiber: #4ade80;
+    --metric-weight: #60a5fa;
+    --metric-weight-soft: #17284a;
   }
 }
 
@@ -33,12 +58,22 @@
   --app-bg: #0b0d10;
   --surface: #15181d;
   --surface-2: #1d2127;
+  --surface-raised: #1a1e24;
   --border: #262b33;
+  --border-soft: #1c2027;
   --text-primary: #f5f7fa;
   --text-secondary: #9aa3ae;
+  --text-tertiary: #6b7280;
   --accent: #5eead4;
   --accent-fg: #04201c;
   --accent-soft: #113330;
+
+  --metric-protein: #2dd4bf;
+  --metric-carbs: #f59e0b;
+  --metric-fat: #a78bfa;
+  --metric-fiber: #4ade80;
+  --metric-weight: #60a5fa;
+  --metric-weight-soft: #17284a;
 }
 
 @theme inline {
@@ -48,6 +83,11 @@
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-accent: var(--accent);
+  --color-metric-protein: var(--metric-protein);
+  --color-metric-carbs: var(--metric-carbs);
+  --color-metric-fat: var(--metric-fat);
+  --color-metric-fiber: var(--metric-fiber);
+  --color-metric-weight: var(--metric-weight);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

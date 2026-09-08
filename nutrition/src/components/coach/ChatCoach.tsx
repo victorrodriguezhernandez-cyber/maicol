@@ -84,7 +84,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         {messages.length === 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {SUGGESTED_PROMPTS.map((p) => (
@@ -100,22 +100,32 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
           </div>
         ) : null}
 
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm ${
-              m.role === "user"
-                ? "ml-auto bg-[var(--accent)] text-[var(--accent-fg)]"
-                : "bg-[var(--surface)] text-[var(--text-primary)]"
-            }`}
-          >
-            {m.role === "assistant" ? formatCoachText(m.content) : m.content}
-          </div>
-        ))}
+        {messages.map((m, i) =>
+          m.role === "user" ? (
+            <div
+              key={i}
+              className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-[var(--accent)] px-3.5 py-2.5 text-sm text-[var(--accent-fg)]"
+            >
+              {m.content}
+            </div>
+          ) : (
+            <div key={i} className="flex max-w-[90%] items-start gap-2">
+              <CoachAvatar />
+              <div className="rounded-2xl rounded-tl-md bg-[var(--surface-2)] px-3.5 py-2.5 text-sm text-[var(--text-primary)]">
+                {formatCoachText(m.content)}
+              </div>
+            </div>
+          ),
+        )}
 
         {isPending ? (
-          <div className="max-w-[60%] rounded-2xl bg-[var(--surface)] px-3.5 py-2.5 text-sm text-[var(--text-secondary)]">
-            …
+          <div className="flex items-center gap-2">
+            <CoachAvatar />
+            <div className="flex gap-1 rounded-2xl rounded-tl-md bg-[var(--surface-2)] px-3.5 py-3">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)] [animation-delay:-0.2s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)] [animation-delay:0.2s]" />
+            </div>
           </div>
         ) : null}
 
@@ -160,23 +170,47 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
           e.preventDefault();
           send(input);
         }}
-        className="sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5"
+        className="sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] flex items-center gap-1.5 rounded-full bg-[var(--surface-raised)] p-1.5 shadow-lg shadow-black/10"
       >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Pregunta algo sobre tus datos…"
-          className="flex-1 bg-transparent px-2 py-1.5 text-sm text-[var(--text-primary)] outline-none"
+          className="flex-1 bg-transparent px-3 py-2 text-sm text-[var(--text-primary)] outline-none"
         />
         <button
           type="submit"
           disabled={!input.trim() || isPending}
-          className="rounded-xl bg-[var(--accent)] px-4 py-1.5 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-fg)] disabled:opacity-40"
+          aria-label="Enviar"
         >
-          Enviar
+          <SendIcon />
         </button>
       </form>
     </div>
+  );
+}
+
+function CoachAvatar() {
+  return (
+    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-soft)] text-[var(--accent)]">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 3.5c.4 2.6 1 4.1 2 5.1s2.5 1.6 5.1 2c-2.6.4-4.1 1-5.1 2s-1.6 2.5-2 5.1c-.4-2.6-1-4.1-2-5.1s-2.5-1.6-5.1-2c2.6-.4 4.1-1 5.1-2s1.6-2.5 2-5.1Z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M4 12l16-7-6 7 6 7-16-7Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
   );
 }
 

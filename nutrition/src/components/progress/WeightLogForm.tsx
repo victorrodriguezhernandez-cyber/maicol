@@ -25,7 +25,7 @@ export function WeightLogForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+    <form onSubmit={handleSubmit} className="rounded-2xl bg-[var(--surface-2)] p-4">
       <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">Registrar peso de hoy</p>
       <div className="flex items-center gap-2">
         <input
