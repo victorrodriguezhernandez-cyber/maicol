@@ -17,6 +17,29 @@ function getClient(): GoogleGenAI {
 
 export class GeminiUnavailableError extends Error {}
 
+// Gemini occasionally returns a transient error — a per-minute rate limit
+// (429) or "model currently experiencing high demand" (503 UNAVAILABLE) —
+// that has nothing to do with the key being misconfigured (that's
+// GeminiUnavailableError, thrown before any request is even made). Retry a
+// couple of times with backoff before giving up, since these are commonly
+// resolved within a second or two.
+export function isTransientGeminiError(e: unknown): boolean {
+  const message = e instanceof Error ? e.message : String(e);
+  return /429|503|rate.?limit|overloaded|unavailable|high demand/i.test(message);
+}
+
+export async function withGeminiRetry<T>(fn: () => Promise<T>): Promise<T> {
+  const backoffMs = [500, 1500];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (attempt >= backoffMs.length || !isTransientGeminiError(e)) throw e;
+      await new Promise((resolve) => setTimeout(resolve, backoffMs[attempt]));
+    }
+  }
+}
+
 export interface StructuredGenerationInput {
   systemInstruction: string;
   parts: Array<
@@ -40,15 +63,17 @@ export async function generateStructured({
   responseSchema,
 }: StructuredGenerationInput): Promise<unknown> {
   const ai = getClient();
-  const response = await ai.models.generateContent({
-    model: getGeminiModel(),
-    contents: [{ role: "user", parts }],
-    config: {
-      systemInstruction,
-      responseMimeType: "application/json",
-      responseSchema,
-    },
-  });
+  const response = await withGeminiRetry(() =>
+    ai.models.generateContent({
+      model: getGeminiModel(),
+      contents: [{ role: "user", parts }],
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema,
+      },
+    }),
+  );
 
   const text = response.text;
   if (!text) throw new Error("Gemini returned an empty response");

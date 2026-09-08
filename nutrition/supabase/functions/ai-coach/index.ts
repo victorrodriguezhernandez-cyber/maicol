@@ -6,7 +6,7 @@
 // the client to show a confirmation UI for (section 33: no silent writes).
 import { handleOptions, corsHeaders } from "../_shared/cors.ts";
 import { requireUser } from "../_shared/auth.ts";
-import { GeminiUnavailableError, getGeminiModel } from "../_shared/gemini.ts";
+import { GeminiUnavailableError, getGeminiModel, withGeminiRetry } from "../_shared/gemini.ts";
 import { computeTrend, weeklyRate } from "../_shared/trend.ts";
 import { GoogleGenAI, type FunctionDeclaration, Type } from "npm:@google/genai@^1.0.0";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@^2.45.0";
@@ -146,11 +146,13 @@ Deno.serve(async (req) => {
     const toolLog: unknown[] = [];
 
     for (let iteration = 0; iteration < 5; iteration++) {
-      const response = await generateWithRetry(ai, {
-        model: getGeminiModel(),
-        contents,
-        config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ functionDeclarations: tools }] },
-      });
+      const response = await withGeminiRetry(() =>
+        ai.models.generateContent({
+          model: getGeminiModel(),
+          contents,
+          config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ functionDeclarations: tools }] },
+        }),
+      );
 
       const calls = response.functionCalls ?? [];
       if (calls.length === 0) {
@@ -425,33 +427,6 @@ function daysBetween(a: string, b: string): number {
 }
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-// Gemini's free tier enforces a per-minute request rate limit, and the API
-// occasionally returns a transient 503 "model overloaded". Neither means the
-// key is misconfigured (that's GeminiUnavailableError, checked separately
-// above) — retry a couple of times with backoff before giving up, since a
-// single tool-use conversation can call generateContent several times in a
-// short window and a real user hitting the coach twice in under a minute
-// shouldn't see an error at all.
-async function generateWithRetry(
-  ai: GoogleGenAI,
-  params: Parameters<GoogleGenAI["models"]["generateContent"]>[0],
-): ReturnType<GoogleGenAI["models"]["generateContent"]> {
-  const backoffMs = [500, 1500];
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await ai.models.generateContent(params);
-    } catch (e) {
-      if (attempt >= backoffMs.length || !isTransientGeminiError(e)) throw e;
-      await new Promise((resolve) => setTimeout(resolve, backoffMs[attempt]));
-    }
-  }
-}
-
-function isTransientGeminiError(e: unknown): boolean {
-  const message = e instanceof Error ? e.message : String(e);
-  return /429|503|rate.?limit|overloaded|unavailable/i.test(message);
 }
 
 // Gemini's FunctionResponse.response field is a Struct — it must be a JSON
