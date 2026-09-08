@@ -88,13 +88,30 @@ was configured, in case you ever need to redo it for a new project:
   desplegar producción" (spec section 66) refers to. Every push to `main`
   auto-deploys to production; other branches/PRs get preview deployments.
 
-## 3. Supabase Auth email template (optional but recommended)
+## 3. Supabase Auth URL Configuration (REQUIRED — do this before the first sign-in)
 
-The default Supabase magic-link email works out of the box. To customize
-it: Supabase Dashboard → Authentication → Email Templates → Magic Link.
-Make sure the redirect URL allowlist (Authentication → URL Configuration)
-includes your Vercel production domain plus
-`https://<domain>/auth/callback`.
+By default a fresh Supabase project's Auth **Site URL** is
+`http://localhost:3000`, and its **Redirect URLs** allowlist only matches
+that. Our login page passes `emailRedirectTo: <origin>/auth/callback` to
+`signInWithOtp`, but Supabase silently **ignores** that and falls back to
+the default Site URL if the requested redirect isn't on the allowlist —
+so until this is set, every confirmation/magic-link email links to
+`localhost` and fails on a real device (confirmed live: this is exactly
+what happened on first sign-in attempt).
+
+Supabase Dashboard → your project → **Authentication → URL
+Configuration**:
+
+- **Site URL** → your production domain, e.g. `https://maicol-6vwk.vercel.app`
+- **Redirect URLs** → add `https://maicol-6vwk.vercel.app/**`
+
+There's no API/MCP tool exposed for this setting — it has to be set from
+the dashboard. After changing it, request a **new** sign-in email; any
+email sent before this change has the broken `localhost` link baked in
+and can't be salvaged.
+
+The default magic-link/confirm-signup email templates work fine as-is;
+customizing them (Authentication → Email Templates) is optional.
 
 ## 4. Verifying the deployment
 
