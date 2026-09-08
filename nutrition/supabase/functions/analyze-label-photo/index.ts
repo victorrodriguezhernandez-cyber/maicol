@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     await supabase.from("ai_analyses").insert({
       user_id: user.id,
       analysis_type: "label",
-      model: Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash",
+      model: Deno.env.get("GEMINI_MODEL") ?? "gemini-3.6-flash",
       structured_result: parsed.data,
       confidence: parsed.data.legible ? "medium" : "low",
       accepted: false,

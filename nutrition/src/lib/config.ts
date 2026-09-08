@@ -35,7 +35,7 @@ export const serverConfig = {
     return process.env.GEMINI_API_KEY;
   },
   get geminiModel(): string {
-    return process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+    return process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
   },
   get usdaApiKey(): string | undefined {
     return process.env.USDA_API_KEY;

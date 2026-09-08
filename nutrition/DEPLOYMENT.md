@@ -27,7 +27,7 @@ supabase login
 supabase link --project-ref pyiukqeuaxonsrrgbfzq
 
 supabase secrets set GEMINI_API_KEY=your-real-key
-supabase secrets set GEMINI_MODEL=gemini-2.5-flash   # optional, this is the default
+supabase secrets set GEMINI_MODEL=gemini-3.6-flash   # optional, this is the default
 ```
 
 `SUPABASE_URL` and `SUPABASE_ANON_KEY` are already available to every Edge

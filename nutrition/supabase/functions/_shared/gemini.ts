@@ -4,7 +4,7 @@
 import { GoogleGenAI } from "npm:@google/genai@^1.0.0";
 
 export function getGeminiModel(): string {
-  return Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+  return Deno.env.get("GEMINI_MODEL") ?? "gemini-3.6-flash";
 }
 
 function getClient(): GoogleGenAI {
