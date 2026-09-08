@@ -6,6 +6,7 @@ import { SignOutButton } from "@/components/settings/SignOutButton";
 const LINKS = [
   { href: "/ajustes/objetivos", label: "Objetivos nutricionales" },
   { href: "/ajustes/perfil", label: "Perfil y preferencias" },
+  { href: "/ajustes/seguridad", label: "Seguridad y acceso" },
   { href: "/ajustes/alimentos", label: "Biblioteca de alimentos" },
   { href: "/recetas", label: "Recetas" },
 ] as const;
