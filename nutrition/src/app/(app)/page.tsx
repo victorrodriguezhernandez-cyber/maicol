@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import {
   getCurrentGoal,
   getMealsForDate,
+  getProfileDisplayName,
   getWeightEntriesSince,
   sumMealItems,
   sumMeals,
@@ -28,18 +29,14 @@ export default async function TodayPage() {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUser(supabase);
   if (!user) redirect("/login");
 
   const goal = await getCurrentGoal(supabase, user.id);
   if (!goal) redirect("/onboarding");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name")
-    .eq("id", user.id)
-    .maybeSingle();
-  const firstName = profile?.display_name?.split(" ")[0] ?? null;
+  const displayName = await getProfileDisplayName(supabase, user.id);
+  const firstName = displayName?.split(" ")[0] ?? null;
   const hour = localHour();
   const greeting = hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
 

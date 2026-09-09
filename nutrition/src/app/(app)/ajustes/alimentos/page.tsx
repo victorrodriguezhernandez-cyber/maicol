@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { formatKcal } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DeleteFoodButton } from "@/components/settings/DeleteFoodButton";
@@ -8,7 +8,7 @@ export default async function BibliotecaAlimentosPage() {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUser(supabase);
   if (!user) redirect("/login");
 
   const { data: foods } = await supabase

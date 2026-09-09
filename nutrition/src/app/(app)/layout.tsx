@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
+import { getProfileDisplayName } from "@/lib/data/nutrition";
 import { BottomNav } from "@/components/nav/BottomNav";
 import { formatDateHeader } from "@/lib/format";
 
@@ -8,17 +9,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUser(supabase);
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const initial = (profile?.display_name?.[0] ?? user.email?.[0] ?? "?").toUpperCase();
+  const displayName = await getProfileDisplayName(supabase, user.id);
+  const initial = (displayName?.[0] ?? user.email?.[0] ?? "?").toUpperCase();
 
   return (
     <div className="flex min-h-dvh flex-col">

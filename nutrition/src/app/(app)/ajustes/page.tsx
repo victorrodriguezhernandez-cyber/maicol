@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/settings/SignOutButton";
 
 const LINKS = [
@@ -15,7 +15,7 @@ export default async function AjustesPage() {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUser(supabase);
   if (!user) redirect("/login");
 
   const initial = user.email?.[0]?.toUpperCase() ?? "?";

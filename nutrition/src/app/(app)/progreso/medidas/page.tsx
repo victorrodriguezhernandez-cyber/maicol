@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { MeasurementForm } from "@/components/progress/MeasurementForm";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateShort } from "@/lib/format";
@@ -18,7 +18,7 @@ export default async function MedidasPage() {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUser(supabase);
   if (!user) redirect("/login");
 
   const { data: measurements } = await supabase

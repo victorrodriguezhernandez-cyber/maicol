@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { getRecentDaysSummary } from "@/lib/data/diary";
 import { formatKcal, formatKg, todayLocalDateString } from "@/lib/format";
 
@@ -19,7 +19,7 @@ export default async function DiarioPage() {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUser(supabase);
   if (!user) redirect("/login");
 
   const days = await getRecentDaysSummary(supabase, user.id, 30);

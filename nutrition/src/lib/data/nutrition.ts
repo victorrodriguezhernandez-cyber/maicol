@@ -1,8 +1,22 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addNutrients, ZERO_NUTRIENTS, type NutrientSet } from "@/lib/nutrition/types";
 import { localDayBoundsUtc } from "@/lib/format";
 import type { MealItemRow, MealRow, NutritionGoalRow } from "@/lib/supabase/types";
+
+/** The app layout (avatar initial) and the Hoy page (greeting name) both
+ * need this for the same request — memoized so that's one query, not two. */
+export const getProfileDisplayName = cache(
+  async (supabase: SupabaseClient, userId: string): Promise<string | null> => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", userId)
+      .maybeSingle();
+    return data?.display_name ?? null;
+  },
+);
 
 export interface MealWithItems extends MealRow {
   meal_items: MealItemRow[];

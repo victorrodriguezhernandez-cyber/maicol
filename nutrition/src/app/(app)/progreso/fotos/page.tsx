@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { ProgressPhotoUploader } from "@/components/progress/ProgressPhotoUploader";
 import { DeleteProgressPhotoButton } from "@/components/progress/DeleteProgressPhotoButton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -16,7 +16,7 @@ export default async function FotosProgresoPage() {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUser(supabase);
   if (!user) redirect("/login");
 
   const { data: photos } = await supabase

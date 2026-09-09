@@ -256,26 +256,46 @@ Deno.serve(async (req) => {
       const modelParts = response.candidates?.[0]?.content?.parts ?? [];
       contents.push({ role: "model", parts: modelParts as never });
 
-      const responseParts = [];
-      for (const call of calls) {
-        if (call.name?.startsWith("propose_")) {
-          const built = await buildAction(supabase, user.id, call.name, call.args ?? {});
-          if ("error" in built) {
-            responseParts.push({ functionResponse: { name: call.name, response: { error: built.error } } });
-            continue;
+      // Gemini often asks for several read-only tools in the same turn
+      // (e.g. "¿cómo voy?" → goals + today's nutrition + weight trend).
+      // Each is an independent DB round trip, so running them concurrently
+      // instead of one-by-one is a real latency win — this is the main
+      // reason a multi-tool question felt slow. Promise.all preserves
+      // `calls` order in `results` regardless of which finishes first, so
+      // responseParts still lines up with what Gemini asked for, and the
+      // toolLog/action bookkeeping below stays in the same order it always
+      // was in (sequential semantics, concurrent execution).
+      const results = await Promise.all(
+        calls.map(async (call) => {
+          if (call.name?.startsWith("propose_")) {
+            const built = await buildAction(supabase, user.id, call.name, call.args ?? {});
+            if ("error" in built) {
+              return { part: { functionResponse: { name: call.name, response: { error: built.error } } } };
+            }
+            return {
+              part: {
+                functionResponse: {
+                  name: call.name,
+                  response: { status: "queued_for_user", risk: built.action.risk },
+                },
+              },
+              action: built.action,
+              logEntry: { name: call.name, args: call.args, action: built.action },
+            };
           }
-          action = built.action;
-          toolLog.push({ name: call.name, args: call.args, action });
-          responseParts.push({
-            functionResponse: { name: call.name, response: { status: "queued_for_user", risk: built.action.risk } },
-          });
-          continue;
-        }
-        const result = await runTool(supabase, user.id, call.name!, call.args ?? {});
-        toolLog.push({ name: call.name, args: call.args, result });
-        responseParts.push({ functionResponse: { name: call.name!, response: toFunctionResponse(result) } });
+          const result = await runTool(supabase, user.id, call.name!, call.args ?? {});
+          return {
+            part: { functionResponse: { name: call.name!, response: toFunctionResponse(result) } },
+            logEntry: { name: call.name, args: call.args, result },
+          };
+        }),
+      );
+
+      for (const r of results) {
+        if (r.logEntry) toolLog.push(r.logEntry);
+        if (r.action) action = r.action;
       }
-      contents.push({ role: "user", parts: responseParts as never });
+      contents.push({ role: "user", parts: results.map((r) => r.part) as never });
     }
 
     await supabase.from("ai_messages").insert({

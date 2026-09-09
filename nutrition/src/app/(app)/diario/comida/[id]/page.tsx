@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { formatKcal, formatTime, MEAL_TYPE_LABELS } from "@/lib/format";
 import { MealItemRow } from "@/components/dashboard/MealItemRow";
 import { DeleteMealButton } from "@/components/dashboard/DeleteMealButton";
@@ -13,7 +13,7 @@ export default async function MealDetailPage({
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUser(supabase);
   if (!user) redirect("/login");
 
   const { data: meal, error } = await supabase

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { getCurrentGoal, getDailyMacroSeries, getWeightEntriesSince } from "@/lib/data/nutrition";
 import { computeWeightTrend, computeWeeklyRate } from "@/lib/nutrition/trend";
 import { checkAdaptiveGoal } from "@/lib/nutrition/adaptive-goal";
@@ -12,7 +12,7 @@ export default async function CoachIaPage() {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUser(supabase);
   if (!user) redirect("/login");
 
   const goal = await getCurrentGoal(supabase, user.id);

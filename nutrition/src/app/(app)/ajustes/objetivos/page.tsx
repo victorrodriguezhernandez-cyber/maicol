@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { getCurrentGoal } from "@/lib/data/nutrition";
 import { GoalEditorForm } from "@/components/settings/GoalEditorForm";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -8,7 +8,7 @@ export default async function ObjetivosPage() {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getUser(supabase);
   if (!user) redirect("/login");
 
   const goal = await getCurrentGoal(supabase, user.id);
