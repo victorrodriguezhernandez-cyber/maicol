@@ -14,6 +14,14 @@ import {
 import { setWeightEntryForDate, deleteWeightEntry } from "@/lib/actions/weight";
 import { formatKcal, formatDateTimeShort } from "@/lib/format";
 import type { NutritionGoalRow } from "@/lib/supabase/types";
+import { LogoMark } from "@/components/ui/Logo";
+import {
+  HistoryIcon,
+  SendIcon,
+  CheckCircleIcon,
+  UndoIcon,
+  CloseIcon,
+} from "@/components/ui/icons";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -252,27 +260,27 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={openHistory}
-          className="flex items-center gap-1 text-xs font-medium text-[var(--text-secondary)] transition-opacity duration-150 active:opacity-60"
+          className="tap-scale flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)]"
         >
-          <HistoryIcon />
+          <HistoryIcon size={14} />
           Chats
         </button>
         <button
           type="button"
           onClick={startNewChat}
-          className="text-xs font-medium text-[var(--accent)] transition-opacity duration-150 active:opacity-60"
+          className="tap-scale text-xs font-semibold text-[var(--accent)]"
         >
           + Nuevo chat
         </button>
       </div>
 
       {historyOpen ? (
-        <div className="glass-panel flex max-h-56 flex-col gap-0.5 overflow-y-auto rounded-2xl p-1.5">
+        <div className="surface-raised flex max-h-56 flex-col gap-0.5 overflow-y-auto p-1.5">
           {isLoadingHistory ? (
             <p className="p-2 text-xs text-[var(--text-tertiary)]">Cargando…</p>
           ) : conversations.length === 0 ? (
@@ -284,7 +292,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
                 type="button"
                 onClick={() => openConversation(c.id)}
                 className={`tap-row rounded-xl px-3 py-2 text-left text-sm ${
-                  c.id === conversationId ? "bg-[var(--surface-raised)] font-medium" : ""
+                  c.id === conversationId ? "bg-[var(--surface-2)] font-semibold" : ""
                 } text-[var(--text-primary)]`}
               >
                 <p className="truncate">{c.title || "Conversación sin título"}</p>
@@ -299,12 +307,15 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
 
       <div className="flex flex-col gap-3">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-5 text-center">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full btn-primary">
-              <SparkleIcon />
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-full"
+              style={{ background: "var(--accent-soft)" }}
+            >
+              <LogoMark size={22} />
             </span>
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
+              <p className="text-[15px] font-semibold text-[var(--text-primary)]">
                 Pregúntame lo que quieras
               </p>
               <p className="mx-auto mt-1 max-w-[240px] text-xs text-[var(--text-secondary)]">
@@ -318,7 +329,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
                   key={p}
                   type="button"
                   onClick={() => send(p)}
-                  className="rounded-full btn-secondary px-3 py-1.5 text-xs text-[var(--text-secondary)]"
+                  className="btn-secondary tap-scale rounded-full px-3 py-1.5 text-xs font-medium"
                 >
                   {p}
                 </button>
@@ -331,14 +342,14 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
           m.role === "user" ? (
             <div
               key={i}
-              className="ml-auto max-w-[85%] rounded-2xl rounded-br-md btn-primary px-3.5 py-2.5 text-sm text-[var(--accent-fg)]"
+              className="btn-primary ml-auto max-w-[85%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm text-[var(--accent-fg)]"
             >
               {m.content}
             </div>
           ) : (
             <div key={i} className="flex max-w-[90%] items-start gap-2">
               <CoachAvatar />
-              <div className="glass-panel rounded-2xl rounded-tl-md px-3.5 py-2.5 text-sm text-[var(--text-primary)]">
+              <div className="surface-soft rounded-tl-md px-4 py-2.5 text-sm text-[var(--text-primary)]">
                 {formatCoachText(m.content)}
               </div>
             </div>
@@ -348,7 +359,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         {isPending ? (
           <div className="flex items-center gap-2">
             <CoachAvatar />
-            <div className="glass-panel flex gap-1 rounded-2xl rounded-tl-md px-3.5 py-3">
+            <div className="surface-soft flex gap-1 rounded-tl-md px-4 py-3.5">
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)] [animation-delay:-0.2s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)] [animation-delay:0.2s]" />
@@ -365,45 +376,51 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         {errorMessage ? <p className="text-xs text-[var(--danger)]">{errorMessage}</p> : null}
 
         {lastExecuted ? (
-          <div className="flex items-center justify-between rounded-2xl bg-[var(--accent-soft)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] shadow-[var(--shadow-sm)] backdrop-blur-xl">
-            <span>✅ {lastExecuted.summary}</span>
+          <div className="surface-raised flex items-center gap-3 border-l-[3px] border-[var(--success)] p-3.5">
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+              style={{ background: "color-mix(in srgb, var(--success) 16%, transparent)", color: "var(--success)" }}
+            >
+              <CheckCircleIcon size={17} />
+            </span>
+            <span className="flex-1 text-sm text-[var(--text-primary)]">{lastExecuted.summary}</span>
             {lastExecuted.undo ? (
               <button
                 type="button"
                 disabled={isUndoing}
                 onClick={undoLastAction}
-                className="ml-2 shrink-0 text-xs font-medium text-[var(--accent)] disabled:opacity-50"
+                className="tap-scale flex shrink-0 items-center gap-1 text-xs font-semibold text-[var(--accent)] disabled:opacity-50"
               >
-                {isUndoing ? "…" : "Deshacer"}
+                <UndoIcon size={13} /> {isUndoing ? "…" : "Deshacer"}
               </button>
             ) : null}
           </div>
         ) : null}
 
         {proposedAction ? (
-          <div className="rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] p-3 text-sm text-[var(--text-primary)] shadow-[var(--shadow-sm)] backdrop-blur-xl">
-            <p className="font-medium">Confirmar acción</p>
+          <div className="surface-raised border-l-[3px] border-[var(--warning)] p-4">
+            <p className="text-[13px] font-semibold text-[var(--text-primary)]">Confirmar acción</p>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">{proposedAction.summary}</p>
             {proposedAction.kind === "goal_change" && (proposedAction.payload as { kcal?: number }).kcal ? (
-              <p className="mt-1 text-xs">
+              <p className="text-metric mt-1.5 text-xs text-[var(--text-primary)]">
                 Nuevo objetivo: {formatKcal((proposedAction.payload as { kcal: number }).kcal)}
               </p>
             ) : null}
-            <div className="mt-2 flex gap-2">
+            <div className="mt-3 flex gap-2">
               <button
                 type="button"
                 disabled={isApplying}
                 onClick={confirmProposal}
-                className="rounded-lg btn-primary px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)]"
+                className="btn-primary tap-scale rounded-lg px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-fg)] disabled:opacity-50"
               >
                 Confirmar
               </button>
               <button
                 type="button"
                 onClick={() => setProposedAction(null)}
-                className="rounded-lg btn-secondary px-3 py-1.5 text-xs text-[var(--text-secondary)]"
+                className="btn-ghost tap-scale flex items-center gap-1 rounded-lg px-3.5 py-1.5 text-xs font-semibold"
               >
-                Cancelar
+                <CloseIcon size={13} /> Cancelar
               </button>
             </div>
           </div>
@@ -415,21 +432,21 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
           e.preventDefault();
           send(input);
         }}
-        className="glass-panel sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] flex items-center gap-1.5 rounded-full p-1.5 shadow-[var(--shadow-md)]"
+        className="surface-glass sticky bottom-[calc(env(safe-area-inset-bottom)+72px)] flex items-center gap-1.5 rounded-full p-1.5 shadow-[var(--shadow-md)]"
       >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Pregunta algo o pídeme que registre/cambie algo…"
-          className="flex-1 bg-transparent px-3 py-2 text-sm text-[var(--text-primary)] outline-none"
+          className="flex-1 bg-transparent px-3.5 py-2 text-sm text-[var(--text-primary)] outline-none"
         />
         <button
           type="submit"
           disabled={!input.trim() || isPending}
-          className="flex h-9 w-9 items-center justify-center rounded-full btn-primary text-[var(--accent-fg)] disabled:opacity-40"
+          className="btn-primary tap-scale flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--accent-fg)] disabled:opacity-40"
           aria-label="Enviar"
         >
-          <SendIcon />
+          <SendIcon size={15} />
         </button>
       </form>
     </div>
@@ -438,53 +455,12 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
 
 function CoachAvatar() {
   return (
-    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-soft)] text-[var(--accent)]">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 3.5c.4 2.6 1 4.1 2 5.1s2.5 1.6 5.1 2c-2.6.4-4.1 1-5.1 2s-1.6 2.5-2 5.1c-.4-2.6-1-4.1-2-5.1s-2.5-1.6-5.1-2c2.6-.4 4.1-1 5.1-2s1.6-2.5 2-5.1Z"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinejoin="round"
-        />
-      </svg>
+    <span
+      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+      style={{ background: "var(--accent-soft)" }}
+    >
+      <LogoMark size={12} />
     </span>
-  );
-}
-
-function SparkleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 3.5c.4 2.6 1 4.1 2 5.1s2.5 1.6 5.1 2c-2.6.4-4.1 1-5.1 2s-1.6 2.5-2 5.1c-.4-2.6-1-4.1-2-5.1s-2.5-1.6-5.1-2c2.6-.4 4.1-1 5.1-2s1.6-2.5 2-5.1Z"
-        stroke="var(--accent-fg)"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M4 12l16-7-6 7 6 7-16-7Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function HistoryIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-      <path d="M12 8v5l3 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      <path
-        d="M4.5 9A7.5 7.5 0 1 1 5 14.5"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M3 5.5V9h3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }
 

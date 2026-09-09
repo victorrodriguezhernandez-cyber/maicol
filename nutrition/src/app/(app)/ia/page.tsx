@@ -5,6 +5,7 @@ import { computeWeightTrend, computeWeeklyRate } from "@/lib/nutrition/trend";
 import { checkAdaptiveGoal } from "@/lib/nutrition/adaptive-goal";
 import { AdaptiveGoalCard } from "@/components/coach/AdaptiveGoalCard";
 import { ChatCoach } from "@/components/coach/ChatCoach";
+import { PageShell } from "@/components/ui/PageShell";
 
 const ANALYSIS_WINDOW_DAYS = 14;
 
@@ -57,13 +58,9 @@ export default async function CoachIaPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Coach IA</h1>
-        <p className="text-xs text-[var(--text-tertiary)]">Conoce tus datos reales de nutrición y peso.</p>
-      </div>
+    <PageShell eyebrow="Conoce tus datos reales de nutrición y peso" title="Asistente IA">
       {adaptiveCard}
       <ChatCoach currentGoal={goal} />
-    </div>
+    </PageShell>
   );
 }

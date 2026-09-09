@@ -5,6 +5,7 @@ import { applyGoalChange } from "@/lib/actions/goals";
 import { formatKcal } from "@/lib/format";
 import type { AdaptiveGoalSuggestion } from "@/lib/nutrition/adaptive-goal";
 import type { NutritionGoalRow } from "@/lib/supabase/types";
+import { TrendIcon, ChevronDownIcon } from "@/components/ui/icons";
 
 export function AdaptiveGoalCard({
   suggestion,
@@ -34,17 +35,29 @@ export function AdaptiveGoalCard({
   }
 
   return (
-    <div className="rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] p-4 shadow-[var(--shadow-sm)]">
-      <p className="text-sm text-[var(--text-primary)]">
-        {suggestion.reason} Propongo {suggestion.deltaKcal! > 0 ? "aumentar" : "reducir"} el objetivo
-        diario de {formatKcal(currentGoal.kcal)} a {formatKcal(suggestion.suggestedKcal)}.
-      </p>
-      <p className="mt-1 text-xs text-[var(--text-secondary)]">
-        Confianza: {suggestion.confidence === "high" ? "alta" : suggestion.confidence === "medium" ? "media" : "baja"}
-      </p>
+    <div className="surface-raised border-l-[3px] border-[var(--accent)] p-4">
+      <div className="flex items-start gap-3">
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+          style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+        >
+          <TrendIcon size={16} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-[var(--text-primary)]">{suggestion.reason}</p>
+          <p className="text-metric mt-1.5 flex items-center gap-1.5 text-sm text-[var(--text-primary)]">
+            {formatKcal(currentGoal.kcal)}
+            <span className="text-[var(--text-tertiary)]">→</span>
+            <span style={{ color: "var(--accent)" }}>{formatKcal(suggestion.suggestedKcal)}</span>
+          </p>
+          <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">
+            Confianza {suggestion.confidence === "high" ? "alta" : suggestion.confidence === "medium" ? "media" : "baja"}
+          </p>
+        </div>
+      </div>
 
       {showAnalysis ? (
-        <div className="mt-2 rounded-xl bg-[var(--surface)] p-3 text-xs text-[var(--text-secondary)]">
+        <div className="mt-3 rounded-xl bg-[var(--surface-2)] p-3 text-xs text-[var(--text-secondary)]">
           <p>Mantenimiento estimado: {formatKcal(suggestion.maintenanceEstimate.maintenanceKcal ?? 0)}</p>
           {suggestion.maintenanceEstimate.rangeMin != null ? (
             <p>
@@ -54,28 +67,29 @@ export function AdaptiveGoalCard({
         </div>
       ) : null}
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex items-center gap-2">
         <button
           type="button"
           disabled={isPending}
           onClick={apply}
-          className="rounded-lg btn-primary px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)] disabled:opacity-50"
+          className="btn-primary tap-scale rounded-lg px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-fg)] disabled:opacity-50"
         >
           Aplicar
         </button>
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          className="rounded-lg btn-secondary px-3 py-1.5 text-xs text-[var(--text-secondary)]"
+          className="btn-secondary tap-scale rounded-lg px-3.5 py-1.5 text-xs font-semibold"
         >
           Mantener
         </button>
         <button
           type="button"
           onClick={() => setShowAnalysis((v) => !v)}
-          className="rounded-lg px-3 py-1.5 text-xs text-[var(--accent)]"
+          className="tap-scale ml-auto flex items-center gap-1 text-xs font-medium text-[var(--accent)]"
         >
           Ver análisis
+          <ChevronDownIcon size={13} className={`transition-transform ${showAnalysis ? "rotate-180" : ""}`} />
         </button>
       </div>
     </div>
