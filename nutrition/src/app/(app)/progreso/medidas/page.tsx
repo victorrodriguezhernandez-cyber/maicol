@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { MeasurementForm } from "@/components/progress/MeasurementForm";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageShell } from "@/components/ui/PageShell";
 import { formatDateShort } from "@/lib/format";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -29,8 +30,7 @@ export default async function MedidasPage() {
     .limit(50);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Medidas corporales</h1>
+    <PageShell title="Medidas corporales">
       <MeasurementForm />
 
       {!measurements?.length ? (
@@ -42,14 +42,12 @@ export default async function MedidasPage() {
               <span className="font-medium text-[var(--text-primary)]">
                 {m.measurement_type === "custom" ? m.custom_label : TYPE_LABEL[m.measurement_type]}
               </span>
-              <span className="text-[var(--text-tertiary)]">
-                {formatDateShort(m.measured_at)}
-              </span>
-              <span className="font-numeric font-semibold text-[var(--text-primary)]">{m.value_cm} cm</span>
+              <span className="text-xs text-[var(--text-tertiary)]">{formatDateShort(m.measured_at)}</span>
+              <span className="text-metric font-semibold text-[var(--text-primary)]">{m.value_cm} cm</span>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </PageShell>
   );
 }

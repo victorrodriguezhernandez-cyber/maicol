@@ -25,9 +25,9 @@ export function WeightLogForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="glass-panel rounded-2xl p-4">
-      <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">Registrar peso de hoy</p>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2 rounded-2xl border border-dashed border-[var(--border-strong)] p-3.5">
       <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-[var(--text-secondary)]">Peso de hoy</span>
         <input
           type="number"
           step="0.05"
@@ -35,18 +35,18 @@ export function WeightLogForm() {
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
           placeholder="72.45"
-          className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--text-primary)]"
+          className="text-metric ml-auto w-24 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-1.5 text-right text-sm text-[var(--text-primary)]"
         />
-        <span className="text-sm text-[var(--text-secondary)]">kg</span>
+        <span className="text-xs text-[var(--text-secondary)]">kg</span>
         <button
           type="submit"
           disabled={!weight || isPending}
-          className="rounded-xl btn-primary px-4 py-2 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
+          className="btn-primary tap-scale rounded-lg px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-fg)] disabled:opacity-50"
         >
           {isPending ? "…" : saved ? "✓" : "Guardar"}
         </button>
       </div>
-      <label className="mt-2 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+      <label className="flex items-center gap-2 text-[11px] text-[var(--text-tertiary)]">
         <input
           type="checkbox"
           checked={usualConditions}

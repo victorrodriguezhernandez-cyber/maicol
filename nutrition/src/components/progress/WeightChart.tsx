@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createChart, LineSeries, type IChartApi, type UTCTimestamp } from "lightweight-charts";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 export interface WeightChartPoint {
   date: string; // YYYY-MM-DD
@@ -20,7 +21,8 @@ const RANGES = [
 export function WeightChart({ points }: { points: WeightChartPoint[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const [rangeDays, setRangeDays] = useState<number>(30);
+  const [rangeLabel, setRangeLabel] = useState<(typeof RANGES)[number]["label"]>("30D");
+  const rangeDays = RANGES.find((r) => r.label === rangeLabel)!.days;
 
   const filtered =
     rangeDays === Infinity
@@ -85,21 +87,12 @@ export function WeightChart({ points }: { points: WeightChartPoint[] }) {
   return (
     <div>
       <div ref={containerRef} className="w-full" />
-      <div className="mt-2 flex justify-center gap-1.5">
-        {RANGES.map((r) => (
-          <button
-            key={r.label}
-            type="button"
-            onClick={() => setRangeDays(r.days)}
-            className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-              rangeDays === r.days
-                ? "btn-primary text-[var(--accent-fg)]"
-                : "bg-[var(--surface-2)] text-[var(--text-secondary)]"
-            }`}
-          >
-            {r.label}
-          </button>
-        ))}
+      <div className="mt-2 flex justify-center">
+        <SegmentedControl
+          options={RANGES.map((r) => ({ value: r.label, label: r.label }))}
+          value={rangeLabel}
+          onChange={setRangeLabel}
+        />
       </div>
     </div>
   );

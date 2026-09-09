@@ -5,6 +5,7 @@ import { toLocalDateKey, todayLocalDateString } from "@/lib/format";
 export interface DaySummary {
   date: string;
   totalKcal: number;
+  proteinG: number;
   status: "complete" | "partial" | "not_logged";
   weightKg: number | null;
 }
@@ -37,7 +38,7 @@ export async function getRecentDaysSummary(
   const [{ data: items, error: itemsError }, { data: dayLogs }, { data: weights }] = await Promise.all([
     supabase
       .from("meals")
-      .select("occurred_at, meal_items(energy_kcal)")
+      .select("occurred_at, meal_items(energy_kcal, protein_g)")
       .eq("user_id", userId)
       .gte("occurred_at", queryFromIso),
     supabase
@@ -54,13 +55,14 @@ export async function getRecentDaysSummary(
   if (itemsError) throw itemsError;
 
   const kcalByDay = new Map<string, number>();
+  const proteinByDay = new Map<string, number>();
   for (const meal of items ?? []) {
     const day = toLocalDateKey(meal.occurred_at as string);
-    const mealKcal = (meal.meal_items as { energy_kcal: number }[]).reduce(
-      (a, b) => a + b.energy_kcal,
-      0,
-    );
+    const mealItems = meal.meal_items as { energy_kcal: number; protein_g: number }[];
+    const mealKcal = mealItems.reduce((a, b) => a + b.energy_kcal, 0);
+    const mealProtein = mealItems.reduce((a, b) => a + b.protein_g, 0);
     kcalByDay.set(day, (kcalByDay.get(day) ?? 0) + mealKcal);
+    proteinByDay.set(day, (proteinByDay.get(day) ?? 0) + mealProtein);
   }
 
   const statusByDay = new Map((dayLogs ?? []).map((d) => [d.log_date as string, d.status as string]));
@@ -79,6 +81,7 @@ export async function getRecentDaysSummary(
     result.push({
       date: key,
       totalKcal,
+      proteinG: proteinByDay.get(key) ?? 0,
       status: explicitStatus ?? (totalKcal > 0 ? "partial" : "not_logged"),
       weightKg: weightByDay.get(key) ?? null,
     });

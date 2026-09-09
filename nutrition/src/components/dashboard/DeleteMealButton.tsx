@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteMeal } from "@/lib/actions/meals";
+import { TrashIcon } from "@/components/ui/icons";
 
 export function DeleteMealButton({ mealId }: { mealId: string }) {
   const router = useRouter();
@@ -18,9 +19,9 @@ export function DeleteMealButton({ mealId }: { mealId: string }) {
           router.push("/diario");
         })
       }
-      className="rounded-lg border border-[var(--danger)] px-3 py-1.5 text-xs font-medium text-[var(--danger)]"
+      className="btn-danger tap-scale flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
     >
-      Eliminar comida
+      <TrashIcon size={13} /> Eliminar
     </button>
   );
 }

@@ -7,7 +7,10 @@ import { formatKg, formatSignedKgPerWeek, formatDateTimeShort } from "@/lib/form
 import { WeightChart } from "@/components/progress/WeightChart";
 import { WeightLogForm } from "@/components/progress/WeightLogForm";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageShell } from "@/components/ui/PageShell";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DeleteWeightButton } from "@/components/progress/DeleteWeightButton";
+import { RulerIcon, ImageIcon, ChevronRightIcon } from "@/components/ui/icons";
 
 export default async function ProgresoPage() {
   const supabase = await createClient();
@@ -30,29 +33,26 @@ export default async function ProgresoPage() {
   const lastObserved = entries.at(-1);
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Progreso</h1>
-
+    <PageShell title="Progreso">
       <WeightLogForm />
 
       {points.length === 0 ? (
         <EmptyState title="Todavía no tienes pesajes registrados" />
       ) : (
-        // One continuous panel holding both the numbers and the chart — the
-        // opposite composition from Hoy's open, unboxed hero, so the two
-        // main screens don't read as the same template with different data.
-        <section className="glass-panel flex flex-col gap-1 rounded-2xl p-4 pb-2">
+        <section className="surface-soft flex flex-col gap-1 p-5 pb-2">
           <div className="flex items-end justify-between">
             <div>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Tendencia</p>
-              <p className="font-numeric text-3xl font-semibold" style={{ color: "var(--metric-weight)" }}>
+              <p className="text-section">Tendencia de peso</p>
+              <p className="text-display mt-1.5 text-[2.25rem]" style={{ color: "var(--metric-weight)" }}>
                 {last ? formatKg(last.trendKg) : "—"}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-[11px] text-[var(--text-tertiary)]">
-                Hoy {lastObserved ? formatKg(lastObserved.weight_kg) : "—"} · Cambio/sem.{" "}
-                {weeklyRate.weeklyRateKg != null ? formatSignedKgPerWeek(weeklyRate.weeklyRateKg) : "—"}
+            <div className="pb-1 text-right">
+              <p className="text-metric text-xs text-[var(--text-secondary)]">
+                Hoy {lastObserved ? formatKg(lastObserved.weight_kg) : "—"}
+              </p>
+              <p className="text-metric text-xs text-[var(--text-tertiary)]">
+                {weeklyRate.weeklyRateKg != null ? formatSignedKgPerWeek(weeklyRate.weeklyRateKg) : "Sin ritmo aún"}
               </p>
             </div>
           </div>
@@ -60,52 +60,42 @@ export default async function ProgresoPage() {
         </section>
       )}
 
-      <section className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
-        <Link
-          href="/progreso/medidas"
-          className="flex items-center justify-between py-3 text-sm font-medium text-[var(--text-primary)] active:opacity-70"
-        >
-          Medidas corporales
-          <ChevronIcon />
+      <section className="grid grid-cols-2 gap-2.5">
+        <Link href="/progreso/medidas" className="tap-scale surface-soft flex flex-col gap-3 p-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "var(--metric-fat-soft)", color: "var(--metric-fat)" }}>
+            <RulerIcon size={16} />
+          </span>
+          <span className="flex items-center justify-between text-[13px] font-semibold text-[var(--text-primary)]">
+            Medidas corporales <ChevronRightIcon size={15} className="text-[var(--text-tertiary)]" />
+          </span>
         </Link>
-        <Link
-          href="/progreso/fotos"
-          className="flex items-center justify-between py-3 text-sm font-medium text-[var(--text-primary)] active:opacity-70"
-        >
-          Fotos de progreso
-          <ChevronIcon />
+        <Link href="/progreso/fotos" className="tap-scale surface-soft flex flex-col gap-3 p-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "var(--metric-carbs-soft)", color: "var(--metric-carbs)" }}>
+            <ImageIcon size={16} />
+          </span>
+          <span className="flex items-center justify-between text-[13px] font-semibold text-[var(--text-primary)]">
+            Fotos de progreso <ChevronRightIcon size={15} className="text-[var(--text-tertiary)]" />
+          </span>
         </Link>
       </section>
 
       {entries.length > 0 ? (
         <section className="flex flex-col gap-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
-            Pesajes recientes
-          </p>
+          <SectionHeader>Pesajes recientes</SectionHeader>
           <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
             {[...entries]
               .reverse()
               .slice(0, 10)
               .map((e) => (
                 <li key={e.id} className="flex items-center justify-between py-2.5 text-sm">
-                  <span className="text-[var(--text-tertiary)]">
-                    {formatDateTimeShort(e.measured_at)}
-                  </span>
-                  <span className="font-numeric font-semibold text-[var(--text-primary)]">{formatKg(e.weight_kg)}</span>
+                  <span className="text-xs text-[var(--text-tertiary)]">{formatDateTimeShort(e.measured_at)}</span>
+                  <span className="text-metric font-semibold text-[var(--text-primary)]">{formatKg(e.weight_kg)}</span>
                   <DeleteWeightButton id={e.id} />
                 </li>
               ))}
           </ul>
         </section>
       ) : null}
-    </div>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[var(--text-tertiary)]">
-      <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    </PageShell>
   );
 }

@@ -3,6 +3,7 @@ import { createClient, getUser } from "@/lib/supabase/server";
 import { ProgressPhotoUploader } from "@/components/progress/ProgressPhotoUploader";
 import { DeleteProgressPhotoButton } from "@/components/progress/DeleteProgressPhotoButton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageShell } from "@/components/ui/PageShell";
 import { formatDateShort } from "@/lib/format";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -36,16 +37,15 @@ export default async function FotosProgresoPage() {
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Fotos de progreso</h1>
+    <PageShell title="Fotos de progreso">
       <ProgressPhotoUploader />
 
       {withUrls.length === 0 ? (
         <EmptyState title="Todavía no tienes fotos de progreso" />
       ) : (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           {withUrls.map((p) => (
-            <div key={p.id} className="relative overflow-hidden rounded-2xl border border-[var(--border)]">
+            <div key={p.id} className="relative overflow-hidden rounded-2xl border border-[var(--border-soft)]">
               {p.signedUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={p.signedUrl} alt={CATEGORY_LABEL[p.category]} className="aspect-[3/4] w-full object-cover" />
@@ -54,8 +54,8 @@ export default async function FotosProgresoPage() {
                   No disponible
                 </div>
               )}
-              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/50 px-2 py-1">
-                <span className="text-[11px] text-white">
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent px-2.5 pb-2 pt-5">
+                <span className="text-[11px] font-medium text-white">
                   {CATEGORY_LABEL[p.category]} · {formatDateShort(p.taken_at)}
                 </span>
                 <DeleteProgressPhotoButton id={p.id} storagePath={p.storage_path} />
@@ -64,6 +64,6 @@ export default async function FotosProgresoPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
