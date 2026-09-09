@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Logo } from "@/components/ui/Logo";
+import { LockIcon } from "@/components/ui/icons";
 
 // Single-user personal app — there is only ever one account, so the
 // email behind it never needs to be typed or shown. Framing the one
@@ -39,28 +41,17 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-[var(--app-bg)] px-6 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl btn-primary text-xl font-semibold">
-          M
-        </div>
-        <h1 className="text-xl font-semibold text-[var(--text-primary)]">
-          Maicol Nutrición
-        </h1>
+    <main className="relative flex min-h-dvh flex-col items-center justify-center gap-10 overflow-hidden bg-[var(--app-bg)] px-6 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <Logo full className="flex-col gap-3 text-center [&>div]:items-center" />
         <p className="max-w-xs text-sm text-[var(--text-secondary)]">
           Tu seguimiento personal de nutrición y volumen, asistido por IA.
         </p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="glass-panel w-full max-w-sm rounded-2xl p-5"
-      >
-        <label
-          htmlFor="username"
-          className="mb-2 block text-xs font-medium text-[var(--text-secondary)]"
-        >
-          Usuario
+      <form onSubmit={handleSubmit} className="surface-raised w-full max-w-sm p-6">
+        <label htmlFor="username" className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+          <LockIcon size={13} /> Usuario
         </label>
         <input
           id="username"
@@ -73,7 +64,7 @@ export default function LoginPage() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="victorrh2008"
-          className="w-full rounded-xl border border-[var(--border)] bg-[var(--app-bg)] px-3 py-2.5 text-sm text-[var(--text-primary)]"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--app-bg)] px-3.5 py-3 text-[15px] text-[var(--text-primary)]"
         />
         {errorMessage ? (
           <p className="mt-2 text-xs text-[var(--danger)]">{errorMessage}</p>
@@ -81,7 +72,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={status === "sending" || !username}
-          className="mt-4 w-full rounded-xl btn-primary py-2.5 text-sm font-medium disabled:opacity-60"
+          className="btn-primary tap-scale mt-4 w-full rounded-xl py-3 text-sm font-semibold text-[var(--accent-fg)] disabled:opacity-60"
         >
           {status === "sending" ? "Entrando…" : "Entrar"}
         </button>

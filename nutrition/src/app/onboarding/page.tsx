@@ -4,12 +4,16 @@ import { useMemo, useState } from "react";
 import { completeOnboarding } from "./actions";
 import { suggestGoal } from "@/lib/nutrition/goal-suggestion";
 import type { ActivityLevel } from "@/lib/nutrition/tdee";
+import { Logo } from "@/components/ui/Logo";
+import { ChevronRightIcon, SparkleIcon } from "@/components/ui/icons";
 
 const MODE_LABEL: Record<string, string> = {
   maintain: "Mantener",
   lose: "Perder peso",
   gain: "Ganar peso / volumen",
 };
+
+const STEPS = ["Sobre ti", "Actividad y objetivo", "Objetivos diarios"] as const;
 
 function ageFromBirthDate(birthDate: string): number {
   if (!birthDate) return 25;
@@ -18,6 +22,7 @@ function ageFromBirthDate(birthDate: string): number {
 }
 
 export default function OnboardingPage() {
+  const [step, setStep] = useState(0);
   const [sex, setSex] = useState<"male" | "female" | "unspecified">("unspecified");
   const [birthDate, setBirthDate] = useState("");
   const [heightCm, setHeightCm] = useState("175");
@@ -58,31 +63,37 @@ export default function OnboardingPage() {
     setCarbohydratesG(String(suggestion.carbohydratesG));
     setFatG(String(suggestion.fatG));
     setFiberG(String(suggestion.fiberG));
+    // A visible reason to move to the last step, not just a value swap.
+    setStep(2);
   }
 
+  const step0Valid = birthDate && Number(heightCm) > 0 && Number(currentWeightKg) > 0;
+
   return (
-    <main className="mx-auto flex min-h-dvh max-w-lg flex-col gap-6 px-5 pb-12 pt-[calc(env(safe-area-inset-top)+24px)]">
+    <main className="mx-auto flex min-h-dvh max-w-lg flex-col gap-6 px-5 pb-12 pt-[calc(env(safe-area-inset-top)+28px)]">
+      <Logo full />
+
       <div>
-        <h1 className="text-xl font-semibold text-[var(--text-primary)]">
-          Vamos a configurar tu perfil
-        </h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          Esto nos permite calcular tus objetivos iniciales. Podrás ajustarlo
-          todo más adelante en Ajustes.
+        <h1 className="text-hero-title text-2xl text-[var(--text-primary)]">Configura tu perfil</h1>
+        <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
+          Esto nos permite calcular tus objetivos iniciales. Podrás ajustarlo todo más adelante en Ajustes.
         </p>
       </div>
 
-      <section className="glass-panel rounded-2xl p-4">
-        <p className="mb-1 text-xs font-medium text-[var(--text-secondary)]">
-          Protocolo de pesaje
-        </p>
-        <p className="text-xs text-[var(--text-secondary)]">
-          Para comparar mejor tus pesos, intenta pesarte en condiciones
-          similares: por la mañana, después de ir al baño y antes de comer o
-          beber. No pasa nada si algún día lo haces en otro momento — el
-          sistema usa una tendencia, no el dato de un único día.
-        </p>
-      </section>
+      {/* Step indicator */}
+      <div className="flex items-center gap-2">
+        {STEPS.map((label, i) => (
+          <div key={label} className="flex flex-1 flex-col gap-1.5">
+            <div
+              className="h-1 rounded-full transition-colors duration-300"
+              style={{ background: i <= step ? "var(--accent)" : "var(--border)" }}
+            />
+            <span className={`text-[10px] font-semibold ${i === step ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`}>
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
 
       <form
         action={async (formData) => {
@@ -91,191 +102,127 @@ export default function OnboardingPage() {
         }}
         className="flex flex-col gap-5"
       >
-        <fieldset className="grid grid-cols-2 gap-3">
-          <Field label="Sexo">
-            <select
-              name="sex"
-              value={sex}
-              onChange={(e) => setSex(e.target.value as typeof sex)}
-              className="input"
-            >
-              <option value="unspecified">Prefiero no decirlo</option>
-              <option value="male">Hombre</option>
-              <option value="female">Mujer</option>
-            </select>
-          </Field>
-          <Field label="Fecha de nacimiento">
-            <input
-              type="date"
-              name="birthDate"
-              required
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Altura (cm)">
-            <input
-              type="number"
-              name="heightCm"
-              required
-              value={heightCm}
-              onChange={(e) => setHeightCm(e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Peso actual (kg)">
-            <input
-              type="number"
-              step="0.1"
-              name="currentWeightKg"
-              required
-              value={currentWeightKg}
-              onChange={(e) => setCurrentWeightKg(e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Actividad">
-            <select
-              value={activityLevel}
-              onChange={(e) => setActivityLevel(e.target.value as ActivityLevel)}
-              className="input"
-            >
-              <option value="sedentary">Sedentaria</option>
-              <option value="light">Ligera</option>
-              <option value="moderate">Moderada</option>
-              <option value="very_active">Alta</option>
-              <option value="extra_active">Muy alta</option>
-            </select>
-          </Field>
-          <Field label="Objetivo">
-            <select
-              name="mode"
-              value={mode}
-              onChange={(e) => setMode(e.target.value as typeof mode)}
-              className="input"
-            >
-              {Object.entries(MODE_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </fieldset>
-
-        {mode !== "maintain" ? (
+        {/* All three steps stay mounted (hidden, not unmounted) so
+            FormData still captures every field on submit — visibility
+            doesn't affect what a native form submits, only removal
+            from the DOM does. */}
+        <div className={step === 0 ? "flex flex-col gap-5" : "hidden"}>
           <fieldset className="grid grid-cols-2 gap-3">
-            <Field label="Ritmo mínimo (kg/semana)">
-              <input
-                type="number"
-                step="0.05"
-                name="weeklyRateMinKg"
-                value={weeklyRateMinKg}
-                onChange={(e) => setWeeklyRateMinKg(e.target.value)}
-                className="input"
-              />
+            <Field label="Sexo">
+              <select name="sex" value={sex} onChange={(e) => setSex(e.target.value as typeof sex)} className="input">
+                <option value="unspecified">Prefiero no decirlo</option>
+                <option value="male">Hombre</option>
+                <option value="female">Mujer</option>
+              </select>
             </Field>
-            <Field label="Ritmo máximo (kg/semana)">
-              <input
-                type="number"
-                step="0.05"
-                name="weeklyRateMaxKg"
-                value={weeklyRateMaxKg}
-                onChange={(e) => setWeeklyRateMaxKg(e.target.value)}
-                className="input"
-              />
+            <Field label="Fecha de nacimiento">
+              <input type="date" name="birthDate" required value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="input" />
             </Field>
-            <Field label="Peso objetivo (kg, opcional)">
-              <input
-                type="number"
-                step="0.1"
-                name="targetWeightKg"
-                value={targetWeightKg}
-                onChange={(e) => setTargetWeightKg(e.target.value)}
-                className="input"
-              />
+            <Field label="Altura (cm)">
+              <input type="number" name="heightCm" required value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="input" />
+            </Field>
+            <Field label="Peso actual (kg)">
+              <input type="number" step="0.1" name="currentWeightKg" required value={currentWeightKg} onChange={(e) => setCurrentWeightKg(e.target.value)} className="input" />
             </Field>
           </fieldset>
-        ) : (
-          <>
-            <input type="hidden" name="weeklyRateMinKg" value="0" />
-            <input type="hidden" name="weeklyRateMaxKg" value="0" />
-          </>
-        )}
 
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-[var(--text-secondary)]">
-            Objetivos diarios
-          </p>
+          <section className="surface-soft p-4">
+            <p className="mb-1 text-[13px] font-semibold text-[var(--text-primary)]">Protocolo de pesaje</p>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Para comparar mejor tus pesos, intenta pesarte en condiciones similares: por la mañana,
+              después de ir al baño y antes de comer o beber. No pasa nada si algún día lo haces en otro
+              momento — el sistema usa una tendencia, no el dato de un único día.
+            </p>
+          </section>
+
+          <StepNav onNext={() => setStep(1)} nextDisabled={!step0Valid} />
+        </div>
+
+        <div className={step === 1 ? "flex flex-col gap-5" : "hidden"}>
+          <fieldset className="grid grid-cols-2 gap-3">
+            <Field label="Actividad">
+              <select value={activityLevel} onChange={(e) => setActivityLevel(e.target.value as ActivityLevel)} className="input">
+                <option value="sedentary">Sedentaria</option>
+                <option value="light">Ligera</option>
+                <option value="moderate">Moderada</option>
+                <option value="very_active">Alta</option>
+                <option value="extra_active">Muy alta</option>
+              </select>
+            </Field>
+            <Field label="Objetivo">
+              <select name="mode" value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} className="input">
+                {Object.entries(MODE_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </fieldset>
+
+          {mode !== "maintain" ? (
+            <fieldset className="grid grid-cols-2 gap-3">
+              <Field label="Ritmo mínimo (kg/semana)">
+                <input type="number" step="0.05" name="weeklyRateMinKg" value={weeklyRateMinKg} onChange={(e) => setWeeklyRateMinKg(e.target.value)} className="input" />
+              </Field>
+              <Field label="Ritmo máximo (kg/semana)">
+                <input type="number" step="0.05" name="weeklyRateMaxKg" value={weeklyRateMaxKg} onChange={(e) => setWeeklyRateMaxKg(e.target.value)} className="input" />
+              </Field>
+              <Field label="Peso objetivo (kg, opcional)">
+                <input type="number" step="0.1" name="targetWeightKg" value={targetWeightKg} onChange={(e) => setTargetWeightKg(e.target.value)} className="input" />
+              </Field>
+            </fieldset>
+          ) : (
+            <>
+              <input type="hidden" name="weeklyRateMinKg" value="0" />
+              <input type="hidden" name="weeklyRateMaxKg" value="0" />
+            </>
+          )}
+
           <button
             type="button"
             disabled={!canSuggest}
             onClick={applySuggestion}
-            className="text-xs font-medium text-[var(--accent)] disabled:opacity-40"
+            className="btn-secondary tap-scale flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold text-[var(--accent)] disabled:opacity-40"
           >
-            Sugerir automáticamente
+            <SparkleIcon size={14} /> Sugerir objetivos automáticamente
           </button>
-        </div>
-        <fieldset className="grid grid-cols-2 gap-3">
-          <Field label="Calorías (kcal)">
-            <input
-              type="number"
-              name="kcal"
-              required
-              value={kcal}
-              onChange={(e) => setKcal(e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Proteína (g)">
-            <input
-              type="number"
-              name="proteinG"
-              required
-              value={proteinG}
-              onChange={(e) => setProteinG(e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Carbohidratos (g)">
-            <input
-              type="number"
-              name="carbohydratesG"
-              required
-              value={carbohydratesG}
-              onChange={(e) => setCarbohydratesG(e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Grasas (g)">
-            <input
-              type="number"
-              name="fatG"
-              required
-              value={fatG}
-              onChange={(e) => setFatG(e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Fibra (g, opcional)">
-            <input
-              type="number"
-              name="fiberG"
-              value={fiberG}
-              onChange={(e) => setFiberG(e.target.value)}
-              className="input"
-            />
-          </Field>
-        </fieldset>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="mt-2 w-full rounded-xl btn-primary py-3 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-60"
-        >
-          {submitting ? "Guardando…" : "Empezar"}
-        </button>
+          <StepNav onBack={() => setStep(0)} onNext={() => setStep(2)} />
+        </div>
+
+        <div className={step === 2 ? "flex flex-col gap-5" : "hidden"}>
+          <fieldset className="grid grid-cols-2 gap-3">
+            <Field label="Calorías (kcal)">
+              <input type="number" name="kcal" required value={kcal} onChange={(e) => setKcal(e.target.value)} className="input" />
+            </Field>
+            <Field label="Proteína (g)">
+              <input type="number" name="proteinG" required value={proteinG} onChange={(e) => setProteinG(e.target.value)} className="input" />
+            </Field>
+            <Field label="Carbohidratos (g)">
+              <input type="number" name="carbohydratesG" required value={carbohydratesG} onChange={(e) => setCarbohydratesG(e.target.value)} className="input" />
+            </Field>
+            <Field label="Grasas (g)">
+              <input type="number" name="fatG" required value={fatG} onChange={(e) => setFatG(e.target.value)} className="input" />
+            </Field>
+            <Field label="Fibra (g, opcional)">
+              <input type="number" name="fiberG" value={fiberG} onChange={(e) => setFiberG(e.target.value)} className="input" />
+            </Field>
+          </fieldset>
+
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setStep(1)} className="btn-secondary tap-scale rounded-xl px-4 py-3 text-sm font-semibold">
+              Atrás
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn-primary tap-scale flex-1 rounded-xl py-3 text-sm font-semibold text-[var(--accent-fg)] disabled:opacity-60"
+            >
+              {submitting ? "Guardando…" : "Empezar"}
+            </button>
+          </div>
+        </div>
       </form>
 
       <style jsx global>{`
@@ -290,6 +237,34 @@ export default function OnboardingPage() {
         }
       `}</style>
     </main>
+  );
+}
+
+function StepNav({
+  onBack,
+  onNext,
+  nextDisabled,
+}: {
+  onBack?: () => void;
+  onNext: () => void;
+  nextDisabled?: boolean;
+}) {
+  return (
+    <div className="flex gap-2">
+      {onBack ? (
+        <button type="button" onClick={onBack} className="btn-secondary tap-scale rounded-xl px-4 py-3 text-sm font-semibold">
+          Atrás
+        </button>
+      ) : null}
+      <button
+        type="button"
+        disabled={nextDisabled}
+        onClick={onNext}
+        className="btn-primary tap-scale flex flex-1 items-center justify-center gap-1 rounded-xl py-3 text-sm font-semibold text-[var(--accent-fg)] disabled:opacity-50"
+      >
+        Continuar <ChevronRightIcon size={16} />
+      </button>
+    </div>
   );
 }
 
