@@ -5,6 +5,7 @@ import { MealComposer, type MealComposerHandle } from "@/components/register/Mea
 import { foodToDraftItem } from "@/lib/nutrition/food-to-item";
 import type { FoodRow } from "@/lib/supabase/types";
 import { formatKcal } from "@/lib/format";
+import { SearchIcon, PlusIcon } from "@/components/ui/icons";
 
 interface SearchResult extends FoodRow {
   rankReason: "recent" | "favorite" | "custom" | "catalog";
@@ -46,18 +47,21 @@ export default function BuscarAlimentoPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <input
-        autoFocus
-        value={query}
-        onChange={(e) => handleQueryChange(e.target.value)}
-        placeholder="Buscar alimento…"
-        className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
-      />
+      <div className="relative">
+        <SearchIcon size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => handleQueryChange(e.target.value)}
+          placeholder="Buscar alimento…"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] py-2.5 pl-9 pr-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+        />
+      </div>
 
       {loading ? <p className="text-xs text-[var(--text-secondary)]">Buscando…</p> : null}
 
       {results.length > 0 ? (
-        <ul className="glass-panel flex flex-col divide-y divide-[var(--border-soft)] overflow-hidden rounded-2xl">
+        <ul className="surface-raised flex flex-col divide-y divide-[var(--border-soft)] overflow-hidden">
           {results.map((food) => (
             <li key={food.id}>
               <button
@@ -70,13 +74,13 @@ export default function BuscarAlimentoPage() {
                     {food.name}
                     {food.brand ? ` · ${food.brand}` : ""}
                   </p>
-                  <p className="text-xs text-[var(--text-secondary)]">
+                  <p className="text-xs text-[var(--text-tertiary)]">
                     {RANK_LABEL[food.rankReason]} · {formatKcal(food.energy_kcal)}/100
                     {food.basis === "per_100ml" ? "ml" : "g"}
                   </p>
                 </div>
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full btn-primary text-base leading-none">
-                  +
+                <span className="btn-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--accent-fg)]">
+                  <PlusIcon size={14} />
                 </span>
               </button>
             </li>

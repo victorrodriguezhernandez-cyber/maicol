@@ -7,6 +7,7 @@ import { createCustomFood } from "@/lib/actions/foods";
 import { MealComposer, type DraftItem } from "@/components/register/MealComposer";
 import { formatKcal } from "@/lib/format";
 import { MacroInline } from "@/components/ui/MacroInline";
+import { TagIcon } from "@/components/ui/icons";
 
 interface LabelEstimate {
   name: string | null;
@@ -113,7 +114,7 @@ export default function EtiquetaCapturaPage() {
     const e = state.estimate;
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-lg font-semibold text-[var(--text-primary)]">Comprobar etiqueta</h1>
+        <h1 className="text-hero-title text-xl text-[var(--text-primary)]">Comprobar etiqueta</h1>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={state.photoUrl} alt="Etiqueta fotografiada" className="max-h-64 rounded-2xl object-contain" />
 
@@ -123,15 +124,15 @@ export default function EtiquetaCapturaPage() {
           </p>
         ) : null}
 
-        <div className="glass-panel flex flex-col gap-2 rounded-2xl p-4 text-sm text-[var(--text-primary)]">
+        <div className="surface-soft flex flex-col gap-2 p-4 text-sm text-[var(--text-primary)]">
           <div>
-            <p className="font-medium">{e.name ?? "Sin nombre detectado"}</p>
-            <p className="text-xs text-[var(--text-secondary)]">
+            <p className="font-semibold">{e.name ?? "Sin nombre detectado"}</p>
+            <p className="text-xs text-[var(--text-tertiary)]">
               {e.brand ?? ""} · {e.basis === "per_100g" ? "por 100 g" : e.basis === "per_100ml" ? "por 100 ml" : `por ración (${e.serving_size_g ?? "?"} g)`}
             </p>
           </div>
           <div className="flex items-center gap-2.5">
-            <span className="font-numeric text-base font-semibold">{formatKcal(e.energy_kcal)}</span>
+            <span className="text-metric text-base text-[var(--text-primary)]">{formatKcal(e.energy_kcal)}</span>
             <MacroInline protein={e.protein_g} carbs={e.carbohydrates_g} fat={e.fat_g} fiber={e.fiber_g} />
           </div>
         </div>
@@ -152,7 +153,7 @@ export default function EtiquetaCapturaPage() {
         <button
           type="button"
           onClick={confirmAndContinue}
-          className="rounded-xl btn-primary py-3 text-sm font-medium text-[var(--accent-fg)]"
+          className="btn-primary tap-scale rounded-xl py-3 text-sm font-semibold text-[var(--accent-fg)]"
         >
           Guardar producto y continuar
         </button>
@@ -162,10 +163,12 @@ export default function EtiquetaCapturaPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Fotografiar etiqueta</h1>
-      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--border)] px-6 py-10 text-center transition-colors duration-150 active:bg-[var(--surface-2)]">
-        <span className="text-3xl">🏷️</span>
-        <span className="text-sm font-medium text-[var(--accent)]">Hacer foto o elegir de la galería</span>
+      <h1 className="text-hero-title text-xl text-[var(--text-primary)]">Fotografiar etiqueta</h1>
+      <label className="tap-scale flex cursor-pointer flex-col items-center gap-3 rounded-2xl border border-dashed border-[var(--border-strong)] px-6 py-10 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full" style={{ background: "var(--metric-carbs-soft)", color: "var(--metric-carbs)" }}>
+          <TagIcon size={22} />
+        </span>
+        <span className="text-sm font-semibold text-[var(--accent)]">Hacer foto o elegir de la galería</span>
         <input
           type="file"
           accept="image/*"

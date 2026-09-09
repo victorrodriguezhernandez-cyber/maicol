@@ -6,6 +6,7 @@ import { compressImageToBase64 } from "@/lib/image";
 import { MealComposer, type DraftItem } from "@/components/register/MealComposer";
 import { aiItemToDraft, type AiMealEstimateResponse } from "@/lib/nutrition/ai-estimate-to-item";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { CameraIcon, PlusIcon } from "@/components/ui/icons";
 
 type State =
   | { kind: "idle" }
@@ -71,7 +72,7 @@ function FotoCapturaInner() {
     return (
       <div className="flex flex-col gap-4">
         {state.result.unable_to_estimate ? (
-          <div className="glass-panel rounded-2xl p-4">
+          <div className="surface-soft p-4">
             <p className="text-sm font-medium text-[var(--text-primary)]">
               No hemos podido estimar esta comida con esta fotografía.
             </p>
@@ -92,12 +93,14 @@ function FotoCapturaInner() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Fotografiar comida</h1>
+      <h1 className="text-hero-title text-xl text-[var(--text-primary)]">Fotografiar comida</h1>
 
       {photos.length === 0 ? (
-        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--border)] px-6 py-10 text-center transition-colors duration-150 active:bg-[var(--surface-2)]">
-          <span className="text-3xl">📷</span>
-          <span className="text-sm font-medium text-[var(--accent)]">Hacer foto o elegir de la galería</span>
+        <label className="tap-scale flex cursor-pointer flex-col items-center gap-3 rounded-2xl border border-dashed border-[var(--border-strong)] px-6 py-10 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+            <CameraIcon size={22} />
+          </span>
+          <span className="text-sm font-semibold text-[var(--accent)]">Hacer foto o elegir de la galería</span>
           <input
             type="file"
             accept="image/*"
@@ -112,8 +115,8 @@ function FotoCapturaInner() {
             // eslint-disable-next-line @next/next/no-img-element
             <img key={i} src={p.preview} alt="" className="aspect-square rounded-xl object-cover" />
           ))}
-          <label className="flex aspect-square cursor-pointer items-center justify-center rounded-xl border border-dashed border-[var(--border)] text-2xl text-[var(--accent)]">
-            +
+          <label className="tap-scale flex aspect-square cursor-pointer items-center justify-center rounded-xl border border-dashed border-[var(--border-strong)] text-[var(--accent)]">
+            <PlusIcon size={20} />
             <input
               type="file"
               accept="image/*"
@@ -155,7 +158,7 @@ function FotoCapturaInner() {
         type="button"
         disabled={photos.length === 0 || state.kind === "analyzing"}
         onClick={analyze}
-        className="rounded-xl btn-primary py-3 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
+        className="btn-primary tap-scale rounded-xl py-3 text-sm font-semibold text-[var(--accent-fg)] disabled:opacity-50"
       >
         {state.kind === "analyzing" ? "Analizando…" : "Analizar"}
       </button>

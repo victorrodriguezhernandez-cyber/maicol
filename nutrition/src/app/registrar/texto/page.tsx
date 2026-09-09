@@ -44,8 +44,8 @@ export default function TextoEntryPage() {
     return (
       <div className="flex flex-col gap-4">
         {state.result.unable_to_estimate ? (
-          <div className="glass-panel rounded-2xl p-4 text-sm text-[var(--text-primary)]">
-            <p className="font-medium">No hemos podido interpretar bien esta descripción.</p>
+          <div className="surface-soft p-4 text-sm text-[var(--text-primary)]">
+            <p className="font-semibold">No hemos podido interpretar bien esta descripción.</p>
             <ul className="mt-2 list-disc pl-4 text-xs text-[var(--text-secondary)]">
               {state.result.clarifying_questions.map((q, i) => (
                 <li key={i}>{q}</li>
@@ -60,14 +60,14 @@ export default function TextoEntryPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Describe lo que has comido</h1>
+      <h1 className="text-hero-title text-xl text-[var(--text-primary)]">Describe lo que has comido</h1>
       <textarea
         autoFocus
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={5}
         placeholder="He comido más o menos 180 gramos de pollo, unos 150 gramos de arroz, medio aguacate y una Coca-Cola Zero."
-        className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+        className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
       />
 
       {state.kind === "unavailable" ? (
@@ -86,7 +86,7 @@ export default function TextoEntryPage() {
         type="button"
         disabled={!text.trim() || state.kind === "analyzing"}
         onClick={analyze}
-        className="rounded-xl btn-primary py-3 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
+        className="btn-primary tap-scale rounded-xl py-3 text-sm font-semibold text-[var(--accent-fg)] disabled:opacity-50"
       >
         {state.kind === "analyzing" ? "Analizando…" : "Analizar"}
       </button>

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { MealComposer, type DraftItem } from "@/components/register/MealComposer";
 import { aiItemToDraft, type AiMealEstimateResponse } from "@/lib/nutrition/ai-estimate-to-item";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MicIcon } from "@/components/ui/icons";
 
 type State =
   | { kind: "idle" }
@@ -91,8 +92,8 @@ export default function VozEntryPage() {
     return (
       <div className="flex flex-col gap-4">
         {state.result.unable_to_estimate ? (
-          <div className="glass-panel rounded-2xl p-4 text-sm text-[var(--text-primary)]">
-            <p className="font-medium">No hemos entendido bien el audio.</p>
+          <div className="surface-soft p-4 text-sm text-[var(--text-primary)]">
+            <p className="font-semibold">No hemos entendido bien el audio.</p>
             <ul className="mt-2 list-disc pl-4 text-xs text-[var(--text-secondary)]">
               {state.result.clarifying_questions.map((q, i) => (
                 <li key={i}>{q}</li>
@@ -107,38 +108,38 @@ export default function VozEntryPage() {
 
   return (
     <div className="flex flex-col items-center gap-6 py-8">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Hablar</h1>
+      <h1 className="text-hero-title text-xl text-[var(--text-primary)]">Hablar</h1>
 
       {state.kind === "idle" ? (
         <button
           type="button"
           onClick={startRecording}
-          className="flex h-24 w-24 items-center justify-center rounded-full btn-primary text-3xl text-[var(--accent-fg)]"
+          className="btn-primary tap-scale flex h-24 w-24 items-center justify-center rounded-full text-[var(--accent-fg)]"
         >
-          🎙️
+          <MicIcon size={34} strokeWidth={1.4} />
         </button>
       ) : null}
 
       {state.kind === "recording" ? (
         <div className="flex flex-col items-center gap-4">
-          <div className="flex h-24 w-24 animate-pulse items-center justify-center rounded-full bg-[var(--danger)] text-3xl text-white">
-            🎙️
+          <div className="flex h-24 w-24 animate-pulse items-center justify-center rounded-full bg-[var(--danger)] text-white">
+            <MicIcon size={34} strokeWidth={1.4} />
           </div>
-          <p className="text-sm tabular-nums text-[var(--text-secondary)]">
+          <p className="text-metric text-sm text-[var(--text-secondary)]">
             {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}
           </p>
           <div className="flex gap-3">
             <button
               type="button"
               onClick={cancelRecording}
-              className="rounded-xl btn-secondary px-4 py-2 text-sm font-medium"
+              className="btn-secondary tap-scale rounded-xl px-4 py-2 text-sm font-semibold"
             >
               Cancelar
             </button>
             <button
               type="button"
               onClick={finishRecording}
-              className="rounded-xl btn-primary px-4 py-2 text-sm font-medium text-[var(--accent-fg)]"
+              className="btn-primary tap-scale rounded-xl px-4 py-2 text-sm font-semibold text-[var(--accent-fg)]"
             >
               Finalizar
             </button>
