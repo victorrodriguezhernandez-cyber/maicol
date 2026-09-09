@@ -3,6 +3,7 @@ import { createClient, getUser } from "@/lib/supabase/server";
 import { formatKcal } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DeleteFoodButton } from "@/components/settings/DeleteFoodButton";
+import { PageShell } from "@/components/ui/PageShell";
 
 export default async function BibliotecaAlimentosPage() {
   const supabase = await createClient();
@@ -19,12 +20,7 @@ export default async function BibliotecaAlimentosPage() {
     .limit(100);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Biblioteca de alimentos</h1>
-      <p className="text-xs text-[var(--text-secondary)]">
-        Tus alimentos y productos personalizados (creados manualmente o desde etiquetas fotografiadas).
-      </p>
-
+    <PageShell eyebrow="Creados manualmente o desde etiquetas fotografiadas" title="Biblioteca de alimentos">
       {!foods?.length ? (
         <EmptyState title="Todavía no tienes alimentos personalizados" />
       ) : (
@@ -35,7 +31,7 @@ export default async function BibliotecaAlimentosPage() {
                 <p className="text-sm font-medium text-[var(--text-primary)]">
                   {f.name} {f.brand ? `· ${f.brand}` : ""}
                 </p>
-                <p className="font-numeric text-xs text-[var(--text-secondary)]">
+                <p className="text-metric text-xs text-[var(--text-tertiary)]">
                   {formatKcal(f.energy_kcal)} / {f.basis === "per_100ml" ? "100 ml" : "100 g"}
                 </p>
               </div>
@@ -44,6 +40,6 @@ export default async function BibliotecaAlimentosPage() {
           ))}
         </ul>
       )}
-    </div>
+    </PageShell>
   );
 }

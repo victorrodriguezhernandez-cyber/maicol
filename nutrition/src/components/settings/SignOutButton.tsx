@@ -14,7 +14,7 @@ export function SignOutButton() {
         router.push("/login");
         router.refresh();
       }}
-      className="w-full rounded-xl border border-[var(--danger)] py-3 text-sm font-medium text-[var(--danger)] transition-colors duration-150 active:bg-[var(--danger)]/10"
+      className="btn-danger tap-scale w-full rounded-xl py-3 text-sm font-semibold"
     >
       Cerrar sesión
     </button>

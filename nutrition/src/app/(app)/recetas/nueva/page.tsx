@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createRecipe } from "@/lib/actions/recipes";
 import type { FoodRow } from "@/lib/supabase/types";
 import { formatKcal } from "@/lib/format";
+import { SearchIcon, CloseIcon } from "@/components/ui/icons";
 
 interface DraftIngredient {
   key: string;
@@ -77,7 +78,7 @@ export default function NuevaRecetaPage() {
 
   return (
     <div className="flex flex-col gap-4 pb-24">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Nueva receta</h1>
+      <h1 className="text-hero-title text-xl text-[var(--text-primary)]">Nueva receta</h1>
 
       <div className="grid grid-cols-3 gap-2">
         <input
@@ -95,14 +96,17 @@ export default function NuevaRecetaPage() {
         />
       </div>
 
-      <input
-        value={query}
-        onChange={(e) => handleQueryChange(e.target.value)}
-        placeholder="Buscar ingrediente…"
-        className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
-      />
+      <div className="relative">
+        <SearchIcon size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+        <input
+          value={query}
+          onChange={(e) => handleQueryChange(e.target.value)}
+          placeholder="Buscar ingrediente…"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] py-2 pl-9 pr-3 text-sm text-[var(--text-primary)]"
+        />
+      </div>
       {results.length > 0 ? (
-        <ul className="glass-panel flex flex-col divide-y divide-[var(--border-soft)] overflow-hidden rounded-2xl">
+        <ul className="surface-raised flex flex-col divide-y divide-[var(--border-soft)] overflow-hidden">
           {results.map((food) => (
             <li key={food.id}>
               <button
@@ -111,7 +115,7 @@ export default function NuevaRecetaPage() {
                 className="tap-row flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-[var(--text-primary)]"
               >
                 <span>{food.name}</span>
-                <span className="font-numeric text-xs text-[var(--text-secondary)]">
+                <span className="text-metric text-xs text-[var(--text-secondary)]">
                   {formatKcal(food.energy_kcal)}/100g
                 </span>
               </button>
@@ -123,21 +127,22 @@ export default function NuevaRecetaPage() {
       {ingredients.length > 0 ? (
         <ul className="flex flex-col gap-2">
           {ingredients.map((ing) => (
-            <li key={ing.key} className="glass-panel flex items-center gap-2 rounded-xl px-3 py-2.5">
+            <li key={ing.key} className="surface-soft flex items-center gap-2 px-3.5 py-2.5">
               <span className="flex-1 text-sm text-[var(--text-primary)]">{ing.name}</span>
               <input
                 type="number"
                 value={ing.gramsEquivalent}
                 onChange={(e) => updateGrams(ing.key, Number(e.target.value) || 0)}
-                className="w-16 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1 text-sm text-[var(--text-primary)]"
+                className="text-metric w-16 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1 text-sm text-[var(--text-primary)]"
               />
               <span className="text-xs text-[var(--text-secondary)]">g</span>
               <button
                 type="button"
                 onClick={() => removeIngredient(ing.key)}
-                className="text-xs font-medium text-[var(--danger)] active:opacity-60"
+                aria-label="Quitar"
+                className="tap-scale text-[var(--text-tertiary)]"
               >
-                Quitar
+                <CloseIcon size={14} />
               </button>
             </li>
           ))}
@@ -152,7 +157,7 @@ export default function NuevaRecetaPage() {
         type="button"
         disabled={saving || !name.trim() || ingredients.length === 0}
         onClick={handleSave}
-        className="mt-2 w-full rounded-xl btn-primary py-3 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
+        className="btn-primary tap-scale mt-2 w-full rounded-xl py-3 text-sm font-semibold text-[var(--accent-fg)] disabled:opacity-50"
       >
         {saving ? "Guardando…" : "Guardar receta"}
       </button>

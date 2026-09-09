@@ -3,6 +3,8 @@ import { createClient, getUser } from "@/lib/supabase/server";
 import { getCurrentGoal } from "@/lib/data/nutrition";
 import { GoalEditorForm } from "@/components/settings/GoalEditorForm";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageShell } from "@/components/ui/PageShell";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 
 export default async function ObjetivosPage() {
   const supabase = await createClient();
@@ -21,9 +23,7 @@ export default async function ObjetivosPage() {
     .limit(10);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Objetivos nutricionales</h1>
-
+    <PageShell title="Objetivos nutricionales">
       {goal ? (
         <GoalEditorForm goal={goal} />
       ) : (
@@ -32,21 +32,19 @@ export default async function ObjetivosPage() {
 
       {history && history.length > 1 ? (
         <section className="flex flex-col gap-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
-            Historial de objetivos
-          </p>
+          <SectionHeader>Historial de objetivos</SectionHeader>
           <ul className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
             {history.map((g) => (
               <li key={g.id} className="flex items-center justify-between py-2.5 text-xs">
                 <span className="text-[var(--text-secondary)]">
                   {g.effective_from} – {g.effective_to ?? "actualidad"}
                 </span>
-                <span className="font-numeric font-semibold text-[var(--text-primary)]">{g.kcal} kcal</span>
+                <span className="text-metric font-semibold text-[var(--text-primary)]">{g.kcal} kcal</span>
               </li>
             ))}
           </ul>
         </section>
       ) : null}
-    </div>
+    </PageShell>
   );
 }

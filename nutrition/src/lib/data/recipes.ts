@@ -34,6 +34,56 @@ export async function listRecipes(supabase: SupabaseClient, userId: string) {
   return (data ?? []) as RecipeRow[];
 }
 
+export interface RecipeSummary extends RecipeRow {
+  perServingKcal: number;
+  ingredientCount: number;
+}
+
+/** Same list, plus a per-serving kcal figure and ingredient count for the
+ * card grid — one extra query joining every recipe_items row the user
+ * owns to its food (not one query per recipe), grouped in memory. */
+export async function listRecipesWithSummary(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<RecipeSummary[]> {
+  const recipes = await listRecipes(supabase, userId);
+  if (recipes.length === 0) return [];
+
+  const { data: items, error } = await supabase
+    .from("recipe_items")
+    .select("recipe_id, grams_equivalent, foods(energy_kcal, basis, serving_size_g)")
+    .in(
+      "recipe_id",
+      recipes.map((r) => r.id),
+    );
+  if (error) throw error;
+
+  const byRecipe = new Map<string, { kcal: number; count: number }>();
+  for (const item of (items ?? []) as unknown as Array<{
+    recipe_id: string;
+    grams_equivalent: number;
+    foods: { energy_kcal: number; basis: string; serving_size_g: number | null };
+  }>) {
+    const food = item.foods;
+    const isServingBasis = food.basis === "per_serving" && food.serving_size_g;
+    const factor = isServingBasis ? 100 / food.serving_size_g! : 1;
+    const kcalPer100 = food.energy_kcal * factor;
+    const acc = byRecipe.get(item.recipe_id) ?? { kcal: 0, count: 0 };
+    acc.kcal += (kcalPer100 * item.grams_equivalent) / 100;
+    acc.count += 1;
+    byRecipe.set(item.recipe_id, acc);
+  }
+
+  return recipes.map((r) => {
+    const agg = byRecipe.get(r.id) ?? { kcal: 0, count: 0 };
+    return {
+      ...r,
+      perServingKcal: r.servings > 0 ? agg.kcal / r.servings : agg.kcal,
+      ingredientCount: agg.count,
+    };
+  });
+}
+
 export async function getRecipeWithItems(supabase: SupabaseClient, recipeId: string) {
   const { data: recipe, error: recipeError } = await supabase
     .from("recipes")

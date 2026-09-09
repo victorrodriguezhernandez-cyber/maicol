@@ -2,13 +2,27 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/settings/SignOutButton";
+import { PageShell } from "@/components/ui/PageShell";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import {
+  ScaleIcon,
+  UserIcon,
+  LockIcon,
+  FoodIcon,
+  BookIcon,
+  UploadIcon,
+  ChevronRightIcon,
+} from "@/components/ui/icons";
 
-const LINKS = [
-  { href: "/ajustes/objetivos", label: "Objetivos nutricionales" },
-  { href: "/ajustes/perfil", label: "Perfil y preferencias" },
-  { href: "/ajustes/seguridad", label: "Seguridad y acceso" },
-  { href: "/ajustes/alimentos", label: "Biblioteca de alimentos" },
-  { href: "/recetas", label: "Recetas" },
+const ACCOUNT_LINKS = [
+  { href: "/ajustes/objetivos", label: "Objetivos nutricionales", icon: ScaleIcon },
+  { href: "/ajustes/perfil", label: "Perfil y preferencias", icon: UserIcon },
+  { href: "/ajustes/seguridad", label: "Seguridad y acceso", icon: LockIcon },
+] as const;
+
+const LIBRARY_LINKS = [
+  { href: "/ajustes/alimentos", label: "Biblioteca de alimentos", icon: FoodIcon },
+  { href: "/recetas", label: "Recetas", icon: BookIcon },
 ] as const;
 
 export default async function AjustesPage() {
@@ -21,54 +35,49 @@ export default async function AjustesPage() {
   const initial = user.email?.[0]?.toUpperCase() ?? "?";
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageShell>
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full btn-primary text-sm font-semibold">
+        <div
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-semibold text-[var(--accent-fg)]"
+          style={{ background: "linear-gradient(135deg, var(--accent-2), var(--accent) 75%)" }}
+        >
           {initial}
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-[var(--text-primary)]">Ajustes</h1>
-          <p className="text-xs text-[var(--text-secondary)]">{user.email}</p>
+          <h1 className="text-hero-title text-xl text-[var(--text-primary)]">Ajustes</h1>
+          <p className="text-xs text-[var(--text-tertiary)]">{user.email}</p>
         </div>
       </div>
 
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
-        {LINKS.map((link) => (
-          <li key={link.href}>
-            <Link
-              href={link.href}
-              className="tap-row flex items-center justify-between py-3 text-sm font-medium text-[var(--text-primary)]"
-            >
-              {link.label}
-              <ChevronIcon />
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <SettingsGroup label="Cuenta" links={ACCOUNT_LINKS} />
+      <SettingsGroup label="Biblioteca" links={LIBRARY_LINKS} />
 
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
-        <li>
-          <a
-            href="/api/export?format=json"
-            className="tap-row flex items-center justify-between py-3 text-sm font-medium text-[var(--text-primary)]"
-          >
-            Exportar mis datos (JSON)
-            <DownloadIcon />
+      <section className="flex flex-col gap-2">
+        <SectionHeader>Datos</SectionHeader>
+        <div className="surface-soft flex flex-col divide-y divide-[var(--border-soft)] overflow-hidden">
+          <a href="/api/export?format=json" className="tap-row flex items-center gap-3 px-4 py-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-secondary)]">
+              <UploadIcon size={15} />
+            </span>
+            <span className="flex-1 text-[13.5px] font-medium text-[var(--text-primary)]">
+              Exportar mis datos (JSON)
+            </span>
+            <ChevronRightIcon size={15} className="text-[var(--text-tertiary)]" />
           </a>
-        </li>
-        <li>
-          <a
-            href="/api/export?format=csv"
-            className="tap-row flex items-center justify-between py-3 text-sm font-medium text-[var(--text-primary)]"
-          >
-            Exportar mis datos (CSV)
-            <DownloadIcon />
+          <a href="/api/export?format=csv" className="tap-row flex items-center gap-3 px-4 py-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-secondary)]">
+              <UploadIcon size={15} />
+            </span>
+            <span className="flex-1 text-[13.5px] font-medium text-[var(--text-primary)]">
+              Exportar mis datos (CSV)
+            </span>
+            <ChevronRightIcon size={15} className="text-[var(--text-tertiary)]" />
           </a>
-        </li>
-      </ul>
+        </div>
+      </section>
 
-      <div className="glass-panel rounded-2xl p-4 text-xs text-[var(--text-secondary)]">
-        <p className="mb-1 font-medium text-[var(--text-primary)]">Privacidad e IA</p>
+      <div className="surface-soft p-4 text-xs text-[var(--text-secondary)]">
+        <p className="mb-1 text-[13px] font-semibold text-[var(--text-primary)]">Privacidad e IA</p>
         <p>
           Las fotografías de comida y etiquetas se envían a Gemini para analizarlas cuando tú lo
           solicitas. Las fotografías de progreso son privadas y nunca se envían a la IA. Los audios
@@ -77,28 +86,31 @@ export default async function AjustesPage() {
       </div>
 
       <SignOutButton />
-    </div>
+    </PageShell>
   );
 }
 
-function ChevronIcon() {
+function SettingsGroup({
+  label,
+  links,
+}: {
+  label: string;
+  links: readonly { href: string; label: string; icon: typeof ScaleIcon }[];
+}) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[var(--text-tertiary)]">
-      <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-[var(--text-tertiary)]">
-      <path
-        d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <section className="flex flex-col gap-2">
+      <SectionHeader>{label}</SectionHeader>
+      <div className="surface-soft flex flex-col divide-y divide-[var(--border-soft)] overflow-hidden">
+        {links.map((link) => (
+          <Link key={link.href} href={link.href} className="tap-row flex items-center gap-3 px-4 py-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-secondary)]">
+              <link.icon size={15} />
+            </span>
+            <span className="flex-1 text-[13.5px] font-medium text-[var(--text-primary)]">{link.label}</span>
+            <ChevronRightIcon size={15} className="text-[var(--text-tertiary)]" />
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }

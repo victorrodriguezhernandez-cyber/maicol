@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { listRecipes } from "@/lib/data/recipes";
+import { listRecipesWithSummary } from "@/lib/data/recipes";
+import { formatKcal } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageShell } from "@/components/ui/PageShell";
+import { BookIcon, PlusIcon } from "@/components/ui/icons";
 
 export default async function RecetasPage() {
   const supabase = await createClient();
@@ -11,50 +14,51 @@ export default async function RecetasPage() {
   } = await getUser(supabase);
   if (!user) redirect("/login");
 
-  const recipes = await listRecipes(supabase, user.id);
+  const recipes = await listRecipesWithSummary(supabase, user.id);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-[var(--text-primary)]">Recetas</h1>
+    <PageShell
+      title="Recetas"
+      trailing={
         <Link
           href="/recetas/nueva"
-          className="rounded-lg btn-primary px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)]"
+          className="btn-primary tap-scale flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold text-[var(--accent-fg)]"
         >
-          Nueva receta
+          <PlusIcon size={14} /> Nueva
         </Link>
-      </div>
-
+      }
+    >
       {recipes.length === 0 ? (
         <EmptyState
           title="Todavía no tienes recetas"
           description="Crea tu primera receta a partir de alimentos de tu biblioteca."
         />
       ) : (
-        <ul className="flex flex-col divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
+        <div className="grid grid-cols-2 gap-2.5">
           {recipes.map((r) => (
-            <li key={r.id}>
-              <Link href={`/recetas/${r.id}`} className="tap-row flex items-center justify-between py-3">
-                <span className="text-sm font-medium text-[var(--text-primary)]">{r.name}</span>
-                <span className="flex items-center gap-2">
-                  <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
-                    {r.servings} ración{r.servings === 1 ? "" : "es"}
-                  </span>
-                  <ChevronIcon />
-                </span>
-              </Link>
-            </li>
+            <Link key={r.id} href={`/recetas/${r.id}`} className="tap-scale surface-soft flex flex-col gap-3 p-3.5">
+              <span
+                className="flex h-9 w-9 items-center justify-center rounded-full"
+                style={{ background: "var(--metric-carbs-soft)", color: "var(--metric-carbs)" }}
+              >
+                <BookIcon size={16} />
+              </span>
+              <div>
+                <p className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-[var(--text-primary)]">
+                  {r.name}
+                </p>
+                <p className="text-metric mt-1 text-xs text-[var(--text-tertiary)]">
+                  {r.perServingKcal > 0 ? `${formatKcal(r.perServingKcal)} / ración` : "Sin ingredientes"}
+                </p>
+              </div>
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                {r.servings} ración{r.servings === 1 ? "" : "es"} · {r.ingredientCount} ingrediente
+                {r.ingredientCount === 1 ? "" : "s"}
+              </p>
+            </Link>
           ))}
-        </ul>
+        </div>
       )}
-    </div>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[var(--text-tertiary)]">
-      <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    </PageShell>
   );
 }

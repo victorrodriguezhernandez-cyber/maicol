@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { SetPasswordForm } from "@/components/settings/SetPasswordForm";
+import { PageShell } from "@/components/ui/PageShell";
 
 export default async function SeguridadPage() {
   const supabase = await createClient();
@@ -10,12 +11,8 @@ export default async function SeguridadPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">Seguridad y acceso</h1>
-      <p className="text-xs text-[var(--text-secondary)]">
-        Cuenta: {user.email}
-      </p>
+    <PageShell eyebrow={`Cuenta: ${user.email}`} title="Seguridad y acceso">
       <SetPasswordForm />
-    </div>
+    </PageShell>
   );
 }
