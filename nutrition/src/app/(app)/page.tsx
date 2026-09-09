@@ -15,6 +15,7 @@ import {
   formatSignedKgPerWeek,
   formatTime,
   todayLocalDateString,
+  localHour,
   MEAL_TYPE_LABELS,
 } from "@/lib/format";
 import { RingProgress } from "@/components/ui/RingProgress";
@@ -39,7 +40,7 @@ export default async function TodayPage() {
     .eq("id", user.id)
     .maybeSingle();
   const firstName = profile?.display_name?.split(" ")[0] ?? null;
-  const hour = new Date().getHours();
+  const hour = localHour();
   const greeting = hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
 
   const today = todayLocalDateString();

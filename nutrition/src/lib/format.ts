@@ -99,6 +99,22 @@ export function todayLocalDateString(): string {
   return toLocalDateKey(new Date());
 }
 
+const hourFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  hour12: false,
+  timeZone: APP_TIMEZONE,
+});
+
+/** The hour-of-day (0-23) in APP_TIMEZONE — never `date.getHours()` for
+ * anything a Server Component computes; that reads the server's own
+ * clock (UTC on Vercel), not the user's. Used for "Buenos días/tardes/
+ * noches" — the one greeting that was still silently wrong in the same
+ * way formatTime used to be. */
+export function localHour(date: Date = new Date()): number {
+  const part = hourFormatter.formatToParts(date).find((p) => p.type === "hour");
+  return part ? Number(part.value) % 24 : date.getHours();
+}
+
 /** Minutes APP_TIMEZONE is ahead of UTC for the instant `date` represents
  * — varies with DST (+60 in winter/CET, +120 in summer/CEST), so this is
  * computed per-date rather than hardcoded. Both sides of the subtraction
