@@ -14,10 +14,16 @@ antes de tocar código.
   proyecto. No la toques salvo que te lo pidan explícitamente.
 - **Rama**: `claude/nutrition-ai-app-vj15u0` (también fusionada a `main`,
   que es la rama de producción real en Vercel — ver "Despliegue" abajo).
-- **Commit exacto de este ZIP**: `PENDING_COMMIT_HASH` — sustituido justo
-  después de confirmarlo con `git rev-parse HEAD` (ver el commit real en
-  el historial de git si tienes el `.git`; si no, este hash es la única
-  referencia).
+- **Commit de referencia de este ZIP**: `ae74368f16b386365bc2ce4d31196dd8cf2cd8b4`
+  en la rama `claude/nutrition-ai-app-vj15u0` (fusionada, idéntica, a
+  `main` en ese momento — ver "Despliegue" abajo). Es el commit que
+  introdujo estos tres documentos de handoff; el contenido del propio
+  archivo del ZIP puede llevar como mucho un commit más encima de ese
+  (una corrección menor a este mismo párrafo) — para el hash exacto y
+  definitivo, usa `git log -1` sobre el checkout real en vez de fiarte
+  solo de este número. El `.git/` no se incluye en el ZIP (ver "Qué NO se
+  incluye" al final) — si necesitas el historial completo, clona
+  `victorrodriguezhernandez-cyber/maicol`.
 - **Estado verificado en el momento de generar este ZIP**: `npx tsc
   --noEmit`, `npx eslint .`, `npm run test` (34/34) y `npm run build`
   pasan limpios. No se garantiza que sigan pasando si el destinatario
