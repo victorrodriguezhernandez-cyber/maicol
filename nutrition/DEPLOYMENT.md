@@ -90,37 +90,40 @@ was configured, in case you ever need to redo it for a new project:
   desplegar producción" (spec section 66) refers to. Every push to `main`
   auto-deploys to production; other branches/PRs get preview deployments.
 
-## 3. Supabase Auth URL Configuration (REQUIRED — do this before the first sign-in)
+## 3. Auth: single fixed account, password-only (no email step)
 
-By default a fresh Supabase project's Auth **Site URL** is
-`http://localhost:3000`, and its **Redirect URLs** allowlist only matches
-that. Our login page passes `emailRedirectTo: <origin>/auth/callback` to
-`signInWithOtp`, but Supabase silently **ignores** that and falls back to
-the default Site URL if the requested redirect isn't on the allowlist —
-so until this is set, every confirmation/magic-link email links to
-`localhost` and fails on a real device (confirmed live: this is exactly
-what happened on first sign-in attempt).
+This app abandoned magic-link/OTP auth — login is now
+`supabase.auth.signInWithPassword({ email: ACCOUNT_EMAIL, password:
+username })` against one fixed, hardcoded account email (see
+`ARCHITECTURE.md` → Auth). There is no sign-up flow and no
+"forgot password" flow. What this means for a fresh environment:
 
-Supabase Dashboard → your project → **Authentication → URL
-Configuration**:
+1. Create the one Supabase Auth user yourself (Dashboard → Authentication
+   → Users → Add user, or `supabase.auth.admin.createUser` with the
+   service-role key) with the exact email hardcoded as `ACCOUNT_EMAIL` in
+   `src/app/(auth)/login/page.tsx` (change that constant first if you
+   want a different email).
+2. Set its password to whatever the user should type as "Usuario" — via
+   the Dashboard, `admin.updateUserById`, or (if you don't have the
+   service-role key available, as was the case in this project — see
+   §2) a direct SQL `UPDATE auth.users SET encrypted_password =
+   crypt('the-word', gen_salt('bf')) WHERE email = '...'` using the
+   `pgcrypto`/`extensions` schema, run once via the Supabase SQL
+   editor/MCP — this is bcrypt-compatible with what GoTrue itself
+   verifies against.
+3. That's it — no Site URL/Redirect URL configuration is needed for
+   sign-in itself anymore (nothing sends an email). `.../auth/callback/
+   route.ts` is unused leftover code from the old magic-link flow.
 
-- **Site URL** → your production domain, e.g. `https://maicol-6vwk.vercel.app`
-- **Redirect URLs** → add `https://maicol-6vwk.vercel.app/**`
-
-There's no API/MCP tool exposed for this setting — it has to be set from
-the dashboard. After changing it, request a **new** sign-in email; any
-email sent before this change has the broken `localhost` link baked in
-and can't be salvaged.
-
-The default magic-link/confirm-signup email templates work fine as-is;
-customizing them (Authentication → Email Templates) is optional.
+The default magic-link/confirm-signup email templates are irrelevant
+unless you reintroduce an email-based flow.
 
 ## 4. Verifying the deployment
 
 1. Visit the deployed URL on an iPhone in Safari, tap Share → "Add to Home
    Screen".
-2. Open it from the home screen icon (standalone mode) and sign in via
-   magic link.
+2. Open it from the home screen icon (standalone mode) and sign in by
+   typing the one "Usuario" word (see §3).
 3. Complete onboarding, log a meal manually, log a weight entry.
 4. If `GEMINI_API_KEY` is set: try a photo or text capture and confirm you
    get a real structured estimate back.

@@ -67,6 +67,10 @@ checks — there is no separate ACL table.
   can only ever run as the `AFTER INSERT ON auth.users` trigger, not be
   called directly over the API).
 - `0003_storage_buckets.sql` — the three buckets + their RLS policies.
+- `0004_optimize_rls_auth_calls.sql` — performance-advisor fix: every RLS
+  policy wraps `auth.uid()` as `(select auth.uid())` so Postgres evaluates
+  it once per query instead of once per row (`auth_rls_initplan` lint).
+  Pure performance change — no access rule is different after it.
 
 Apply new migrations with the Supabase MCP/CLI against project
 `pyiukqeuaxonsrrgbfzq`, or `supabase db push` once you have the CLI linked

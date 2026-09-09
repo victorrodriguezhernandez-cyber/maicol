@@ -68,8 +68,27 @@ reach is protected by Row Level Security (see `DATABASE.md`).
   `auth.uid() = user_id`; the shared food catalog (`foods` with
   `user_id IS NULL`) is readable by everyone and writable only by
   server-side code holding the service-role key.
-- **Auth**: Supabase email OTP ("magic link"), no password. See
-  `src/app/(auth)/login/page.tsx` and `.../auth/callback/route.ts`.
+- **Auth**: single-user app — there is exactly one Supabase Auth account,
+  a fixed email (`ACCOUNT_EMAIL` hardcoded in
+  `src/app/(auth)/login/page.tsx`) that the user never sees or types. The
+  one "Usuario" field on the login screen is used as the Supabase Auth
+  **password** for that fixed email
+  (`supabase.auth.signInWithPassword({ email: ACCOUNT_EMAIL, password:
+  username })`) — so signing in is a single word, with no email step and
+  no confirmation email, and it never touches Supabase's email-sending
+  rate limit. `SetPasswordForm.tsx` (Ajustes → Seguridad) lets the user
+  change that word later via `supabase.auth.updateUser({ password })`
+  while already signed in — still no email involved. The account's
+  initial password was set once via a direct SQL `UPDATE auth.users …
+  encrypted_password = crypt(...)` (pgcrypto, the same bcrypt scheme
+  GoTrue itself uses) rather than through the API, because
+  `SUPABASE_SERVICE_ROLE_KEY` isn't configured in any environment (see
+  `DEPLOYMENT.md`); there is currently no "forgot password"/self-service
+  reset path — resetting it again means the same direct-SQL update.
+  `.../auth/callback/route.ts` (an OTP/magic-link verification handler)
+  is a leftover from an earlier email-link version of login and is no
+  longer reachable from any UI — safe to delete once you're sure nothing
+  else links to it.
 - **Storage**: three private buckets — `meal-images`, `progress-images`,
   `optional-documents` — each with an RLS policy on `storage.objects`
   restricting access to the caller's own `<user_id>/…` folder. The app
