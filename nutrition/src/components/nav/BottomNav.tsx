@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { RegisterSheet } from "@/components/register/RegisterSheet";
+import { HomeIcon, CalendarIcon, TrendIcon, SparkleIcon, PlusIcon } from "@/components/ui/icons";
 
 const TABS = [
   { href: "/", label: "Hoy", icon: HomeIcon },
   { href: "/diario", label: "Diario", icon: CalendarIcon },
-  { href: "/progreso", label: "Progreso", icon: ChartIcon },
-  { href: "/ia", label: "IA", icon: SparkIcon },
+] as const;
+const TABS_RIGHT = [
+  { href: "/progreso", label: "Progreso", icon: TrendIcon },
+  { href: "/ia", label: "IA", icon: SparkleIcon },
 ] as const;
 
 export function BottomNav() {
@@ -19,35 +22,32 @@ export function BottomNav() {
   return (
     <>
       <nav
-        className="safe-bottom safe-x fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border-soft)] bg-[var(--surface)]/70 backdrop-blur-xl"
+        className="safe-bottom safe-x fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border-soft)] bg-[var(--app-bg)]/85 backdrop-blur-2xl"
         aria-label="Navegación principal"
       >
-        <div className="mx-auto flex max-w-lg items-center justify-between px-2">
-          {TABS.slice(0, 2).map((tab) => (
+        <div className="mx-auto flex max-w-lg items-center justify-between px-3">
+          {TABS.map((tab) => (
             <NavItem key={tab.href} tab={tab} active={pathname === tab.href} />
           ))}
 
           <button
             type="button"
             onClick={() => setRegisterOpen(true)}
-            className="flex flex-col items-center gap-1 px-3 py-2"
+            className="tap-scale flex flex-col items-center gap-1 px-3 py-2"
             aria-label="Registrar"
           >
             <span
-              className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full text-[var(--accent-fg)] shadow-[var(--shadow-md)]"
+              className="-mt-7 flex h-[52px] w-[52px] items-center justify-center rounded-full text-[var(--accent-fg)]"
               style={{
-                background:
-                  "linear-gradient(135deg, color-mix(in srgb, var(--accent) 85%, white), var(--accent) 65%)",
+                background: "linear-gradient(135deg, var(--accent-2), var(--accent) 75%)",
+                boxShadow: "0 1px 0 0 color-mix(in srgb, white 25%, transparent) inset, var(--shadow-md)",
               }}
             >
-              <PlusIcon />
-            </span>
-            <span className="text-[11px] font-medium text-[var(--text-secondary)]">
-              Registrar
+              <PlusIcon size={24} strokeWidth={2.1} />
             </span>
           </button>
 
-          {TABS.slice(2).map((tab) => (
+          {TABS_RIGHT.map((tab) => (
             <NavItem key={tab.href} tab={tab} active={pathname === tab.href} />
           ))}
         </div>
@@ -62,73 +62,30 @@ function NavItem({
   tab,
   active,
 }: {
-  tab: (typeof TABS)[number];
+  tab: { href: string; label: string; icon: typeof HomeIcon };
   active: boolean;
 }) {
   const Icon = tab.icon;
   return (
-    <Link
-      href={tab.href}
-      className="flex flex-col items-center gap-1 px-3 py-2.5"
-    >
+    <Link href={tab.href} className="tap-scale relative flex flex-col items-center gap-1 px-3 py-2.5">
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="absolute top-1 h-7 w-7 rounded-full"
+          style={{ background: "var(--accent-soft)" }}
+        />
+      ) : null}
       <Icon
-        className={active ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}
+        size={21}
+        className={`relative ${active ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`}
       />
       <span
-        className={`text-[11px] font-medium ${
-          active ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"
+        className={`relative text-[10.5px] font-semibold ${
+          active ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"
         }`}
       >
         {tab.label}
       </span>
     </Link>
-  );
-}
-
-function HomeIcon({ className }: { className?: string }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M4 11.5 12 4l8 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M6 10v9a1 1 0 0 0 1 1h3v-5h4v5h3a1 1 0 0 0 1-1v-9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className={className}>
-      <rect x="4" y="5.5" width="16" height="14.5" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M4 9.5h16M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ChartIcon({ className }: { className?: string }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M4 19.5V4.5M4 19.5h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M7 16l3.5-4 3 2.5L18 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function SparkIcon({ className }: { className?: string }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className={className}>
-      <path
-        d="M12 3.5c.4 2.6 1 4.1 2 5.1s2.5 1.6 5.1 2c-2.6.4-4.1 1-5.1 2s-1.6 2.5-2 5.1c-.4-2.6-1-4.1-2-5.1s-2.5-1.6-5.1-2c2.6-.4 4.1-1 5.1-2s1.6-2.5 2-5.1Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-    </svg>
   );
 }

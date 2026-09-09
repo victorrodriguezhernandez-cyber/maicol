@@ -37,40 +37,22 @@ export function Sheet({ open, onOpenChange, title, children }: SheetProps) {
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <button
         aria-label="Cerrar"
-        className="absolute inset-0 bg-black/40 backdrop-blur-[1px] animate-[fadeIn_.15s_ease-out]"
+        className="absolute inset-0 bg-black/45 backdrop-blur-[1px] animate-[maicol-fade-in_.15s_ease-out]"
         onClick={() => onOpenChange(false)}
       />
       <div
         role="dialog"
         aria-modal="true"
-        className="safe-bottom relative z-10 w-full max-w-lg rounded-t-3xl border-t border-[var(--border)] bg-[var(--surface)] pb-4 shadow-2xl animate-[slideUp_.2s_ease-out]"
+        className="safe-bottom relative z-10 w-full max-w-lg rounded-t-[2rem] border-t border-x border-[var(--border)] bg-[var(--surface-overlay)] pb-4 shadow-[var(--shadow-lg)] animate-[maicol-slide-up_.22s_cubic-bezier(0.22,1,0.36,1)]"
       >
-        <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-[var(--border)]" />
+        <div className="mx-auto mt-2.5 h-1 w-9 rounded-full bg-[var(--border-strong)]" />
         {title ? (
-          <h2 className="px-5 pt-3 text-base font-semibold text-[var(--text-primary)]">
+          <h2 className="text-hero-title px-5 pt-3.5 text-[17px] text-[var(--text-primary)]">
             {title}
           </h2>
         ) : null}
-        <div className="px-2 pt-2">{children}</div>
+        <div className="pt-2">{children}</div>
       </div>
-      <style jsx global>{`
-        @keyframes slideUp {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
-          }
-        }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-      `}</style>
     </div>,
     document.body,
   );

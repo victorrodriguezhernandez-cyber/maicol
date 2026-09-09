@@ -1,97 +1,156 @@
 @import "tailwindcss";
 
+/* =========================================================================
+   MAICOL — design system v2
+   =========================================================================
+   Rebuilt from scratch (not an iteration on v1's glass/blur look). The
+   composition does the work of feeling premium — surfaces at real
+   elevation levels, one loud hero per screen, a strict type scale, and
+   color spent with intent — not another layer of blur on the same flat
+   rectangles. See DESIGN_REBUILD_MAP.md for the full rationale and the
+   screen-by-screen map.
+   ========================================================================= */
+
 :root {
-  --app-bg: #f7f8fa;
+  /* ---- Surfaces: five real levels, not one flat color repeated ---- */
+  /* Light mode is a genuine second palette, not an inverted afterthought —
+     same structure (five levels, same semantic roles) with warm-neutral
+     paper tones instead of anthracite. */
+  --app-bg: #f4f5f7;
   --surface: #ffffff;
-  --surface-2: #f1f3f5;
+  --surface-2: #eef0f3;
   --surface-raised: #ffffff;
-  --border: #e5e7eb;
-  --border-soft: #eef0f2;
-  --text-primary: #12161c;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9aa1ac;
-  --accent: #0f766e;
+  --surface-overlay: #ffffff;
+  --border: #e2e5ea;
+  --border-soft: #ebedf0;
+  --border-strong: #d5d9e0;
+
+  --text-primary: #10131a;
+  --text-secondary: #5b6270;
+  --text-tertiary: #9298a5;
+
+  --accent: #0f9488;
+  --accent-2: #0a6f66;
   --accent-fg: #ffffff;
-  --accent-soft: #ccfbf1;
+  --accent-soft: #d9f5f0;
+  --accent-glow: color-mix(in srgb, #0f9488 22%, transparent);
+
   --danger: #dc2626;
+  --danger-soft: #fde3e1;
   --success: #16a34a;
-  --warning: #d97706;
+  --warning: #c2620a;
 
-  /* Semantic metric colors — one hue per concept, used consistently across
-     Hoy/Progreso/Diario instead of the accent teal standing in for
-     everything. Keep these distinct from --accent (reserved for actions/
-     interactive elements) so a screen full of data doesn't read as a wall
-     of buttons. */
-  --metric-protein: #0f766e;
-  --metric-carbs: #b45309;
+  /* One fixed hue per nutrition concept — never reused for chrome/actions. */
+  --metric-protein: #0d9488;
+  --metric-protein-soft: #d3f3ee;
+  --metric-carbs: #c2650a;
+  --metric-carbs-soft: #fbe6d1;
   --metric-fat: #7c3aed;
-  --metric-fiber: #15803d;
-  --metric-weight: #2563eb;
-  --metric-weight-soft: #dbeafe;
+  --metric-fat-soft: #ece3fd;
+  --metric-fiber: #16803d;
+  --metric-fiber-soft: #d7f2e0;
+  --metric-weight: #2554e0;
+  --metric-weight-soft: #dce6fd;
 
-  /* Elevation is spent deliberately, not stamped on every block: only
-     things that truly float above the flat page (the composer, the FAB,
-     an action card demanding a decision) get a shadow, and it's tinted
-     toward the page ink rather than pure black so it reads as "lifted",
-     not "smudged". Flat surfaces (surface/surface-2) stay flat on
-     purpose — that contrast IS the depth signal. */
-  --shadow-color: 220 20% 30%;
-  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 1px hsl(var(--shadow-color) / 0.04);
-  --shadow-md: 0 8px 24px hsl(var(--shadow-color) / 0.12), 0 2px 6px hsl(var(--shadow-color) / 0.08);
+  --shadow-color: 222 30% 35%;
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+  --shadow-sm: 0 2px 6px hsl(var(--shadow-color) / 0.08), 0 1px 2px hsl(var(--shadow-color) / 0.05);
+  --shadow-md: 0 12px 28px hsl(var(--shadow-color) / 0.14), 0 3px 8px hsl(var(--shadow-color) / 0.08);
+  --shadow-lg: 0 24px 60px hsl(var(--shadow-color) / 0.22), 0 6px 16px hsl(var(--shadow-color) / 0.1);
+
+  --ring-track-light: color-mix(in srgb, var(--text-primary) 8%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --app-bg: #0b0d10;
-    --surface: #15181d;
-    --surface-2: #1d2127;
-    --surface-raised: #1a1e24;
-    --border: #262b33;
-    --border-soft: #1c2027;
+    --app-bg: #08090c;
+    --surface: #101216;
+    --surface-2: #16191e;
+    --surface-raised: #191c22;
+    --surface-overlay: #1c2027;
+    --border: #23272f;
+    --border-soft: #1a1d23;
+    --border-strong: #30353f;
+
     --text-primary: #f5f7fa;
-    --text-secondary: #9aa3ae;
-    --text-tertiary: #6b7280;
-    --accent: #5eead4;
-    --accent-fg: #04201c;
+    --text-secondary: #9aa1ac;
+    --text-tertiary: #676f7b;
+
+    --accent: #2dd4bf;
+    --accent-2: #5eead4;
+    --accent-fg: #052420;
     --accent-soft: #113330;
+    --accent-glow: color-mix(in srgb, #2dd4bf 28%, transparent);
+
+    --danger: #f87171;
+    --danger-soft: #2a1416;
+    --success: #4ade80;
+    --warning: #fb923c;
 
     --metric-protein: #2dd4bf;
-    --metric-carbs: #f59e0b;
-    --metric-fat: #a78bfa;
+    --metric-protein-soft: #0f2b28;
+    --metric-carbs: #f0a339;
+    --metric-carbs-soft: #2c2013;
+    --metric-fat: #b794f6;
+    --metric-fat-soft: #241c37;
     --metric-fiber: #4ade80;
-    --metric-weight: #60a5fa;
-    --metric-weight-soft: #17284a;
+    --metric-fiber-soft: #142a1c;
+    --metric-weight: #6f9bf7;
+    --metric-weight-soft: #16233f;
 
-    --shadow-color: 220 40% 2%;
-    --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4), 0 1px 1px hsl(var(--shadow-color) / 0.3);
-    --shadow-md: 0 8px 24px hsl(var(--shadow-color) / 0.5), 0 2px 8px hsl(var(--shadow-color) / 0.4);
+    --shadow-color: 220 45% 2%;
+    --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.5);
+    --shadow-sm: 0 2px 8px hsl(var(--shadow-color) / 0.5), 0 1px 3px hsl(var(--shadow-color) / 0.4);
+    --shadow-md: 0 16px 36px hsl(var(--shadow-color) / 0.55), 0 4px 12px hsl(var(--shadow-color) / 0.4);
+    --shadow-lg: 0 32px 72px hsl(var(--shadow-color) / 0.6), 0 8px 20px hsl(var(--shadow-color) / 0.45);
+
+    --ring-track-light: #262b33;
   }
 }
 
 :root[data-theme="dark"] {
-  --app-bg: #0b0d10;
-  --surface: #15181d;
-  --surface-2: #1d2127;
-  --surface-raised: #1a1e24;
-  --border: #262b33;
-  --border-soft: #1c2027;
+  --app-bg: #08090c;
+  --surface: #101216;
+  --surface-2: #16191e;
+  --surface-raised: #191c22;
+  --surface-overlay: #1c2027;
+  --border: #23272f;
+  --border-soft: #1a1d23;
+  --border-strong: #30353f;
+
   --text-primary: #f5f7fa;
-  --text-secondary: #9aa3ae;
-  --text-tertiary: #6b7280;
-  --accent: #5eead4;
-  --accent-fg: #04201c;
+  --text-secondary: #9aa1ac;
+  --text-tertiary: #676f7b;
+
+  --accent: #2dd4bf;
+  --accent-2: #5eead4;
+  --accent-fg: #052420;
   --accent-soft: #113330;
+  --accent-glow: color-mix(in srgb, #2dd4bf 28%, transparent);
+
+  --danger: #f87171;
+  --danger-soft: #2a1416;
+  --success: #4ade80;
+  --warning: #fb923c;
 
   --metric-protein: #2dd4bf;
-  --metric-carbs: #f59e0b;
-  --metric-fat: #a78bfa;
+  --metric-protein-soft: #0f2b28;
+  --metric-carbs: #f0a339;
+  --metric-carbs-soft: #2c2013;
+  --metric-fat: #b794f6;
+  --metric-fat-soft: #241c37;
   --metric-fiber: #4ade80;
-  --metric-weight: #60a5fa;
-  --metric-weight-soft: #17284a;
+  --metric-fiber-soft: #142a1c;
+  --metric-weight: #6f9bf7;
+  --metric-weight-soft: #16233f;
 
-  --shadow-color: 220 40% 2%;
-  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4), 0 1px 1px hsl(var(--shadow-color) / 0.3);
-  --shadow-md: 0 8px 24px hsl(var(--shadow-color) / 0.5), 0 2px 8px hsl(var(--shadow-color) / 0.4);
+  --shadow-color: 220 45% 2%;
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.5);
+  --shadow-sm: 0 2px 8px hsl(var(--shadow-color) / 0.5), 0 1px 3px hsl(var(--shadow-color) / 0.4);
+  --shadow-md: 0 16px 36px hsl(var(--shadow-color) / 0.55), 0 4px 12px hsl(var(--shadow-color) / 0.4);
+  --shadow-lg: 0 32px 72px hsl(var(--shadow-color) / 0.6), 0 8px 20px hsl(var(--shadow-color) / 0.45);
+
+  --ring-track-light: #262b33;
 }
 
 @theme inline {
@@ -125,19 +184,12 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* A quiet atmosphere behind every screen — not a loud decorative gradient
-   hero, just enough color life that the app's black isn't flat void. Three
-   of the palette's own hues (accent teal, metric-weight blue, metric-fat
-   violet), never an invented color. A fixed pseudo-element instead of a
-   body background-attachment:fixed — iOS Safari resizes the viewport on
-   scroll (URL bar show/hide) and a fixed background on body itself visibly
-   jumps there; a position:fixed layer behind everything doesn't.
-   Deliberately large radii reaching from both the top AND the bottom of
-   the viewport — an earlier version only glowed near the very top, so
-   anything below the first screenful (Volumen on Hoy, all of Coach IA,
-   any glass-panel not right under the header) had no color behind it for
-   backdrop-filter to catch and just read as a flat grey box. This is the
-   fix for that, not a cosmetic tweak. */
+/* Ambient light — three fixed light sources behind the whole app, not a
+   decorative gradient stamped per-screen. Dimmer and more targeted than
+   v1: it exists to give elevated surfaces something to catch, not to be
+   noticed on its own. position:fixed (not body background-attachment)
+   because iOS Safari resizes the viewport on scroll and a fixed body
+   background visibly jumps there. */
 body::before {
   content: "";
   position: fixed;
@@ -145,70 +197,146 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(1100px 900px at 12% -10%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 65%),
-    radial-gradient(900px 800px at 105% 10%, color-mix(in srgb, var(--metric-weight) 11%, transparent), transparent 62%),
-    radial-gradient(1000px 750px at 45% 115%, color-mix(in srgb, var(--metric-fat) 9%, transparent), transparent 65%);
+    radial-gradient(820px 620px at 8% -8%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+    radial-gradient(680px 560px at 108% 6%, color-mix(in srgb, var(--metric-weight) 10%, transparent), transparent 60%),
+    radial-gradient(760px 640px at 40% 118%, color-mix(in srgb, var(--metric-fat) 8%, transparent), transparent 62%);
 }
 
-/* The two button voices used everywhere an action lives — a considered
-   gradient-and-lift primary vs. a translucent glass secondary — instead of
-   every screen inventing its own flat-fill button. Deliberately no
-   border-radius/padding/font-size here: those stay per-instance Tailwind
-   utilities so this never fights a screen's own sizing. */
+/* =========================================================================
+   Type scale — six explicit roles, never "everything is 14px medium".
+   Use these classes directly rather than composing font-size/weight ad
+   hoc, so the hierarchy stays intentional across screens.
+   ========================================================================= */
+
+.text-display {
+  /* The one number-of-the-screen: today's kcal, current weight. */
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+}
+.text-hero-title {
+  /* "Hoy", "Progreso" — the page's own name. */
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+.text-section {
+  /* "Comidas de hoy", "Objetivos" — a group label. */
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.text-metric {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+.text-meta {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.01em;
+}
+
+/* Legacy alias kept for any component not yet migrated off it. */
+.font-numeric {
+  font-family: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* =========================================================================
+   Surfaces — five levels used with intent, per DESIGN_REBUILD_MAP.md:
+   1. page background (--app-bg, nothing painted)
+   2. .surface-flat  — grouped content with no card chrome (spacing only)
+   3. .surface-soft  — a quiet, bordered block one step off the page
+   4. .surface-glass — content meant to feel like it hovers (rare, on purpose)
+   5. .surface-raised — the elevated/action layer (sheets, decision cards)
+   ========================================================================= */
+
+.surface-soft {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 1.25rem;
+}
+
+.surface-glass {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--surface-2) 78%, var(--accent) 7%),
+    color-mix(in srgb, var(--surface-2) 40%, transparent)
+  );
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 7%, transparent);
+  border-radius: 1.5rem;
+}
+
+.surface-raised {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+/* Kept for any not-yet-migrated call site — maps to the new raised look. */
+.glass-panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+}
+
+/* =========================================================================
+   Buttons — five voices, not one gradient rectangle everywhere.
+   ========================================================================= */
+
 .btn-primary,
-.btn-secondary {
-  transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease, filter 150ms ease;
+.btn-secondary,
+.btn-ghost,
+.btn-danger {
+  transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease, filter 150ms ease, background-color 150ms ease;
 }
 .btn-primary:active:not(:disabled),
-.btn-secondary:active:not(:disabled) {
-  transform: scale(0.97);
+.btn-secondary:active:not(:disabled),
+.btn-ghost:active:not(:disabled),
+.btn-danger:active:not(:disabled) {
+  transform: scale(0.965);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 85%, white), var(--accent) 70%);
+  background: linear-gradient(135deg, var(--accent-2), var(--accent) 75%);
   color: var(--accent-fg);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 1px 0 0 color-mix(in srgb, white 25%, transparent) inset, var(--shadow-sm);
 }
 .btn-primary:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   box-shadow: none;
 }
 
 .btn-secondary {
-  background: linear-gradient(
-    155deg,
-    color-mix(in srgb, var(--surface-2) 82%, var(--accent) 5%),
-    color-mix(in srgb, var(--surface-2) 60%, transparent)
-  );
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   color: var(--text-primary);
 }
 
-/* A panel that reads as glass — frosted, faintly bordered — instead of a
-   flat surface-2 fill. Used for the handful of blocks meant to feel like
-   they're floating over the page atmosphere (Volumen, decision cards).
-   The gradient fill (not a flat color-mix) is deliberate: backdrop-filter
-   alone only looks like anything when there's colorful content behind the
-   panel to blur, and most of a scrolled page has none. Baking a faint
-   accent-tinted gradient into the panel itself means it has real visual
-   presence anywhere on the page — the ambient blur is a bonus on top,
-   not the only source of it. */
-.glass-panel {
-  background: linear-gradient(
-    155deg,
-    color-mix(in srgb, var(--surface-2) 80%, var(--accent) 6%),
-    color-mix(in srgb, var(--surface-2) 55%, transparent)
-  );
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid color-mix(in srgb, var(--text-primary) 8%, transparent);
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+.btn-ghost:active:not(:disabled) {
+  background: var(--surface-2);
 }
 
-/* A tappable row inside a divided list (settings links, recipe list,
-   export actions) — one shared press feel instead of every screen
-   reinventing active-state opacity by hand. */
+.btn-danger {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+}
+
 .tap-row {
   transition: opacity 150ms ease, background-color 150ms ease;
 }
@@ -216,9 +344,15 @@ body::before {
   opacity: 0.55;
 }
 
-/* Shared focus feel for plain bordered inputs/selects across forms —
-   the accent border brightens instead of snapping, and text/number
-   inputs don't feel like a different, older part of the app. */
+/* A press-scale utility for anything tappable that isn't a .btn-*. */
+.tap-scale {
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+.tap-scale:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
 input,
 select,
 textarea {
@@ -235,18 +369,6 @@ textarea:focus {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Every stat that's actually a measurement — kcal, macros, kg, dates in a
-   list — reads in Plex Mono's tabular figures instead of the body sans.
-   This is the one deliberate typographic signature of the app: numbers as
-   an instrument reading, not as UI chrome (fits a tool whose whole premise
-   is being honest about precision — see AI.md's provenance hierarchy). */
-.font-numeric {
-  font-family: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-
-/* iOS PWA safe-area helpers */
 .safe-top {
   padding-top: env(safe-area-inset-top);
 }
@@ -260,4 +382,42 @@ textarea:focus {
 
 ::-webkit-scrollbar {
   display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes maicol-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes maicol-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes maicol-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

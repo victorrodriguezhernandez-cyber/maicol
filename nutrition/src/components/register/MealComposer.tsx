@@ -7,6 +7,7 @@ import type { MealItemSource, PrecisionLevel } from "@/lib/nutrition/types";
 import { formatKcal, formatGrams, MEAL_TYPE_LABELS } from "@/lib/format";
 import { MacroInline } from "@/components/ui/MacroInline";
 import { estimateQuality, estimateQualityColor } from "@/lib/nutrition/estimate-quality";
+import { TrashIcon, PlusIcon } from "@/components/ui/icons";
 
 export interface DraftItem {
   key: string;
@@ -45,12 +46,17 @@ export const MealComposer = forwardRef<MealComposerHandle, {
   title?: string;
   emptyLabel?: string;
   startWithAddForm?: boolean;
+  /** Preselects the meal type — set when the composer was opened from a
+   * specific meal-type group's "+" (Hoy/Diario), instead of the default
+   * time-of-day guess. */
+  initialMealType?: "breakfast" | "lunch" | "dinner" | "snack" | "other";
 }>(function MealComposer(
   {
     initialItems,
     title = "Revisar estimación",
     emptyLabel = "Añade al menos un alimento.",
     startWithAddForm = false,
+    initialMealType,
   },
   ref,
 ) {
@@ -59,7 +65,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
   useImperativeHandle(ref, () => ({
     addItem: (item) => setItems((prev) => [...prev, item]),
   }));
-  const [mealType, setMealType] = useState(guessMealType());
+  const [mealType, setMealType] = useState(initialMealType ?? guessMealType());
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -184,15 +190,13 @@ export const MealComposer = forwardRef<MealComposerHandle, {
   }
 
   return (
-    <div className="flex flex-col gap-4 pb-28">
-      <h1 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h1>
-
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-[var(--text-secondary)]">Tipo de comida</span>
+    <div className="flex flex-col gap-5 pb-32">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-hero-title text-xl text-[var(--text-primary)]">{title}</h1>
         <select
           value={mealType}
           onChange={(e) => setMealType(e.target.value as typeof mealType)}
-          className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+          className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
         >
           {Object.entries(MEAL_TYPE_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -200,50 +204,50 @@ export const MealComposer = forwardRef<MealComposerHandle, {
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
       {items.length === 0 ? (
         <p className="text-sm text-[var(--text-secondary)]">{emptyLabel}</p>
       ) : (
         <ul className="flex flex-col gap-2.5">
           {items.map((item) => (
-            <li key={item.key} className="glass-panel rounded-2xl p-3.5">
+            <li key={item.key} className="surface-soft p-4">
               <div className="flex items-start justify-between gap-2">
                 <input
                   value={item.name}
                   onChange={(e) => updateItem(item.key, { name: e.target.value })}
-                  className="flex-1 border-0 border-b border-transparent bg-transparent text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+                  className="flex-1 border-0 border-b border-transparent bg-transparent text-[15px] font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
                 />
                 <button
                   type="button"
                   onClick={() => removeItem(item.key)}
                   aria-label="Eliminar"
-                  className="shrink-0 text-xs font-medium text-[var(--danger)] active:opacity-60"
+                  className="tap-scale shrink-0 text-[var(--text-tertiary)]"
                 >
-                  Eliminar
+                  <TrashIcon size={16} />
                 </button>
               </div>
 
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2.5 flex items-center gap-2">
                 <input
                   type="number"
                   value={item.quantityAmount}
                   onChange={(e) => rescaleItem(item.key, Number(e.target.value) || 0)}
-                  className="w-20 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1 text-sm text-[var(--text-primary)]"
+                  className="text-metric w-16 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1 text-sm text-[var(--text-primary)]"
                 />
-                <span className="text-sm text-[var(--text-secondary)]">{item.quantityUnit}</span>
-                <span className="font-numeric ml-auto text-base font-semibold text-[var(--text-primary)]">
+                <span className="text-xs text-[var(--text-secondary)]">{item.quantityUnit}</span>
+                <span className="text-metric ml-auto text-lg text-[var(--text-primary)]">
                   {formatKcal(item.energyKcal)}
                 </span>
               </div>
 
-              <div className="mt-1.5 flex items-center justify-between gap-2">
+              <div className="mt-2 flex items-center justify-between gap-2">
                 <MacroInline protein={item.proteinG} carbs={item.carbohydratesG} fat={item.fatG} />
                 <ConfidenceBadge item={item} />
               </div>
 
               {item.rangeKcalMin != null && item.rangeKcalMax != null ? (
-                <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                <p className="mt-1.5 text-[11px] text-[var(--text-tertiary)]">
                   Rango probable: {Math.round(item.rangeKcalMin)}–{Math.round(item.rangeKcalMax)} kcal
                 </p>
               ) : null}
@@ -253,17 +257,17 @@ export const MealComposer = forwardRef<MealComposerHandle, {
       )}
 
       {showAddForm ? (
-        <div className="glass-panel rounded-2xl p-3.5">
-          <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">Añadir ingrediente</p>
+        <div className="surface-soft p-4">
+          <p className="text-section mb-3">Añadir ingrediente</p>
           <div className="grid grid-cols-2 gap-2">
-            <input placeholder="Nombre" value={draftName} onChange={(e) => setDraftName(e.target.value)} className="col-span-2 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1.5 text-sm text-[var(--text-primary)]" />
-            <input placeholder="Gramos" type="number" value={draftGrams} onChange={(e) => setDraftGrams(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1.5 text-sm text-[var(--text-primary)]" />
-            <input placeholder="Kcal" type="number" value={draftKcal} onChange={(e) => setDraftKcal(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1.5 text-sm text-[var(--text-primary)]" />
-            <input placeholder="Proteína g" type="number" value={draftProtein} onChange={(e) => setDraftProtein(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1.5 text-sm text-[var(--text-primary)]" />
-            <input placeholder="Carbohidratos g" type="number" value={draftCarbs} onChange={(e) => setDraftCarbs(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1.5 text-sm text-[var(--text-primary)]" />
-            <input placeholder="Grasas g" type="number" value={draftFat} onChange={(e) => setDraftFat(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1.5 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Nombre" value={draftName} onChange={(e) => setDraftName(e.target.value)} className="col-span-2 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Gramos" type="number" value={draftGrams} onChange={(e) => setDraftGrams(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Kcal" type="number" value={draftKcal} onChange={(e) => setDraftKcal(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Proteína g" type="number" value={draftProtein} onChange={(e) => setDraftProtein(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Carbohidratos g" type="number" value={draftCarbs} onChange={(e) => setDraftCarbs(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Grasas g" type="number" value={draftFat} onChange={(e) => setDraftFat(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
           </div>
-          <button type="button" onClick={addManualItem} className="mt-2 w-full rounded-lg btn-primary py-2 text-xs font-medium text-[var(--accent-fg)]">
+          <button type="button" onClick={addManualItem} className="btn-primary mt-3 w-full rounded-lg py-2.5 text-xs font-semibold text-[var(--accent-fg)]">
             Añadir
           </button>
         </div>
@@ -271,22 +275,18 @@ export const MealComposer = forwardRef<MealComposerHandle, {
         <button
           type="button"
           onClick={() => setShowAddForm(true)}
-          className="rounded-2xl border border-dashed border-[var(--border)] py-3 text-sm font-medium text-[var(--accent)] transition-colors duration-150 active:bg-[var(--surface-2)]"
+          className="tap-scale flex items-center justify-center gap-1.5 rounded-2xl border border-dashed border-[var(--border-strong)] py-3 text-sm font-semibold text-[var(--accent)]"
         >
-          + Añadir ingrediente
+          <PlusIcon size={15} /> Añadir ingrediente
         </button>
       )}
 
-      <div className="glass-panel flex flex-col gap-3 rounded-2xl p-4">
+      <div className="surface-raised flex flex-col gap-3.5 p-4">
         <div className="flex items-baseline justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
-            Total de la comida
-          </p>
-          <p className="font-numeric text-2xl font-semibold text-[var(--text-primary)]">
-            {formatKcal(totals.kcal)}
-          </p>
+          <p className="text-section">Total de la comida</p>
+          <p className="text-metric text-2xl text-[var(--text-primary)]">{formatKcal(totals.kcal)}</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-5">
           <TotalChip label="Proteína" value={totals.protein} color="var(--metric-protein)" />
           <TotalChip label="Carbos" value={totals.carbs} color="var(--metric-carbs)" />
           <TotalChip label="Grasas" value={totals.fat} color="var(--metric-fat)" />
@@ -299,7 +299,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
         type="button"
         disabled={items.length === 0 || isPending}
         onClick={handleSave}
-        className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+16px)] mx-auto max-w-lg rounded-xl btn-primary py-3.5 text-sm font-semibold text-[var(--accent-fg)] shadow-[var(--shadow-md)] disabled:opacity-50"
+        className="btn-primary fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+16px)] mx-auto max-w-lg rounded-2xl py-3.5 text-sm font-semibold text-[var(--accent-fg)] disabled:opacity-50"
       >
         {isPending ? "Guardando…" : "Guardar comida"}
       </button>
@@ -314,7 +314,7 @@ function TotalChip({ label, value, color }: { label: string; value: number; colo
         <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
         <span className="text-[11px] text-[var(--text-secondary)]">{label}</span>
       </div>
-      <p className="font-numeric text-sm font-semibold text-[var(--text-primary)]">{formatGrams(value)}</p>
+      <p className="text-metric text-sm text-[var(--text-primary)]">{formatGrams(value)}</p>
     </div>
   );
 }
