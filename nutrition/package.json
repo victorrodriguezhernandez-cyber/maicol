@@ -8,9 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "cap:sync": "cap sync ios",
+    "cap:open:ios": "cap open ios"
   },
   "dependencies": {
+    "@capacitor/core": "8.5.1",
+    "@capacitor/ios": "8.5.1",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@google/genai": "^2.21.0",
     "@supabase/ssr": "^0.12.6",
@@ -29,6 +33,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

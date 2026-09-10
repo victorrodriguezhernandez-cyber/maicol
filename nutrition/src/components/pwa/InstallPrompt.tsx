@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { CloseIcon } from "@/components/ui/icons";
 
 const DISMISS_KEY = "maicol-install-dismissed";
@@ -25,13 +26,17 @@ function isIos() {
 }
 
 /**
- * "No parece una web": Chrome/Android give us a real install prompt via
- * `beforeinstallprompt`, but iOS Safari never fires that event at all —
- * there, "installing" only exists as a manual Share ⇒ Añadir a pantalla
- * de inicio, which nothing on the page can trigger, so the best a PWA can
- * do is tell the user those steps. Once actually installed (opened from
- * the home-screen icon), `display: standalone` is already true and this
- * renders nothing — the whole point is to get there.
+ * For everyone still on the PWA: Chrome/Android give us a real install
+ * prompt via `beforeinstallprompt`, but iOS Safari never fires that
+ * event at all — there, "installing" only exists as a manual Share ⇒
+ * Añadir a pantalla de inicio, which nothing on the page can trigger, so
+ * the best a PWA can do is tell the user those steps. Once actually
+ * installed (opened from the home-screen icon), `display: standalone`
+ * is already true and this renders nothing.
+ *
+ * For anyone on the real native (Capacitor) build: there is nothing to
+ * install, full stop — this renders nothing there either, checked
+ * first and independent of the PWA-specific signals above.
  */
 type Mode = "hidden" | "ios" | "android";
 
@@ -45,6 +50,13 @@ export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
+    // Already the real native container (the Capacitor shell) — not a
+    // browser tab pretending to be one, so there is nothing left to
+    // "install". Capacitor's own bridge injects this regardless of
+    // whether the web bundle imports it, so this is a reliable check
+    // independent of the UA/display-mode sniffing below (a WKWebView
+    // never reports display-mode: standalone on its own).
+    if (Capacitor.isNativePlatform()) return;
     if (isStandalone() || localStorage.getItem(DISMISS_KEY)) return;
     if (isIos()) {
       // Not deriving this from render/props — UA sniffing only exists
