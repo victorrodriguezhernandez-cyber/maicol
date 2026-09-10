@@ -17,10 +17,13 @@ export default async function ProgresoPage() {
   } = await getUser(supabase);
   if (!user) redirect("/login");
 
-  const goal = await getCurrentGoal(supabase, user.id);
   const since = new Date();
   since.setDate(since.getDate() - 200);
-  const entries = await getWeightEntriesSince(supabase, user.id, since.toISOString());
+  // Independent reads — one round trip, not two in a row.
+  const [goal, entries] = await Promise.all([
+    getCurrentGoal(supabase, user.id),
+    getWeightEntriesSince(supabase, user.id, since.toISOString()),
+  ]);
 
   const points = computeWeightTrend(entries.map((e) => ({ measuredAt: e.measured_at, weightKg: e.weight_kg })));
   const weeklyRate = computeWeeklyRate(points, {

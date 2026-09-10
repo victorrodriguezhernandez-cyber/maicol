@@ -22,16 +22,21 @@ export default async function TodayPage() {
   } = await getUser(supabase);
   if (!user) redirect("/login");
 
-  const goal = await getCurrentGoal(supabase, user.id);
+  // Three independent reads (none depends on another's result) — fired
+  // together instead of one-after-another so the page pays for one
+  // network round trip's worth of latency, not three in a row.
+  const today = todayLocalDateString();
+  const [goal, displayName, meals] = await Promise.all([
+    getCurrentGoal(supabase, user.id),
+    getProfileDisplayName(supabase, user.id),
+    getMealsForDate(supabase, user.id, today),
+  ]);
   if (!goal) redirect("/onboarding");
 
-  const displayName = await getProfileDisplayName(supabase, user.id);
   const firstName = displayName?.split(" ")[0] ?? null;
   const hour = localHour();
   const greeting = hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
 
-  const today = todayLocalDateString();
-  const meals = await getMealsForDate(supabase, user.id, today);
   const totals = sumMeals(meals);
 
   const remaining = goal.kcal - totals.energy_kcal;

@@ -13,14 +13,15 @@ export default async function ObjetivosPage() {
   } = await getUser(supabase);
   if (!user) redirect("/login");
 
-  const goal = await getCurrentGoal(supabase, user.id);
-
-  const { data: history } = await supabase
-    .from("nutrition_goals")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("effective_from", { ascending: false })
-    .limit(10);
+  const [goal, { data: history }] = await Promise.all([
+    getCurrentGoal(supabase, user.id),
+    supabase
+      .from("nutrition_goals")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("effective_from", { ascending: false })
+      .limit(10),
+  ]);
 
   return (
     <PageShell title="Objetivos nutricionales">

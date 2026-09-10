@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { OfflineSyncBoundary } from "@/components/offline/OfflineSyncBoundary";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import "./globals.css";
 
 // IBM Plex Sans + IBM Plex Mono, deliberately — not the default Geist the
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
         <OfflineSyncBoundary />
+        <InstallPrompt />
         {children}
       </body>
     </html>
