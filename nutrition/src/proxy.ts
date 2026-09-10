@@ -51,6 +51,29 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (user) {
+    // `auth.getUser()` above already re-validated the session against
+    // Supabase's Auth server — a real network round trip. Every page
+    // under (app) used to repeat that exact same call on its own
+    // (`getUser()` in lib/supabase/server.ts), paying for a second,
+    // fully redundant round trip on EVERY navigation before it could
+    // even start its own data queries. Forward the already-validated
+    // id/email as trusted request headers so pages can skip it. `.set()`
+    // on a fresh Headers object replaces any value the client itself
+    // sent under the same name — nothing downstream reads what the
+    // client claims. This never widens authorization: every DB query is
+    // still scoped by RLS via the real cookie-borne JWT regardless of
+    // what these headers say.
+    const headers = new Headers(request.headers);
+    headers.set("x-maicol-user-id", user.id);
+    headers.set("x-maicol-user-email", user.email ?? "");
+    const withHeaders = NextResponse.next({ request: { headers } });
+    for (const cookie of response.cookies.getAll()) {
+      withHeaders.cookies.set(cookie);
+    }
+    response = withHeaders;
+  }
+
   return response;
 }
 
