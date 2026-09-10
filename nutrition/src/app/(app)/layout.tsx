@@ -19,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="safe-top safe-x sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border-soft)] bg-[var(--app-bg)]/85 px-4 py-2.5 backdrop-blur-2xl">
+      <header className="safe-top sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border-soft)] bg-[var(--app-bg)]/85 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-2.5 backdrop-blur-2xl">
         <Logo />
         <div className="flex items-center gap-3">
           <p className="hidden text-xs font-medium text-[var(--text-tertiary)] sm:block">
@@ -36,7 +36,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      <main className="safe-x mx-auto w-full max-w-lg flex-1 px-4 pb-28 pt-4">{children}</main>
+      <main className="mx-auto w-full max-w-lg flex-1 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-28 pt-4">
+        {children}
+      </main>
 
       <BottomNav />
     </div>

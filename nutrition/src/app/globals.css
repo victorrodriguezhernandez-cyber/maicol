@@ -290,6 +290,39 @@ body::before {
   border-radius: 1.25rem;
 }
 
+/* The ONE dominant panel per screen (today's kcal, weight trend) — a
+   real gradient + a corner glow instead of a flat card, and no border:
+   depth here comes from light, not a stroke. */
+.surface-hero {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--surface-raised) 100%, transparent),
+    color-mix(in srgb, var(--surface-2) 88%, var(--accent) 5%)
+  );
+  border-radius: 1.75rem;
+  box-shadow: var(--shadow-lg), inset 0 1px 0 0 color-mix(in srgb, white 7%, transparent);
+  overflow: hidden;
+}
+.surface-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(440px 240px at 105% -15%, var(--accent-glow), transparent 70%);
+  pointer-events: none;
+}
+
+/* A secondary module — borderless on purpose, lifted only by a shade
+   difference from the page and a whisper of shadow. Use for anything
+   that shouldn't compete with the screen's .surface-hero. */
+.surface-panel {
+  background: var(--surface-2);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-xs);
+}
+
 /* =========================================================================
    Buttons — five voices, not one gradient rectangle everywhere.
    ========================================================================= */

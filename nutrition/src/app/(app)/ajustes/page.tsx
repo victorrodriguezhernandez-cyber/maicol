@@ -86,6 +86,14 @@ export default async function AjustesPage() {
       </div>
 
       <SignOutButton />
+
+      <p className="text-center text-[10px] text-[var(--text-tertiary)]">
+        Gráficos de peso con{" "}
+        <a href="https://www.tradingview.com/" className="underline" target="_blank" rel="noreferrer">
+          lightweight-charts, cortesía de TradingView
+        </a>
+        .
+      </p>
     </PageShell>
   );
 }

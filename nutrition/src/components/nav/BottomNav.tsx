@@ -22,10 +22,23 @@ export function BottomNav() {
   return (
     <>
       <nav
-        className="safe-bottom safe-x fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border-soft)] bg-[var(--app-bg)]/85 backdrop-blur-2xl"
+        className="safe-bottom safe-x fixed inset-x-0 bottom-0 z-40 bg-[var(--app-bg)]/75 backdrop-blur-2xl"
+        style={{ boxShadow: "0 -1px 0 0 var(--border-soft), 0 -8px 24px hsl(var(--shadow-color) / 0.12)" }}
         aria-label="Navegación principal"
       >
-        <div className="mx-auto flex max-w-lg items-center justify-between px-3">
+        <div className="relative mx-auto flex max-w-lg items-center justify-between px-2">
+          {/* The FAB's own glow, bleeding into the bar so it reads as
+              welded to the navigation rather than a circle floating on
+              top of it. */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 top-0 h-16 w-24 -translate-x-1/2 -translate-y-1/2"
+            style={{
+              background: "radial-gradient(closest-side, var(--accent-glow), transparent)",
+              filter: "blur(6px)",
+            }}
+          />
+
           {TABS.map((tab) => (
             <NavItem key={tab.href} tab={tab} active={pathname === tab.href} />
           ))}
@@ -33,17 +46,18 @@ export function BottomNav() {
           <button
             type="button"
             onClick={() => setRegisterOpen(true)}
-            className="tap-scale flex flex-col items-center gap-1 px-3 py-2"
+            className="tap-scale relative flex flex-col items-center px-3 py-2"
             aria-label="Registrar"
           >
             <span
-              className="-mt-7 flex h-[52px] w-[52px] items-center justify-center rounded-full text-[var(--accent-fg)]"
+              className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full text-[var(--accent-fg)]"
               style={{
-                background: "linear-gradient(135deg, var(--accent-2), var(--accent) 75%)",
-                boxShadow: "0 1px 0 0 color-mix(in srgb, white 25%, transparent) inset, var(--shadow-md)",
+                background: "linear-gradient(150deg, var(--accent-2), var(--accent) 78%)",
+                boxShadow:
+                  "0 1px 0 0 color-mix(in srgb, white 30%, transparent) inset, 0 0 0 5px var(--app-bg), var(--shadow-md)",
               }}
             >
-              <PlusIcon size={24} strokeWidth={2.1} />
+              <PlusIcon size={23} strokeWidth={2.2} />
             </span>
           </button>
 
@@ -67,22 +81,17 @@ function NavItem({
 }) {
   const Icon = tab.icon;
   return (
-    <Link href={tab.href} className="tap-scale relative flex flex-col items-center gap-1 px-3 py-2.5">
+    <Link href={tab.href} className="tap-scale relative flex flex-col items-center gap-1 px-4 py-3">
       {active ? (
         <span
           aria-hidden="true"
-          className="absolute top-1 h-7 w-7 rounded-full"
+          className="absolute inset-x-1 top-1 bottom-1 rounded-2xl"
           style={{ background: "var(--accent-soft)" }}
         />
       ) : null}
-      <Icon
-        size={21}
-        className={`relative ${active ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`}
-      />
+      <Icon size={20} className={`relative ${active ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`} />
       <span
-        className={`relative text-[10.5px] font-semibold ${
-          active ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"
-        }`}
+        className={`relative text-[10px] font-semibold ${active ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`}
       >
         {tab.label}
       </span>

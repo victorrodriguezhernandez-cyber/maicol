@@ -12,7 +12,7 @@ import {
   type AddMealItemForDateInput,
 } from "@/lib/actions/meals";
 import { setWeightEntryForDate, deleteWeightEntry } from "@/lib/actions/weight";
-import { formatKcal, formatDateTimeShort } from "@/lib/format";
+import { formatKcal, formatDateTimeShort, MEAL_TYPE_LABELS } from "@/lib/format";
 import type { NutritionGoalRow } from "@/lib/supabase/types";
 import { LogoMark } from "@/components/ui/Logo";
 import {
@@ -21,6 +21,7 @@ import {
   CheckCircleIcon,
   UndoIcon,
   CloseIcon,
+  SparkleIcon,
 } from "@/components/ui/icons";
 
 interface ChatMessage {
@@ -40,9 +41,22 @@ interface ActionProposal {
   payload: Record<string, unknown>;
 }
 
+interface MealBreakdown {
+  mealTypeLabel: string;
+  totalKcal: number;
+  items: { name: string; kcal: number }[];
+  mealId: string;
+}
+
 interface ExecutedAction {
   summary: string;
   undo?: () => Promise<void>;
+  /** Only set for actions that touched a whole meal (add_meal_item,
+   * duplicate_meal) — real rows read back from the DB (or, for a
+   * duplicate, the exact snapshot just written), never reconstructed
+   * from the model's prose. Lets the "done" card show the actual meal
+   * breakdown instead of just a one-line summary. */
+  breakdown?: MealBreakdown | null;
 }
 
 interface ConversationSummary {
@@ -125,8 +139,10 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
       case "add_meal_item": {
         const payload = action.payload as AddMealItemForDateInput;
         const result = await addMealItemForDate(payload);
+        const breakdown = await fetchMealBreakdown(result.mealId);
         setLastExecuted({
           summary: action.summary,
+          breakdown,
           undo: async () => {
             if (result.mealCreated) await deleteMeal(result.mealId);
             else await deleteMealItem(result.mealItemId);
@@ -149,8 +165,17 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
       case "duplicate_meal": {
         const payload = action.payload as { snapshot: CreateMealInput };
         const newMealId = await createMeal(payload.snapshot);
+        // The snapshot already carries every item that was written — no
+        // extra read needed, this is the exact data just inserted.
+        const totalKcal = payload.snapshot.items.reduce((a, it) => a + it.energyKcal, 0);
         setLastExecuted({
           summary: action.summary,
+          breakdown: {
+            mealId: newMealId,
+            mealTypeLabel: MEAL_TYPE_LABELS[payload.snapshot.mealType] ?? payload.snapshot.mealType,
+            totalKcal,
+            items: payload.snapshot.items.map((it) => ({ name: it.name, kcal: it.energyKcal })),
+          },
           undo: async () => {
             await deleteMeal(newMealId);
           },
@@ -201,6 +226,27 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         return;
       }
     }
+  }
+
+  /** Reads back the meal's actual current items — used right after
+   * add_meal_item so the "done" card can show the real, current
+   * breakdown of that meal (which may include items logged before this
+   * turn), never just the one item the model added. */
+  async function fetchMealBreakdown(mealId: string): Promise<MealBreakdown | null> {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("meals")
+      .select("id, meal_type, meal_items(name, energy_kcal)")
+      .eq("id", mealId)
+      .maybeSingle();
+    if (!data) return null;
+    const items = (data.meal_items as { name: string; energy_kcal: number }[]) ?? [];
+    return {
+      mealId,
+      mealTypeLabel: MEAL_TYPE_LABELS[data.meal_type as string] ?? (data.meal_type as string),
+      totalKcal: items.reduce((a, it) => a + it.energy_kcal, 0),
+      items: items.map((it) => ({ name: it.name, kcal: it.energy_kcal })),
+    };
   }
 
   function confirmProposal() {
@@ -307,23 +353,26 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
 
       <div className="flex flex-col gap-3">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-full"
-              style={{ background: "var(--accent-soft)" }}
-            >
-              <LogoMark size={22} />
-            </span>
-            <div>
-              <p className="text-[15px] font-semibold text-[var(--text-primary)]">
-                Pregúntame lo que quieras
-              </p>
-              <p className="mx-auto mt-1 max-w-[240px] text-xs text-[var(--text-secondary)]">
-                Leo tus datos reales de nutrición y peso, y puedo registrar o
-                corregir cosas por ti cuando lo pidas.
-              </p>
+          <div className="surface-hero flex flex-col gap-3 p-4">
+            <div className="flex items-center gap-3">
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                style={{ background: "var(--accent-soft)" }}
+              >
+                <LogoMark size={19} />
+              </span>
+              <div>
+                <p className="text-[14px] font-semibold text-[var(--text-primary)]">Pregúntame lo que quieras</p>
+                <p className="text-xs text-[var(--text-tertiary)]">Conozco tus datos reales, no invento nada.</p>
+              </div>
             </div>
-            <div className="flex flex-wrap justify-center gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
+              <Capability label="Consulta tus macros" />
+              <Capability label="Registra comidas" />
+              <Capability label="Corrige un peso" />
+              <Capability label="Ajusta tu objetivo" />
+            </div>
+            <div className="flex flex-wrap gap-1.5 border-t border-[var(--border-soft)] pt-3">
               {SUGGESTED_PROMPTS.map((p) => (
                 <button
                   key={p}
@@ -349,7 +398,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
           ) : (
             <div key={i} className="flex max-w-[90%] items-start gap-2">
               <CoachAvatar />
-              <div className="surface-soft rounded-tl-md px-4 py-2.5 text-sm text-[var(--text-primary)]">
+              <div className="surface-panel rounded-tl-md px-4 py-2.5 text-sm text-[var(--text-primary)]">
                 {formatCoachText(m.content)}
               </div>
             </div>
@@ -359,7 +408,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         {isPending ? (
           <div className="flex items-center gap-2">
             <CoachAvatar />
-            <div className="surface-soft flex gap-1 rounded-tl-md px-4 py-3.5">
+            <div className="surface-panel flex gap-1 rounded-tl-md px-4 py-3.5">
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)] [animation-delay:-0.2s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--text-tertiary)] [animation-delay:0.2s]" />
@@ -376,52 +425,98 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         {errorMessage ? <p className="text-xs text-[var(--danger)]">{errorMessage}</p> : null}
 
         {lastExecuted ? (
-          <div className="surface-raised flex items-center gap-3 border-l-[3px] border-[var(--success)] p-3.5">
+          <div className="flex max-w-[92%] items-start gap-2">
             <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-              style={{ background: "color-mix(in srgb, var(--success) 16%, transparent)", color: "var(--success)" }}
+              className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+              style={{ background: "color-mix(in srgb, var(--success) 18%, transparent)", color: "var(--success)" }}
             >
-              <CheckCircleIcon size={17} />
+              <CheckCircleIcon size={13} />
             </span>
-            <span className="flex-1 text-sm text-[var(--text-primary)]">{lastExecuted.summary}</span>
-            {lastExecuted.undo ? (
-              <button
-                type="button"
-                disabled={isUndoing}
-                onClick={undoLastAction}
-                className="tap-scale flex shrink-0 items-center gap-1 text-xs font-semibold text-[var(--accent)] disabled:opacity-50"
-              >
-                <UndoIcon size={13} /> {isUndoing ? "…" : "Deshacer"}
-              </button>
-            ) : null}
+            <div className="surface-panel min-w-0 flex-1 rounded-tl-md p-3.5">
+              <p className="text-[13px] font-medium text-[var(--text-primary)]">{lastExecuted.summary}</p>
+
+              {lastExecuted.breakdown ? (
+                <div className="mt-2.5 rounded-xl bg-[var(--surface)] p-3">
+                  <div className="flex items-center justify-between border-b border-[var(--border-soft)] pb-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+                      {lastExecuted.breakdown.mealTypeLabel}
+                    </span>
+                    <span className="text-metric text-sm text-[var(--text-primary)]">
+                      {formatKcal(lastExecuted.breakdown.totalKcal)}
+                    </span>
+                  </div>
+                  <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
+                    {lastExecuted.breakdown.items.map((it, i) => (
+                      <li key={i} className="flex items-center justify-between py-1.5 text-xs">
+                        <span className="text-[var(--text-secondary)]">{it.name}</span>
+                        <span className="text-metric text-[var(--text-tertiary)]">{formatKcal(it.kcal)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              <div className="mt-2.5 flex items-center gap-3">
+                {lastExecuted.breakdown ? (
+                  <a
+                    href={`/diario/comida/${lastExecuted.breakdown.mealId}`}
+                    className="text-xs font-semibold text-[var(--accent)]"
+                  >
+                    Ver comida
+                  </a>
+                ) : null}
+                {lastExecuted.undo ? (
+                  <button
+                    type="button"
+                    disabled={isUndoing}
+                    onClick={undoLastAction}
+                    className="tap-scale flex items-center gap-1 text-xs font-semibold text-[var(--text-tertiary)] disabled:opacity-50"
+                  >
+                    <UndoIcon size={12} /> {isUndoing ? "…" : "Deshacer"}
+                  </button>
+                ) : null}
+              </div>
+            </div>
           </div>
         ) : null}
 
         {proposedAction ? (
-          <div className="surface-raised border-l-[3px] border-[var(--warning)] p-4">
-            <p className="text-[13px] font-semibold text-[var(--text-primary)]">Confirmar acción</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">{proposedAction.summary}</p>
-            {proposedAction.kind === "goal_change" && (proposedAction.payload as { kcal?: number }).kcal ? (
-              <p className="text-metric mt-1.5 text-xs text-[var(--text-primary)]">
-                Nuevo objetivo: {formatKcal((proposedAction.payload as { kcal: number }).kcal)}
-              </p>
-            ) : null}
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                disabled={isApplying}
-                onClick={confirmProposal}
-                className="btn-primary tap-scale rounded-lg px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-fg)] disabled:opacity-50"
-              >
-                Confirmar
-              </button>
-              <button
-                type="button"
-                onClick={() => setProposedAction(null)}
-                className="btn-ghost tap-scale flex items-center gap-1 rounded-lg px-3.5 py-1.5 text-xs font-semibold"
-              >
-                <CloseIcon size={13} /> Cancelar
-              </button>
+          <div className="flex max-w-[92%] items-start gap-2">
+            <span
+              className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+              style={{ background: "color-mix(in srgb, var(--warning) 18%, transparent)", color: "var(--warning)" }}
+            >
+              <SparkleIcon size={12} />
+            </span>
+            <div className="surface-panel min-w-0 flex-1 rounded-tl-md p-3.5">
+              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Confirmar acción</p>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">{proposedAction.summary}</p>
+              {proposedAction.kind === "goal_change" && (proposedAction.payload as { kcal?: number }).kcal ? (
+                <p className="text-metric mt-2 flex items-center gap-2 text-sm text-[var(--text-primary)]">
+                  {formatKcal(currentGoal?.kcal ?? 0)}
+                  <span className="text-[var(--text-tertiary)]">→</span>
+                  <span style={{ color: "var(--accent)" }}>
+                    {formatKcal((proposedAction.payload as { kcal: number }).kcal)}
+                  </span>
+                </p>
+              ) : null}
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  disabled={isApplying}
+                  onClick={confirmProposal}
+                  className="btn-primary tap-scale rounded-lg px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-fg)] disabled:opacity-50"
+                >
+                  Confirmar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProposedAction(null)}
+                  className="btn-ghost tap-scale flex items-center gap-1 rounded-lg px-3.5 py-1.5 text-xs font-semibold"
+                >
+                  <CloseIcon size={13} /> Cancelar
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -437,7 +532,7 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Pregunta algo o pídeme que registre/cambie algo…"
+          placeholder="Pregunta o pídeme algo…"
           className="flex-1 bg-transparent px-3.5 py-2 text-sm text-[var(--text-primary)] outline-none"
         />
         <button
@@ -449,6 +544,15 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
           <SendIcon size={15} />
         </button>
       </form>
+    </div>
+  );
+}
+
+function Capability({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-2)] px-2.5 py-2 text-[11px] font-medium text-[var(--text-secondary)]">
+      <span aria-hidden="true" className="h-1 w-1 shrink-0 rounded-full" style={{ background: "var(--accent)" }} />
+      {label}
     </div>
   );
 }

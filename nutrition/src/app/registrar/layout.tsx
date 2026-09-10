@@ -7,7 +7,7 @@ export default function RegistrarLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--app-bg)]">
-      <header className="safe-top safe-x flex items-center gap-2 border-b border-[var(--border-soft)] bg-[var(--app-bg)]/90 px-4 py-3 backdrop-blur-xl">
+      <header className="safe-top flex items-center gap-2 border-b border-[var(--border-soft)] bg-[var(--app-bg)]/90 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-3 backdrop-blur-xl">
         <button
           type="button"
           onClick={() => router.back()}
@@ -18,7 +18,7 @@ export default function RegistrarLayout({ children }: { children: React.ReactNod
         </button>
         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Registrar</p>
       </header>
-      <main className="safe-x safe-bottom mx-auto w-full max-w-lg flex-1 px-4 py-4">
+      <main className="safe-bottom mx-auto w-full max-w-lg flex-1 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-4">
         {children}
       </main>
     </div>

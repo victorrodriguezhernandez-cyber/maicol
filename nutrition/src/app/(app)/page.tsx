@@ -4,28 +4,16 @@ import {
   getCurrentGoal,
   getMealsForDate,
   getProfileDisplayName,
-  getWeightEntriesSince,
   sumMealItems,
   sumMeals,
 } from "@/lib/data/nutrition";
-import { computeWeightTrend, computeWeeklyRate } from "@/lib/nutrition/trend";
-import {
-  formatKcal,
-  formatKg,
-  formatSignedKgPerWeek,
-  todayLocalDateString,
-  localHour,
-} from "@/lib/format";
+import { formatKcal, todayLocalDateString, localHour } from "@/lib/format";
 import { RingProgress } from "@/components/ui/RingProgress";
-import { HeroMetric } from "@/components/ui/HeroMetric";
-import { MetricBar } from "@/components/ui/MetricBar";
+import { MacroDashboard } from "@/components/dashboard/MacroDashboard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { PageShell } from "@/components/ui/PageShell";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { MealGroup, type MealGroupItem } from "@/components/dashboard/MealGroup";
-import { TrendIcon } from "@/components/ui/icons";
 
-const MEAL_TYPE_ORDER = ["breakfast", "lunch", "snack", "dinner", "other"] as const;
+const MEAL_TYPE_ORDER = ["breakfast", "lunch", "snack", "dinner"] as const;
 
 export default async function TodayPage() {
   const supabase = await createClient();
@@ -46,27 +34,15 @@ export default async function TodayPage() {
   const meals = await getMealsForDate(supabase, user.id, today);
   const totals = sumMeals(meals);
 
-  const since = new Date();
-  since.setDate(since.getDate() - 60);
-  const weightEntries = await getWeightEntriesSince(supabase, user.id, since.toISOString());
-  const trendPoints = computeWeightTrend(
-    weightEntries.map((w) => ({ measuredAt: w.measured_at, weightKg: w.weight_kg })),
-  );
-  const weeklyRate =
-    goal.mode !== "maintain"
-      ? computeWeeklyRate(trendPoints, {
-          targetMinKgPerWeek: goal.weekly_rate_min_kg ?? undefined,
-          targetMaxKgPerWeek: goal.weekly_rate_max_kg ?? undefined,
-        })
-      : computeWeeklyRate(trendPoints);
-
-  const lastTrend = trendPoints.at(-1);
   const remaining = goal.kcal - totals.energy_kcal;
   const pct = goal.kcal > 0 ? Math.round(Math.min(100, (totals.energy_kcal / goal.kcal) * 100)) : 0;
 
   // Group by meal TYPE, not by individual `meals` row — several logged
   // entries of the same type on the same day (e.g. two breakfasts)
-  // collapse into one timeline block (see MealGroup.tsx).
+  // collapse into one timeline block. Every canonical type always
+  // renders (even with zero items) so the timeline itself reads as
+  // deliberate rather than empty when little is logged yet; "other" is
+  // the one exception, shown only when it actually has something.
   const groups = new Map<string, { totalKcal: number; items: MealGroupItem[] }>();
   for (const meal of meals) {
     const mealTotals = sumMealItems(meal.meal_items);
@@ -77,74 +53,66 @@ export default async function TodayPage() {
     }
     groups.set(meal.meal_type, g);
   }
-  const orderedGroups = MEAL_TYPE_ORDER.filter((t) => groups.has(t)).map((t) => ({
-    type: t,
-    ...groups.get(t)!,
-  }));
+  const allTypes = [...MEAL_TYPE_ORDER, ...(groups.has("other") ? (["other"] as const) : [])];
+  const orderedGroups = allTypes.map((t) => ({ type: t, ...(groups.get(t) ?? { totalKcal: 0, items: [] }) }));
 
   return (
-    <PageShell eyebrow={`${greeting}${firstName ? `, ${firstName}` : ""}`} title="Hoy">
-      {/* Hero: today's calories dominate the screen, on purpose. */}
-      <section className="surface-soft px-5 py-5">
-        <HeroMetric
-          eyebrow="Calorías de hoy"
-          value={Math.round(totals.energy_kcal).toLocaleString("es-ES")}
-          unit={`/ ${goal.kcal.toLocaleString("es-ES")} kcal`}
-          support={
-            remaining >= 0
-              ? `Quedan ${formatKcal(remaining)}`
-              : `${formatKcal(Math.abs(remaining))} por encima del objetivo`
-          }
-          ring={
-            <RingProgress value={totals.energy_kcal} max={goal.kcal} size={76} strokeWidth={7}>
-              <span className="text-metric text-base text-[var(--text-primary)]">{pct}%</span>
-            </RingProgress>
-          }
-        />
-      </section>
+    <div className="flex flex-col gap-4 pb-6">
+      <div className="flex items-baseline justify-between">
+        <div>
+          <p className="text-meta">{greeting}{firstName ? `, ${firstName}` : ""}</p>
+          <h1 className="text-hero-title text-[1.6rem] text-[var(--text-primary)]">Hoy</h1>
+        </div>
+      </div>
 
-      {/* Macros: full-width bars, readable consumed/goal at a glance. */}
-      <section className="flex flex-col gap-4">
-        <MetricBar label="Proteína" value={totals.protein_g} goal={goal.protein_g} color="var(--metric-protein)" />
-        <MetricBar label="Carbohidratos" value={totals.carbohydrates_g} goal={goal.carbohydrates_g} color="var(--metric-carbs)" />
-        <MetricBar label="Grasas" value={totals.fat_g} goal={goal.fat_g} color="var(--metric-fat)" />
-        {goal.fiber_g ? (
-          <MetricBar label="Fibra" value={totals.fiber_g ?? 0} goal={goal.fiber_g} color="var(--metric-fiber)" />
-        ) : null}
-      </section>
-
-      {/* Volumen: a quiet inline strip, not a card competing with the hero. */}
-      {lastTrend ? (
-        <section className="flex items-center gap-3 border-y border-[var(--border-soft)] py-3.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--metric-weight-soft)" }}>
-            <TrendIcon size={15} style={{ color: "var(--metric-weight)" }} />
-          </span>
-          <p className="text-xs text-[var(--text-secondary)]">Tendencia de peso</p>
-          <p className="text-metric ml-auto text-sm text-[var(--text-primary)]">{formatKg(lastTrend.trendKg)}</p>
-          {weeklyRate.weeklyRateKg != null ? (
-            <p className="text-metric text-xs text-[var(--text-tertiary)]">
-              {formatSignedKgPerWeek(weeklyRate.weeklyRateKg)}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
-
-      {/* Comidas: a timeline grouped by meal type, not a flat card stack. */}
-      <section className="flex flex-col gap-3">
-        <SectionHeader>Comidas de hoy</SectionHeader>
-        {orderedGroups.length === 0 ? (
-          <EmptyState
-            title="Sin comidas registradas todavía"
-            description="Usa el botón Registrar para añadir tu primera comida del día."
-          />
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {orderedGroups.map((g) => (
-              <MealGroup key={g.type} type={g.type} totalKcal={g.totalKcal} items={g.items} />
-            ))}
+      {/* Hero: the one dashboard panel that dominates the screen. */}
+      <section className="surface-hero flex items-center justify-between gap-4 p-5">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <p className="text-section">Calorías de hoy</p>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-display text-[2.75rem] text-[var(--text-primary)]">
+              {Math.round(totals.energy_kcal).toLocaleString("es-ES")}
+            </span>
           </div>
-        )}
+          <p className="text-xs text-[var(--text-tertiary)]">de {goal.kcal.toLocaleString("es-ES")} kcal</p>
+          <p
+            className="mt-1.5 inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            style={{
+              background: remaining >= 0 ? "var(--accent-soft)" : "color-mix(in srgb, var(--warning) 16%, transparent)",
+              color: remaining >= 0 ? "var(--accent)" : "var(--warning)",
+            }}
+          >
+            {remaining >= 0
+              ? `${formatKcal(remaining)} disponibles`
+              : `${formatKcal(Math.abs(remaining))} por encima`}
+          </p>
+        </div>
+        <RingProgress value={totals.energy_kcal} max={goal.kcal} size={92} strokeWidth={9} glow>
+          <span className="text-metric text-lg text-[var(--text-primary)]">{pct}%</span>
+        </RingProgress>
       </section>
-    </PageShell>
+
+      {/* Macros: one tight 2×2 dashboard, not four stacked form rows. */}
+      <MacroDashboard
+        macros={[
+          { label: "Proteína", value: totals.protein_g, goal: goal.protein_g, color: "var(--metric-protein)" },
+          { label: "Carbos", value: totals.carbohydrates_g, goal: goal.carbohydrates_g, color: "var(--metric-carbs)" },
+          { label: "Grasas", value: totals.fat_g, goal: goal.fat_g, color: "var(--metric-fat)" },
+          ...(goal.fiber_g
+            ? [{ label: "Fibra", value: totals.fiber_g ?? 0, goal: goal.fiber_g, color: "var(--metric-fiber)" }]
+            : []),
+        ]}
+      />
+
+      {/* Comidas: all four moments of the day, always visible. */}
+      <section className="flex flex-col gap-2.5">
+        <SectionHeader>Comidas de hoy</SectionHeader>
+        <div className="flex flex-col gap-2">
+          {orderedGroups.map((g) => (
+            <MealGroup key={g.type} type={g.type} totalKcal={g.totalKcal} items={g.items} />
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
