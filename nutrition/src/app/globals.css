@@ -366,9 +366,36 @@ body::before {
   color: var(--accent-fg);
   box-shadow: 0 1px 0 0 color-mix(in srgb, white 25%, transparent) inset, var(--shadow-sm);
 }
-.btn-primary:disabled {
-  opacity: 0.4;
+/* Un botón deshabilitado tiene que PARECER deshabilitado.
+
+   Durante mucho tiempo esta regla sólo existía para .btn-primary, y el
+   resultado era el peor fallo de interfaz posible: botones que se veían
+   vivos, se pulsaban y no hacía nada. El usuario no puede distinguir "esto
+   está apagado" de "esto está roto", y acaba pensando que la app falla.
+
+   `cursor: not-allowed` en ratón y la opacidad en todas partes. El
+   :active:not(:disabled) de arriba ya evita que además dé el rebote táctil
+   que promete que algo va a pasar. */
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-ghost:disabled,
+.btn-danger:disabled,
+.btn-pill:disabled {
+  opacity: 0.38;
   box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Y la red de seguridad: CUALQUIER botón deshabilitado, lleve o no una
+   clase .btn-*, se atenúa. Así un botón de icono o un enlace de texto
+   nuevo no puede volver a aparecer vivo estando apagado por olvidarse de
+   la clase. Un `disabled:opacity-*` propio de Tailwind gana a esta regla
+   (una clase tiene más especificidad que un selector de elemento), así
+   que los que ya deciden su propia opacidad siguen mandando. */
+button:disabled,
+[aria-disabled="true"] {
+  opacity: 0.38;
+  cursor: not-allowed;
 }
 
 .btn-secondary {

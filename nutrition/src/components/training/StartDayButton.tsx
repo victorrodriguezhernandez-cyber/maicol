@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { startSession } from "@/lib/actions/training";
-import { PlayIcon } from "@/components/ui/icons";
+import Link from "next/link";
+import { PlayIcon, PlusIcon } from "@/components/ui/icons";
 
 /**
  * "Empezar" un día de rutina, o un entreno libre.
@@ -17,13 +18,23 @@ import { PlayIcon } from "@/components/ui/icons";
 export function StartDayButton({
   routineDayId,
   dayName,
-  disabled = false,
+  emptyHref,
   variant = "primary",
   hasOpenSession = false,
 }: {
   routineDayId: string | null;
   dayName: string;
-  disabled?: boolean;
+  /**
+   * A dónde llevar cuando el día todavía no tiene ejercicios.
+   *
+   * Antes esto era un `disabled` a secas, y era el peor botón de la app:
+   * crear una rutina desde plantilla deja los días vacíos, así que lo
+   * primero que veías al entrar era un "Empezar" que no hacía nada. Un
+   * botón deshabilitado sólo vale cuando de verdad no hay nada que
+   * hacer; aquí sí lo hay — falta añadir ejercicios — así que el botón
+   * cambia de texto y te lleva allí.
+   */
+  emptyHref?: string | null;
   variant?: "primary" | "secondary";
   hasOpenSession?: boolean;
 }) {
@@ -52,13 +63,23 @@ export function StartDayButton({
 
   const label = hasOpenSession ? "Continuar" : "Empezar";
 
+  // Día sin ejercicios: en vez de un botón apagado, la acción que de
+  // verdad toca.
+  if (emptyHref) {
+    return (
+      <Link href={emptyHref} className="btn-pill shrink-0 text-xs">
+        <PlusIcon size={13} /> Añadir ejercicios
+      </Link>
+    );
+  }
+
   if (variant === "secondary") {
     return (
       <div className="flex flex-col gap-1.5">
         <button
           type="button"
           onClick={handleClick}
-          disabled={disabled || pending}
+          disabled={pending}
           className="btn-secondary tap-scale flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-[var(--text-primary)]"
         >
           <PlayIcon size={15} />
@@ -74,7 +95,7 @@ export function StartDayButton({
       <button
         type="button"
         onClick={handleClick}
-        disabled={disabled || pending}
+        disabled={pending}
         aria-label={`${label} ${dayName}`}
         className="btn-pill text-xs"
         data-active={hasOpenSession ? "true" : undefined}

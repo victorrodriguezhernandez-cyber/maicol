@@ -122,7 +122,11 @@ export default async function EntrenoPage() {
                 <StartDayButton
                   routineDayId={day.id}
                   dayName={day.name}
-                  disabled={day.routine_exercises.length === 0}
+                  emptyHref={
+                    day.routine_exercises.length === 0
+                      ? `/entreno/rutinas/${routine.id}`
+                      : null
+                  }
                   hasOpenSession={Boolean(openSession)}
                 />
               </div>
