@@ -69,14 +69,19 @@ reach is protected by Row Level Security (see `DATABASE.md`).
   `user_id IS NULL`) is readable by everyone and writable only by
   server-side code holding the service-role key.
 - **Auth**: single-user app — there is exactly one Supabase Auth account,
-  a fixed email (`ACCOUNT_EMAIL` hardcoded in
-  `src/app/(auth)/login/page.tsx`) that the user never sees or types. The
+  a fixed email that the user never sees or types. The
   one "Usuario" field on the login screen is used as the Supabase Auth
-  **password** for that fixed email
-  (`supabase.auth.signInWithPassword({ email: ACCOUNT_EMAIL, password:
-  username })`) — so signing in is a single word, with no email step and
-  no confirmation email, and it never touches Supabase's email-sending
-  rate limit. `SetPasswordForm.tsx` (Ajustes → Seguridad) lets the user
+  **password** for that fixed email — so signing in is a single word, with
+  no email step and no confirmation email, and it never touches Supabase's
+  email-sending rate limit.
+  `signInWithPassword` runs **server-side**, in the `signIn` Server Action
+  at `src/app/(auth)/login/actions.ts`, reading the address from
+  `serverConfig.accountEmail` (env var `ACCOUNT_EMAIL`, with a literal
+  fallback). It used to be a literal inside the `"use client"` login page,
+  which shipped the account's email in the public JS bundle — anyone could
+  read the identifier and only had to guess one word. The action returns a
+  bare boolean so the response can't be used to confirm the account
+  exists. `SetPasswordForm.tsx` (Ajustes → Seguridad) lets the user
   change that word later via `supabase.auth.updateUser({ password })`
   while already signed in — still no email involved. The account's
   initial password was set once via a direct SQL `UPDATE auth.users …

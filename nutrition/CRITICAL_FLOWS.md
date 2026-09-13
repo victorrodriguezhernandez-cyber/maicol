@@ -151,8 +151,16 @@ parte de la app.
 Ver `ARCHITECTURE.md` → Auth y `DEPLOYMENT.md` §3 para el detalle
 completo. Resumen operativo:
 
-- Una única cuenta Supabase Auth, email fijo (`ACCOUNT_EMAIL` en
-  `src/app/(auth)/login/page.tsx`), nunca mostrado al usuario.
+- Una única cuenta Supabase Auth, email fijo, nunca mostrado al usuario.
+  Vive **solo en el servidor**: `serverConfig.accountEmail`
+  (`src/lib/config.ts`, variable `ACCOUNT_EMAIL`), consumido por la Server
+  Action `signIn` en `src/app/(auth)/login/actions.ts`.
+- **Nunca lo muevas a un componente `"use client"`.** Estuvo ahí y el
+  email acabó en el bundle público junto a la llamada de login: como el
+  "Usuario" ES la contraseña, cualquiera conocía el identificador y solo
+  tenía que adivinar una palabra. Hay un test E2E
+  (`e2e/acceso.spec.ts`, "no filtra la cuenta al navegador") que descarga
+  cada chunk servido y falla si vuelve a ocurrir.
 - El campo "Usuario" que teclea el usuario ES la contraseña de esa cuenta
   (`signInWithPassword`). No hay magic link, no hay email de
   verificación, no hay "olvidé mi contraseña".
@@ -216,7 +224,10 @@ merece estar aquí.
 - `src/app/~offline/page.tsx` es la página de fallback del service worker
   (`@ducanh2912/next-pwa` la detecta automáticamente por su ruta) —
   sin comprobación de auth, porque no puede llamar a
-  `supabase.auth.getUser()` sin red.
+  `supabase.auth.getUser()` sin red. Ojo: durante un tiempo **sí** estuvo
+  detrás del middleware de sesión, que la redirigía a `/login` — la única
+  pantalla que tampoco puede cargar sin red. Está excluida
+  explícitamente en `src/proxy.ts` y hay un test E2E que lo vigila.
 - **Cómo se rompe sin querer**: añadir un nuevo campo obligatorio a
   `CreateMealInput` sin actualizar el tipo en `src/lib/offline/db.ts`
   (`PendingMeal.input: CreateMealInput`) — TypeScript debería avisar, pero

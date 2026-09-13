@@ -64,7 +64,12 @@ project.
    Usa `applyGoalChange` para cualquier cambio de objetivo; no hagas
    `UPDATE` directo sobre la fila abierta salvo que sea exactamente ese
    patrón de cerrar-y-abrir.
-8. **No hay datos ni respuestas de IA simuladas.** Si vas a añadir una
+8. **El email de la cuenta nunca vuelve al cliente.** El login se ejecuta
+   en una Server Action (`src/app/(auth)/login/actions.ts`) leyendo
+   `serverConfig.accountEmail`. Estuvo incrustado en el componente cliente
+   y acabó en el bundle público; como el "Usuario" ES la contraseña, eso
+   regalaba medio credencial. Hay un test E2E que falla si reaparece.
+9. **No hay datos ni respuestas de IA simuladas.** Si vas a añadir una
    funcionalidad que "aparenta" funcionar (un botón que no hace nada real,
    un array hardcoded haciendo de base de datos), no la añadas — o la
    implementas de verdad, o la dejas fuera y lo documentas en el README
@@ -103,9 +108,16 @@ función que llame a Gemini debe:
 npm run dev          # Turbopack, PWA desactivada
 npm run build         # --webpack (necesario por @ducanh2912/next-pwa, ver README)
 npm run test           # Vitest — corre esto tras tocar src/lib/nutrition/*
+npm run test:e2e       # Playwright — levanta un build de producción y lo prueba
 npx tsc --noEmit -p tsconfig.json
 npx eslint .
 ```
+
+Los E2E necesitan un build previo (`npm run build`). En un entorno donde
+el navegador instalado no coincida con el que espera `@playwright/test`,
+pásale la ruta: `CHROMIUM_PATH=/ruta/a/chrome npm run test:e2e`.
+Corren sobre Chromium con viewport de iPhone; **no** cubren bugs
+específicos de Safari (ver el comentario en `playwright.config.ts`).
 
 `npm run build` y `npx eslint .` generan/pueden tocar
 `public/sw.js`/`public/workbox-*.js`/`public/*.js.map` — están en

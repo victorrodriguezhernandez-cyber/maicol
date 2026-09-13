@@ -61,6 +61,7 @@ Safari — `next dev` desactiva el service worker a propósito.
 | `npm run start`     | Sirve el build de producción                       |
 | `npm run lint`      | ESLint                                              |
 | `npm run test`      | Unit tests (Vitest)                                 |
+| `npm run test:e2e`  | Tests end-to-end (Playwright, viewport de iPhone)   |
 | `npm run test:watch`| Unit tests en modo watch                            |
 
 > **Nota sobre Turbopack**: Next.js 16 usa Turbopack por defecto, pero el
