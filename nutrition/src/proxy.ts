@@ -36,8 +36,15 @@ export async function proxy(request: NextRequest) {
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login");
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/");
+  // The /design styleguide only exists while developing (the route itself
+  // 404s in production), so it never needs a session to be reviewed.
+  // Guarded on NODE_ENV rather than on the path alone: in a production
+  // build this condition is false, so the redirect behaves exactly as
+  // before and nothing new is reachable without auth.
+  const isDevStyleguide =
+    process.env.NODE_ENV !== "production" && request.nextUrl.pathname.startsWith("/design");
 
-  if (!user && !isAuthRoute && !isAuthCallback) {
+  if (!user && !isAuthRoute && !isAuthCallback && !isDevStyleguide) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", request.nextUrl.pathname);

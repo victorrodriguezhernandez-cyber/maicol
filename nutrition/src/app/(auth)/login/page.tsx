@@ -61,7 +61,7 @@ export default function LoginPage() {
           autoFocus
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="victorrh2008"
+          placeholder="Maicol"
           className="w-full rounded-xl border border-[var(--border)] bg-[var(--app-bg)] px-3.5 py-3 text-[15px] text-[var(--text-primary)]"
         />
         {errorMessage ? (

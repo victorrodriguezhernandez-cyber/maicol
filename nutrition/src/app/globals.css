@@ -12,10 +12,126 @@
    ========================================================================= */
 
 :root {
-  /* ---- Surfaces: five real levels, not one flat color repeated ---- */
-  /* Light mode is a genuine second palette, not an inverted afterthought —
-     same structure (five levels, same semantic roles) with warm-neutral
-     paper tones instead of anthracite. */
+  /* ---- DARK IS THE DEFAULT ---------------------------------------------
+     v3 inverts v2: dark is no longer "the other palette", it IS the
+     product's face. Light still exists as a genuine second palette (same
+     five levels, same semantic roles) for anyone on a light OS or who
+     toggles it — see the two blocks below.
+
+     The ground is a blue-cast near-black, not a flat neutral: five
+     elevation levels that actually separate, so a card reads as lifted
+     rather than as a lighter rectangle.
+     --------------------------------------------------------------------- */
+  /* The steps between levels are deliberately wide. A first pass used
+     ~4-6 points of lightness between them and, screenshotted on a real
+     phone-sized dark viewport, all five surfaces read as the same
+     rectangle — the separation existed in the hex values and not to the
+     eye. Roughly doubling each step is what makes "raised" actually look
+     raised. */
+  --app-bg: #04060a;
+  --surface: #0c1018;
+  --surface-2: #141925;
+  --surface-raised: #1c2331;
+  --surface-overlay: #242c3d;
+  --border: #2a3242;
+  --border-soft: #1a2130;
+  --border-strong: #3a4457;
+
+  --text-primary: #f3f6fa;
+  --text-secondary: #98a2b3;
+  --text-tertiary: #656f80;
+
+  /* Electric lime — the ACTION color. Deliberately never used to paint a
+     nutrition value: metrics own their own hues below, so "lime" always
+     means "you can press this", never "this is protein". That separation
+     is what keeps a single bright accent from flattening the whole UI
+     into one acid tone. */
+  --accent: #c9f24d;
+  --accent-2: #a3d916;
+  --accent-fg: #0a1400;
+  --accent-soft: #1d2708;
+  --accent-glow: color-mix(in srgb, #c9f24d 26%, transparent);
+
+  --danger: #ff6b6b;
+  --danger-soft: #2b1418;
+  --success: #4ade80;
+  --warning: #fbbf24;
+
+  /* One fixed hue per nutrition concept — never reused for chrome or
+     actions. Fiber sits at emerald rather than a yellower green so it
+     never reads as the lime action color. */
+  --metric-protein: #2dd4bf;
+  --metric-protein-soft: #0d2b28;
+  --metric-carbs: #f5a524;
+  --metric-carbs-soft: #2e2112;
+  --metric-fat: #b794f6;
+  --metric-fat-soft: #241c37;
+  --metric-fiber: #34d399;
+  --metric-fiber-soft: #0f2a20;
+  --metric-weight: #7aa2ff;
+  --metric-weight-soft: #16233f;
+
+  --shadow-color: 222 60% 2%;
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.55);
+  --shadow-sm: 0 2px 8px hsl(var(--shadow-color) / 0.55), 0 1px 3px hsl(var(--shadow-color) / 0.45);
+  --shadow-md: 0 16px 36px hsl(var(--shadow-color) / 0.6), 0 4px 12px hsl(var(--shadow-color) / 0.45);
+  --shadow-lg: 0 32px 72px hsl(var(--shadow-color) / 0.65), 0 8px 20px hsl(var(--shadow-color) / 0.5);
+
+  --ring-track-light: #232a38;
+}
+
+/* ---- Light: opt-in, and a real palette rather than an inversion ------- */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --app-bg: #f4f5f7;
+    --surface: #ffffff;
+    --surface-2: #eef0f3;
+    --surface-raised: #ffffff;
+    --surface-overlay: #ffffff;
+    --border: #e2e5ea;
+    --border-soft: #ebedf0;
+    --border-strong: #d5d9e0;
+
+    --text-primary: #10131a;
+    --text-secondary: #5b6270;
+    --text-tertiary: #9298a5;
+
+    /* Lime at full electric strength is unreadable on paper-white, so the
+       light palette carries the same "action" role at a weight that works
+       on a light ground. Same meaning, different value. */
+    --accent: #5d8f00;
+    --accent-2: #47700a;
+    --accent-fg: #ffffff;
+    --accent-soft: #e8f6c8;
+    --accent-glow: color-mix(in srgb, #5d8f00 18%, transparent);
+
+    --danger: #dc2626;
+    --danger-soft: #fde3e1;
+    --success: #16a34a;
+    --warning: #c2620a;
+
+    --metric-protein: #0d9488;
+    --metric-protein-soft: #d3f3ee;
+    --metric-carbs: #c2650a;
+    --metric-carbs-soft: #fbe6d1;
+    --metric-fat: #7c3aed;
+    --metric-fat-soft: #ece3fd;
+    --metric-fiber: #047857;
+    --metric-fiber-soft: #d7f2e0;
+    --metric-weight: #2554e0;
+    --metric-weight-soft: #dce6fd;
+
+    --shadow-color: 222 30% 35%;
+    --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+    --shadow-sm: 0 2px 6px hsl(var(--shadow-color) / 0.08), 0 1px 2px hsl(var(--shadow-color) / 0.05);
+    --shadow-md: 0 12px 28px hsl(var(--shadow-color) / 0.14), 0 3px 8px hsl(var(--shadow-color) / 0.08);
+    --shadow-lg: 0 24px 60px hsl(var(--shadow-color) / 0.22), 0 6px 16px hsl(var(--shadow-color) / 0.1);
+
+    --ring-track-light: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  }
+}
+
+:root[data-theme="light"] {
   --app-bg: #f4f5f7;
   --surface: #ffffff;
   --surface-2: #eef0f3;
@@ -29,25 +145,24 @@
   --text-secondary: #5b6270;
   --text-tertiary: #9298a5;
 
-  --accent: #0f9488;
-  --accent-2: #0a6f66;
+  --accent: #5d8f00;
+  --accent-2: #47700a;
   --accent-fg: #ffffff;
-  --accent-soft: #d9f5f0;
-  --accent-glow: color-mix(in srgb, #0f9488 22%, transparent);
+  --accent-soft: #e8f6c8;
+  --accent-glow: color-mix(in srgb, #5d8f00 18%, transparent);
 
   --danger: #dc2626;
   --danger-soft: #fde3e1;
   --success: #16a34a;
   --warning: #c2620a;
 
-  /* One fixed hue per nutrition concept — never reused for chrome/actions. */
   --metric-protein: #0d9488;
   --metric-protein-soft: #d3f3ee;
   --metric-carbs: #c2650a;
   --metric-carbs-soft: #fbe6d1;
   --metric-fat: #7c3aed;
   --metric-fat-soft: #ece3fd;
-  --metric-fiber: #16803d;
+  --metric-fiber: #047857;
   --metric-fiber-soft: #d7f2e0;
   --metric-weight: #2554e0;
   --metric-weight-soft: #dce6fd;
@@ -59,98 +174,6 @@
   --shadow-lg: 0 24px 60px hsl(var(--shadow-color) / 0.22), 0 6px 16px hsl(var(--shadow-color) / 0.1);
 
   --ring-track-light: color-mix(in srgb, var(--text-primary) 8%, transparent);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --app-bg: #08090c;
-    --surface: #101216;
-    --surface-2: #16191e;
-    --surface-raised: #191c22;
-    --surface-overlay: #1c2027;
-    --border: #23272f;
-    --border-soft: #1a1d23;
-    --border-strong: #30353f;
-
-    --text-primary: #f5f7fa;
-    --text-secondary: #9aa1ac;
-    --text-tertiary: #676f7b;
-
-    --accent: #2dd4bf;
-    --accent-2: #5eead4;
-    --accent-fg: #052420;
-    --accent-soft: #113330;
-    --accent-glow: color-mix(in srgb, #2dd4bf 28%, transparent);
-
-    --danger: #f87171;
-    --danger-soft: #2a1416;
-    --success: #4ade80;
-    --warning: #fb923c;
-
-    --metric-protein: #2dd4bf;
-    --metric-protein-soft: #0f2b28;
-    --metric-carbs: #f0a339;
-    --metric-carbs-soft: #2c2013;
-    --metric-fat: #b794f6;
-    --metric-fat-soft: #241c37;
-    --metric-fiber: #4ade80;
-    --metric-fiber-soft: #142a1c;
-    --metric-weight: #6f9bf7;
-    --metric-weight-soft: #16233f;
-
-    --shadow-color: 220 45% 2%;
-    --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.5);
-    --shadow-sm: 0 2px 8px hsl(var(--shadow-color) / 0.5), 0 1px 3px hsl(var(--shadow-color) / 0.4);
-    --shadow-md: 0 16px 36px hsl(var(--shadow-color) / 0.55), 0 4px 12px hsl(var(--shadow-color) / 0.4);
-    --shadow-lg: 0 32px 72px hsl(var(--shadow-color) / 0.6), 0 8px 20px hsl(var(--shadow-color) / 0.45);
-
-    --ring-track-light: #262b33;
-  }
-}
-
-:root[data-theme="dark"] {
-  --app-bg: #08090c;
-  --surface: #101216;
-  --surface-2: #16191e;
-  --surface-raised: #191c22;
-  --surface-overlay: #1c2027;
-  --border: #23272f;
-  --border-soft: #1a1d23;
-  --border-strong: #30353f;
-
-  --text-primary: #f5f7fa;
-  --text-secondary: #9aa1ac;
-  --text-tertiary: #676f7b;
-
-  --accent: #2dd4bf;
-  --accent-2: #5eead4;
-  --accent-fg: #052420;
-  --accent-soft: #113330;
-  --accent-glow: color-mix(in srgb, #2dd4bf 28%, transparent);
-
-  --danger: #f87171;
-  --danger-soft: #2a1416;
-  --success: #4ade80;
-  --warning: #fb923c;
-
-  --metric-protein: #2dd4bf;
-  --metric-protein-soft: #0f2b28;
-  --metric-carbs: #f0a339;
-  --metric-carbs-soft: #2c2013;
-  --metric-fat: #b794f6;
-  --metric-fat-soft: #241c37;
-  --metric-fiber: #4ade80;
-  --metric-fiber-soft: #142a1c;
-  --metric-weight: #6f9bf7;
-  --metric-weight-soft: #16233f;
-
-  --shadow-color: 220 45% 2%;
-  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.5);
-  --shadow-sm: 0 2px 8px hsl(var(--shadow-color) / 0.5), 0 1px 3px hsl(var(--shadow-color) / 0.4);
-  --shadow-md: 0 16px 36px hsl(var(--shadow-color) / 0.55), 0 4px 12px hsl(var(--shadow-color) / 0.4);
-  --shadow-lg: 0 32px 72px hsl(var(--shadow-color) / 0.6), 0 8px 20px hsl(var(--shadow-color) / 0.45);
-
-  --ring-track-light: #262b33;
 }
 
 @theme inline {
@@ -209,12 +232,29 @@ body::before {
    ========================================================================= */
 
 .text-display {
-  /* The one number-of-the-screen: today's kcal, current weight. */
+  /* The one number-of-the-screen: today's kcal, current weight.
+     This is where the design spends its boldness. In a tool whose entire
+     content is measurements, the figure itself is the hero — so it gets
+     the mono face, tabular figures and, on the dark ground, a faint
+     luminance that makes it read as lit rather than printed. Kept to a
+     whisper (18% alpha, 24px): enough to separate it from the surface,
+     not enough to look like a neon sign. */
   font-family: var(--font-plex-mono), ui-monospace, monospace;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
   line-height: 0.95;
+  text-shadow: 0 0 24px color-mix(in srgb, currentColor 18%, transparent);
+}
+/* Printed, not lit, on paper-white: a glow on a light ground just reads
+   as a blurry number. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .text-display {
+    text-shadow: none;
+  }
+}
+:root[data-theme="light"] .text-display {
+  text-shadow: none;
 }
 .text-hero-title {
   /* "Hoy", "Progreso" — the page's own name. */
@@ -346,7 +386,15 @@ body::before {
   box-shadow: 0 1px 0 0 color-mix(in srgb, white 25%, transparent) inset, var(--shadow-sm);
 }
 .btn-primary:disabled {
-  opacity: 0.4;
+  /* Not just a faded gradient: lime at 40% opacity over the dark ground
+     turns into a muddy olive that reads as "broken", not as "not yet".
+     A disabled control drops the accent entirely and becomes a neutral
+     surface — the colour returns the moment the action becomes
+     available, which is also the clearest signal that it has. */
+  background: var(--surface-2);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-soft);
+  opacity: 1;
   box-shadow: none;
 }
 

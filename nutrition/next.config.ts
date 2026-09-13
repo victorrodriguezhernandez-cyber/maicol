@@ -34,6 +34,16 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  // Next.js 16 runs Turbopack by default and refuses to start when it also
+  // finds a webpack config, rather than silently ignoring one of them —
+  // and @ducanh2912/next-pwa always injects a webpack config, even though
+  // it disables itself in development. That combination made `npm run dev`
+  // fail to boot outright. An empty turbopack config is the framework's
+  // own documented way to say "this is intentional, use Turbopack here";
+  // the production build keeps using webpack via `next build --webpack`,
+  // which is what the PWA plugin actually needs to emit the service
+  // worker.
+  turbopack: {},
   experimental: {
     serverActions: {
       bodySizeLimit: "15mb",
