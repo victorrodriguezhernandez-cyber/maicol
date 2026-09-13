@@ -48,3 +48,11 @@ next-env.d.ts
 /public/worker-*.js
 /public/fallback-*.js
 /public/*.js.map
+
+# Utilidades de desarrollo de un solo uso (capturas, extraccion de SVG).
+# Necesitan resolver node_modules desde aqui, por eso viven en la raiz del
+# proyecto y no en un directorio temporal.
+/.shot.mjs
+/.svgshot.mjs
+/.extract.mjs
+/.label.mjs

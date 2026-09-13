@@ -3,6 +3,7 @@ import { MacroChip } from "@/components/ui/MacroChip";
 import { RingProgress } from "@/components/ui/RingProgress";
 import { AlertIcon, CheckIcon, TrendIcon } from "@/components/ui/icons";
 import { BodyMap } from "@/components/training/BodyMap";
+import { TierLegend } from "@/components/training/TierLegend";
 
 /**
  * Living styleguide — development only (this route 404s in production and
@@ -82,31 +83,33 @@ export default function DesignSystemPage() {
       </Section>
 
       <Section title="Mapa muscular">
-        {/* Intensidades de ejemplo para ver que la figura se lee: pecho y
-            dorsal trabajados, pierna a medias, gemelos en frío. */}
-        <div className="surface-panel grid grid-cols-2 gap-2 p-4">
+        {/* Rangos de ejemplo, para ver que los cinco colores se distinguen
+            entre sí y contra el cuerpo apagado. */}
+        <div className="surface-panel flex flex-col gap-4 p-4">
           <BodyMap
-            view="frente"
-            intensity={{
-              pecho: 0.85,
-              deltoide_anterior: 0.5,
-              deltoide_lateral: 0.3,
-              biceps: 0.6,
-              abdominales: 0.4,
-              cuadriceps: 0.7,
-              antebrazo: 0.2,
+            tiers={{
+              pecho: "oro",
+              dorsal: "platino",
+              espalda_alta: "plata",
+              deltoide_anterior: "plata",
+              deltoide_lateral: "bronce",
+              deltoide_posterior: "bronce",
+              biceps: "oro",
+              triceps: "plata",
+              antebrazo: "bronce",
+              abdominales: "diamante",
+              oblicuos: "bronce",
+              cuadriceps: "platino",
+              isquiotibiales: "oro",
+              gluteo: "plata",
+              gemelos: "bronce",
             }}
           />
-          <BodyMap
-            view="espalda"
-            intensity={{
-              dorsal: 0.9,
-              espalda_alta: 0.55,
-              triceps: 0.45,
-              gluteo: 0.65,
-              isquiotibiales: 0.5,
-              deltoide_posterior: 0.25,
-            }}
+          <TierLegend compact />
+        </div>
+        <div className="surface-panel p-4">
+          <TierLegend
+            counts={{ sin_datos: 2, bronce: 6, plata: 4, oro: 3, platino: 2, diamante: 1 }}
           />
         </div>
       </Section>

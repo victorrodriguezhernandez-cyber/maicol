@@ -483,3 +483,208 @@ export async function getCompletedSetsForExercise(
     sessionId: r.session_id,
   }));
 }
+
+// =========================================================================
+// Niveles por músculo
+// =========================================================================
+
+import { weekBounds } from "@/lib/training/week";
+import { estimateOneRepMax } from "@/lib/training/records";
+import {
+  computeMuscleLevel,
+  type MuscleLevel,
+  type MuscleStats,
+} from "@/lib/training/levels";
+import { VOLUME_LANDMARKS, MUSCLE_GROUPS } from "@/lib/training/muscles";
+
+/** Cuántas semanas hacia atrás mira el componente de constancia. */
+const CONSISTENCY_WEEKS = 8;
+
+/**
+ * Todo lo que hace falta para puntuar los 17 músculos, en UNA consulta.
+ *
+ * Se trae el historial completo de series completadas con su ejercicio y su
+ * fecha, y el reparto se hace en memoria reusando `computeWeeklyVolume` —
+ * que es donde están escritas y probadas las reglas de conteo (entera para
+ * el objetivo, media para los secundarios, el calentamiento no cuenta).
+ *
+ * Agrupar por semana en SQL sería más rápido, pero exigiría replicar esas
+ * reglas en una función de Postgres, y entonces existirían en dos sitios.
+ * Para un historial personal — miles de series, no millones — una lectura
+ * y un bucle salen mucho más baratos que dos verdades sobre cómo cuenta
+ * una serie.
+ */
+export async function getMuscleLevels(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ levels: MuscleLevel[]; stats: Record<MuscleGroup, MuscleStats> }> {
+  const { data, error } = await supabase
+    .from("workout_sets")
+    .select(
+      "exercise_id, set_type, weight_kg, reps, completed_at, session_id, exercises!inner(name, primary_muscle, secondary_muscles), training_sessions!inner(user_id, session_date)",
+    )
+    .eq("training_sessions.user_id", userId)
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: true })
+    .limit(5000);
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as {
+    exercise_id: string;
+    set_type: string;
+    weight_kg: number | null;
+    reps: number | null;
+    completed_at: string;
+    session_id: string;
+    exercises: { name: string; primary_muscle: MuscleGroup; secondary_muscles: MuscleGroup[] };
+    training_sessions: { session_date: string };
+  }[];
+
+  // --- Volumen por semana y acumulado ------------------------------------
+  const porSemana = new Map<string, CountableSetLike[]>();
+  const acumulado = new Map<MuscleGroup, number>();
+
+  for (const row of rows) {
+    const clave = weekKey(new Date(row.completed_at));
+    const lista = porSemana.get(clave) ?? [];
+    lista.push({
+      setType: row.set_type,
+      primaryMuscle: row.exercises.primary_muscle,
+      secondaryMuscles: row.exercises.secondary_muscles ?? [],
+    });
+    porSemana.set(clave, lista);
+  }
+
+  for (const sets of porSemana.values()) {
+    for (const v of computeWeeklyVolume(sets)) {
+      if (v.sets > 0) acumulado.set(v.muscle, (acumulado.get(v.muscle) ?? 0) + v.sets);
+    }
+  }
+
+  // --- Constancia: semanas que llegaron al mínimo, de las últimas 8 ------
+  const semanasRecientes: string[] = [];
+  for (let i = 0; i < CONSISTENCY_WEEKS; i += 1) {
+    const d = new Date();
+    d.setDate(d.getDate() - i * 7);
+    semanasRecientes.push(weekKey(d));
+  }
+
+  const primeraSemana = rows.length > 0 ? weekKey(new Date(rows[0].completed_at)) : null;
+  const observadas = primeraSemana
+    ? semanasRecientes.filter((k) => k >= primeraSemana).length
+    : 0;
+
+  const cumplidas = new Map<MuscleGroup, number>();
+  for (const clave of semanasRecientes) {
+    const sets = porSemana.get(clave);
+    if (!sets) continue;
+    for (const v of computeWeeklyVolume(sets)) {
+      if (v.sets >= VOLUME_LANDMARKS[v.muscle].mev) {
+        cumplidas.set(v.muscle, (cumplidas.get(v.muscle) ?? 0) + 1);
+      }
+    }
+  }
+
+  // --- Progresión en el ejercicio principal de cada músculo -------------
+  const progreso = computeStrengthProgress(rows);
+
+  const stats = {} as Record<MuscleGroup, MuscleStats>;
+  const levels: MuscleLevel[] = [];
+
+  for (const muscle of MUSCLE_GROUPS) {
+    const p = progreso.get(muscle);
+    const s: MuscleStats = {
+      muscle,
+      weeksAtMev: cumplidas.get(muscle) ?? 0,
+      weeksObserved: Math.max(observadas, cumplidas.get(muscle) ? 1 : 0),
+      totalSets: acumulado.get(muscle) ?? 0,
+      strengthGain: p?.gain ?? null,
+      sessionsOnMainLift: p?.sessions ?? 0,
+    };
+    stats[muscle] = s;
+    levels.push(computeMuscleLevel(s));
+  }
+
+  return { levels, stats };
+}
+
+interface CountableSetLike {
+  setType: string;
+  primaryMuscle: MuscleGroup;
+  secondaryMuscles: MuscleGroup[];
+}
+
+/**
+ * Cuánto ha mejorado el ejercicio principal de cada músculo.
+ *
+ * "Principal" es el que más sesiones distintas tiene, no el más pesado: lo
+ * que mide progresión es repetir el mismo movimiento y verlo subir, y un
+ * ejercicio hecho una vez con mucho peso no dice nada de eso.
+ *
+ * Se compara la media de las DOS primeras sesiones contra la de las dos
+ * últimas, en vez de la primera contra la última. Un solo día bueno o malo
+ * mueve mucho una comparación entre extremos; una media de dos amortigua
+ * ese ruido sin necesitar un historial largo.
+ */
+function computeStrengthProgress(
+  rows: {
+    exercise_id: string;
+    set_type: string;
+    weight_kg: number | null;
+    reps: number | null;
+    session_id: string;
+    exercises: { primary_muscle: MuscleGroup };
+  }[],
+): Map<MuscleGroup, { gain: number; sessions: number }> {
+  // ejercicio -> sesión -> mejor 1RM estimado de esa sesión
+  const porEjercicio = new Map<string, { muscle: MuscleGroup; sesiones: Map<string, number> }>();
+
+  for (const row of rows) {
+    if (row.set_type === "calentamiento" || row.set_type === "dropset") continue;
+    if (row.weight_kg == null || row.reps == null) continue;
+    const oneRm = estimateOneRepMax(row.weight_kg, row.reps);
+    if (oneRm == null) continue;
+
+    let entrada = porEjercicio.get(row.exercise_id);
+    if (!entrada) {
+      entrada = { muscle: row.exercises.primary_muscle, sesiones: new Map() };
+      porEjercicio.set(row.exercise_id, entrada);
+    }
+    const previo = entrada.sesiones.get(row.session_id) ?? 0;
+    if (oneRm > previo) entrada.sesiones.set(row.session_id, oneRm);
+  }
+
+  // Por músculo, el ejercicio con más sesiones.
+  const mejorPorMusculo = new Map<MuscleGroup, number[]>();
+  for (const { muscle, sesiones } of porEjercicio.values()) {
+    const valores = [...sesiones.values()];
+    const actual = mejorPorMusculo.get(muscle);
+    if (!actual || valores.length > actual.length) mejorPorMusculo.set(muscle, valores);
+  }
+
+  const resultado = new Map<MuscleGroup, { gain: number; sessions: number }>();
+  for (const [muscle, valores] of mejorPorMusculo) {
+    if (valores.length < 2) {
+      resultado.set(muscle, { gain: 0, sessions: valores.length });
+      continue;
+    }
+    const inicio = media(valores.slice(0, 2));
+    const fin = media(valores.slice(-2));
+    resultado.set(muscle, {
+      gain: inicio > 0 ? (fin - inicio) / inicio : 0,
+      sessions: valores.length,
+    });
+  }
+  return resultado;
+}
+
+function media(ns: number[]): number {
+  return ns.reduce((a, b) => a + b, 0) / ns.length;
+}
+
+/** Clave ordenable de la semana a la que pertenece una fecha: "2026-W37". */
+function weekKey(d: Date): string {
+  const { start } = weekBounds(d);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
+}

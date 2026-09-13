@@ -6,12 +6,13 @@ import {
   getOpenSession,
   getRecentSessions,
   getVolumeBetween,
+  getMuscleLevels,
 } from "@/lib/data/training";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StartDayButton } from "@/components/training/StartDayButton";
-import { WeeklyVolumeCard } from "@/components/training/WeeklyVolumeCard";
+import { PhysiqueCard } from "@/components/training/PhysiqueCard";
 import { sessionVolumeKg, formatKg } from "@/lib/training/records";
 import { weekBounds, formatWeekday } from "@/lib/training/week";
 import {
@@ -35,11 +36,12 @@ export default async function EntrenoPage() {
   const { start, end } = weekBounds(new Date());
 
   // Cuatro lecturas independientes: un viaje, no cuatro encadenados.
-  const [routine, openSession, recent, volume] = await Promise.all([
+  const [routine, openSession, recent, volume, physique] = await Promise.all([
     getActiveRoutine(supabase, user.id),
     getOpenSession(supabase, user.id),
     getRecentSessions(supabase, user.id, 8),
     getVolumeBetween(supabase, user.id, start.toISOString(), end.toISOString()),
+    getMuscleLevels(supabase, user.id),
   ]);
 
   return (
@@ -157,7 +159,12 @@ export default async function EntrenoPage() {
         ) : null}
       </section>
 
-      <WeeklyVolumeCard volume={volume} />
+      <PhysiqueCard
+        levels={physique.levels}
+        stats={physique.stats}
+        volume={volume}
+        sessionsLogged={recent.length}
+      />
 
       <section className="flex flex-col gap-3">
         <SectionHeader

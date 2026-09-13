@@ -21,6 +21,10 @@ const eslintConfig = defineConfig([
     "public/*.js.map",
     // Deno runtime (Supabase Edge Functions) — separate toolchain/lint.
     "supabase/functions/**",
+    // Utilidades de desarrollo de un solo uso (capturas, extracción de
+    // SVG). Están en .gitignore; viven en la raíz del proyecto sólo para
+    // poder resolver node_modules, no son código de la aplicación.
+    ".*.mjs",
   ]),
 ]);
 
