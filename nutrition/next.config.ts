@@ -39,6 +39,26 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "15mb",
     },
   },
+  // Baseline security headers (OWASP "security misconfiguration" / the
+  // security-and-hardening skill's "Always Do" list). Deliberately limited
+  // to headers with no plausible functional impact — no CSP or
+  // Permissions-Policy here: this app needs the camera (foto/etiqueta),
+  // the microphone (voz), Supabase Storage image domains and an inline
+  // theme-init script (see ARCHITECTURE.md), so a real CSP needs to be
+  // designed and tested against those flows rather than added blind.
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+        ],
+      },
+    ];
+  },
 };
 
 export default withPWA(nextConfig);
