@@ -47,9 +47,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  // Matches --app-bg in the (now default) dark palette, so the iOS status
-  // bar and the PWA splash blend into the app instead of framing it.
-  themeColor: "#05070c",
+  themeColor: "#12161C",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
