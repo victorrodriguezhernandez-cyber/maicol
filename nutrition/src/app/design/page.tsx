@@ -31,7 +31,7 @@ export default function DesignSystemPage() {
         <div className="surface-hero flex items-end justify-between p-6">
           <div className="flex flex-col gap-2">
             <span className="text-meta">Hoy</span>
-            <span className="text-display text-6xl text-[var(--text-primary)]">1 847</span>
+            <span className="text-display text-6xl text-[var(--text-primary)]">1.847</span>
             <span className="text-sm text-[var(--text-secondary)]">de 2 400 kcal</span>
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -67,7 +67,7 @@ export default function DesignSystemPage() {
         </div>
       </Section>
 
-      <Section title="Un color por métrica (nunca el lima)">
+      <Section title="Un color por métrica, nunca el de acción">
         <div className="grid grid-cols-2 gap-3">
           <Metric name="Proteína" value="142 g" token="protein" />
           <Metric name="Carbohidratos" value="210 g" token="carbs" />

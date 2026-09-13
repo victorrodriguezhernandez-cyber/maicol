@@ -1,14 +1,18 @@
 @import "tailwindcss";
 
 /* =========================================================================
-   MAICOL — design system v2
+   MAICOL — design system v3
    =========================================================================
-   Rebuilt from scratch (not an iteration on v1's glass/blur look). The
-   composition does the work of feeling premium — surfaces at real
-   elevation levels, one loud hero per screen, a strict type scale, and
-   color spent with intent — not another layer of blur on the same flat
-   rectangles. See DESIGN_REBUILD_MAP.md for the full rationale and the
-   screen-by-screen map.
+   v3 keeps v2's structure (five surface levels, six type roles, five
+   button voices, one hue per metric) and changes two things: dark is now
+   the default rather than the alternate palette, and every surface is a
+   gradient with a lit top edge instead of a flat fill — a flat fill on a
+   dark ground reads as a grey rectangle pasted on black.
+
+   Rejected along the way, recorded so it is not retried: an electric lime
+   accent (shouted on near-black, and is the most recognisable cliché of
+   machine-generated design) and a luminescence on the display figures
+   (read as blurred, not lit). See DESIGN_REBUILD_MAP.md.
    ========================================================================= */
 
 :root {
@@ -28,29 +32,33 @@
      rectangle — the separation existed in the hex values and not to the
      eye. Roughly doubling each step is what makes "raised" actually look
      raised. */
-  --app-bg: #04060a;
-  --surface: #0c1018;
-  --surface-2: #141925;
-  --surface-raised: #1c2331;
-  --surface-overlay: #242c3d;
-  --border: #2a3242;
-  --border-soft: #1a2130;
-  --border-strong: #3a4457;
+  --app-bg: #080a0f;
+  --surface: #11151c;
+  --surface-2: #171c25;
+  --surface-raised: #1d232e;
+  --surface-overlay: #242b38;
+  --border: #2a3140;
+  --border-soft: #1c222c;
+  --border-strong: #39414f;
+  /* The single line of light along the top edge of every raised surface.
+     This is what separates an expensive-looking dark UI from grey
+     rectangles on black: the eye reads a lit edge as a physical edge. */
+  --edge-light: inset 0 1px 0 0 color-mix(in srgb, #ffffff 8%, transparent);
 
   --text-primary: #f3f6fa;
   --text-secondary: #98a2b3;
   --text-tertiary: #656f80;
 
-  /* Electric lime — the ACTION color. Deliberately never used to paint a
-     nutrition value: metrics own their own hues below, so "lime" always
-     means "you can press this", never "this is protein". That separation
-     is what keeps a single bright accent from flattening the whole UI
-     into one acid tone. */
-  --accent: #c9f24d;
-  --accent-2: #a3d916;
-  --accent-fg: #0a1400;
-  --accent-soft: #1d2708;
-  --accent-glow: color-mix(in srgb, #c9f24d 26%, transparent);
+  /* Teal — the ACTION color. Electric lime was tried here and rejected:
+     on a near-black ground it shouted, and it is also the single most
+     recognisable cliché of machine-generated design. Teal keeps the same
+     rule — it means "you can press this", never "this is protein", which
+     is why the metric hues below are separate — without the acid edge. */
+  --accent: #2dd4bf;
+  --accent-2: #5eead4;
+  --accent-fg: #052420;
+  --accent-soft: #113330;
+  --accent-glow: color-mix(in srgb, #2dd4bf 26%, transparent);
 
   --danger: #ff6b6b;
   --danger-soft: #2b1418;
@@ -58,16 +66,17 @@
   --warning: #fbbf24;
 
   /* One fixed hue per nutrition concept — never reused for chrome or
-     actions. Fiber sits at emerald rather than a yellower green so it
-     never reads as the lime action color. */
+     actions. Protein shares teal with the accent on purpose: they never
+     appear as a choice between each other (one paints data, the other
+     paints controls), and a sixth distinct hue would have been noise. */
   --metric-protein: #2dd4bf;
   --metric-protein-soft: #0d2b28;
   --metric-carbs: #f5a524;
   --metric-carbs-soft: #2e2112;
   --metric-fat: #b794f6;
   --metric-fat-soft: #241c37;
-  --metric-fiber: #34d399;
-  --metric-fiber-soft: #0f2a20;
+  --metric-fiber: #4ade80;
+  --metric-fiber-soft: #142a1c;
   --metric-weight: #7aa2ff;
   --metric-weight-soft: #16233f;
 
@@ -96,14 +105,13 @@
     --text-secondary: #5b6270;
     --text-tertiary: #9298a5;
 
-    /* Lime at full electric strength is unreadable on paper-white, so the
-       light palette carries the same "action" role at a weight that works
-       on a light ground. Same meaning, different value. */
-    --accent: #5d8f00;
-    --accent-2: #47700a;
+    /* Same role, darker value: the dark palette's teal does not have
+       enough contrast against paper-white to carry an action. */
+    --accent: #0f9488;
+    --accent-2: #0a6f66;
     --accent-fg: #ffffff;
-    --accent-soft: #e8f6c8;
-    --accent-glow: color-mix(in srgb, #5d8f00 18%, transparent);
+    --accent-soft: #d9f5f0;
+    --accent-glow: color-mix(in srgb, #0f9488 18%, transparent);
 
     --danger: #dc2626;
     --danger-soft: #fde3e1;
@@ -116,7 +124,7 @@
     --metric-carbs-soft: #fbe6d1;
     --metric-fat: #7c3aed;
     --metric-fat-soft: #ece3fd;
-    --metric-fiber: #047857;
+    --metric-fiber: #16803d;
     --metric-fiber-soft: #d7f2e0;
     --metric-weight: #2554e0;
     --metric-weight-soft: #dce6fd;
@@ -128,6 +136,9 @@
     --shadow-lg: 0 24px 60px hsl(var(--shadow-color) / 0.22), 0 6px 16px hsl(var(--shadow-color) / 0.1);
 
     --ring-track-light: color-mix(in srgb, var(--text-primary) 8%, transparent);
+    /* A white lit edge on a white card is invisible at best and a smudge
+       at worst — depth in the light palette comes from shadow instead. */
+    --edge-light: none;
   }
 }
 
@@ -145,11 +156,11 @@
   --text-secondary: #5b6270;
   --text-tertiary: #9298a5;
 
-  --accent: #5d8f00;
-  --accent-2: #47700a;
+  --accent: #0f9488;
+  --accent-2: #0a6f66;
   --accent-fg: #ffffff;
-  --accent-soft: #e8f6c8;
-  --accent-glow: color-mix(in srgb, #5d8f00 18%, transparent);
+  --accent-soft: #d9f5f0;
+  --accent-glow: color-mix(in srgb, #0f9488 18%, transparent);
 
   --danger: #dc2626;
   --danger-soft: #fde3e1;
@@ -162,7 +173,7 @@
   --metric-carbs-soft: #fbe6d1;
   --metric-fat: #7c3aed;
   --metric-fat-soft: #ece3fd;
-  --metric-fiber: #047857;
+  --metric-fiber: #16803d;
   --metric-fiber-soft: #d7f2e0;
   --metric-weight: #2554e0;
   --metric-weight-soft: #dce6fd;
@@ -174,6 +185,7 @@
   --shadow-lg: 0 24px 60px hsl(var(--shadow-color) / 0.22), 0 6px 16px hsl(var(--shadow-color) / 0.1);
 
   --ring-track-light: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  --edge-light: none;
 }
 
 @theme inline {
@@ -239,22 +251,15 @@ body::before {
      luminance that makes it read as lit rather than printed. Kept to a
      whisper (18% alpha, 24px): enough to separate it from the surface,
      not enough to look like a neon sign. */
+  /* No glow. A luminescence was tried on the figures and rejected on
+     sight: it made them read as blurred rather than lit. The weight of
+     the mono face and the size are what carry the number — it does not
+     need help. */
   font-family: var(--font-plex-mono), ui-monospace, monospace;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
   line-height: 0.95;
-  text-shadow: 0 0 24px color-mix(in srgb, currentColor 18%, transparent);
-}
-/* Printed, not lit, on paper-white: a glow on a light ground just reads
-   as a blurry number. */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .text-display {
-    text-shadow: none;
-  }
-}
-:root[data-theme="light"] .text-display {
-  text-shadow: none;
 }
 .text-hero-title {
   /* "Hoy", "Progreso" — the page's own name. */
@@ -298,10 +303,21 @@ body::before {
    5. .surface-raised — the elevated/action layer (sheets, decision cards)
    ========================================================================= */
 
+/* Every surface below is a gradient plus a lit top edge, never a flat
+   fill. On a dark ground a flat fill reads as a grey rectangle pasted on
+   black — which is exactly the "flatter and cheaper than before" the
+   first dark pass was rejected for. A two-stop vertical gradient of only
+   a few percent, plus --edge-light, is what gives a card a top and a
+   bottom and therefore a body. */
 .surface-soft {
-  background: var(--surface);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 100%, #ffffff 3%),
+    var(--surface)
+  );
   border: 1px solid var(--border-soft);
   border-radius: 1.25rem;
+  box-shadow: var(--edge-light, none);
 }
 
 .surface-glass {
@@ -317,10 +333,14 @@ body::before {
 }
 
 .surface-raised {
-  background: var(--surface-raised);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-raised) 100%, #ffffff 5%),
+    var(--surface-raised)
+  );
   border: 1px solid var(--border);
   border-radius: 1.5rem;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-md), var(--edge-light, none);
 }
 
 /* Kept for any not-yet-migrated call site — maps to the new raised look. */
@@ -358,9 +378,13 @@ body::before {
    difference from the page and a whisper of shadow. Use for anything
    that shouldn't compete with the screen's .surface-hero. */
 .surface-panel {
-  background: var(--surface-2);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-2) 100%, #ffffff 4%),
+    var(--surface-2)
+  );
   border-radius: 1.25rem;
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-xs), var(--edge-light, none);
 }
 
 /* =========================================================================
