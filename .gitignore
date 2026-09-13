@@ -1,0 +1,5 @@
+
+# Playwright
+nutrition/test-results/
+nutrition/playwright-report/
+nutrition/.playwright-cli/

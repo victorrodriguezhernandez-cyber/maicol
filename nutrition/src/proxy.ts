@@ -43,8 +43,14 @@ export async function proxy(request: NextRequest) {
   // before and nothing new is reachable without auth.
   const isDevStyleguide =
     process.env.NODE_ENV !== "production" && request.nextUrl.pathname.startsWith("/design");
+  // The service worker's offline fallback (CRITICAL_FLOWS.md rule 10).
+  // It deliberately performs no auth check, because with no network there
+  // is no way to validate a session — and gating it here contradicted
+  // that: a cache miss while offline sent the user to /login, which is
+  // the one screen that cannot possibly load without network either.
+  const isOfflineFallback = request.nextUrl.pathname === "/~offline";
 
-  if (!user && !isAuthRoute && !isAuthCallback && !isDevStyleguide) {
+  if (!user && !isAuthRoute && !isAuthCallback && !isDevStyleguide && !isOfflineFallback) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", request.nextUrl.pathname);
