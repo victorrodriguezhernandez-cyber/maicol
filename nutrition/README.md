@@ -26,8 +26,49 @@ este README y en `ARCHITECTURE.md` como "implementado" funciona de verdad
 contra la base de datos real del proyecto Supabase — no hay datos ni
 respuestas de IA simuladas en ningún punto de la aplicación.
 
-Lo que **no** está incluido en este V1 (documentado explícitamente, no
-oculto):
+### Entreno
+
+El apartado de fuerza es completo y funciona contra la misma base de datos:
+
+- **Catálogo de 129 ejercicios** cubriendo los 17 grupos musculares, cada
+  uno con sus instrucciones de ejecución. Se filtra por músculo, material
+  y tipo. Puedes crear los tuyos propios.
+- **Rutinas** con días, ejercicios, series objetivo, rango de
+  repeticiones, RIR, descanso y superseries. Cuatro formas de crear una:
+  a mano, desde plantilla, contándoselo a la IA, o fotografiando la que ya
+  sigues.
+- **Registro en directo** con la tabla SERIE · PREVIA · KG · REPES, la
+  columna "previa" con lo que hiciste la última vez, notas por serie,
+  tipos de serie (calentamiento, dropset, backoff, al fallo) y cronómetro
+  de descanso.
+- **Récords** por ejercicio: más peso, más repeticiones, máximo estimado
+  (Epley, sólo hasta 12 repeticiones porque a partir de ahí la fórmula
+  deja de ser fiable) y mejor sesión. Se avisan en el momento de batirlos.
+- **Mapa muscular en SVG propio** — no es arte copiado ni una imagen
+  recortada — con el volumen semanal de cada grupo y su evolución en ocho
+  semanas.
+- **Cada etiqueta se puede justificar.** Al tocar "volumen alto" o
+  "por debajo del mínimo" se abre el número exacto, el rango con el que
+  se compara, de dónde sale ese rango, cómo se cuentan las series y la
+  advertencia de que son medias de población con mucha variación
+  individual.
+
+Lo que **no** tiene el apartado de entreno, dicho igual de claro:
+
+- El cronómetro de descanso **no suena ni vibra**: `navigator.vibrate` no
+  existe en Safari de iOS y el audio automático está bloqueado sin
+  interacción previa. Un aviso que falla la mitad de las veces es peor
+  que no tenerlo, así que el aviso es visual (el contador se pone en rojo
+  y crece).
+- No hay gráfica de progresión de carga por ejercicio; sí el historial
+  completo en lista y las barras de volumen semanal por músculo.
+- Las plantillas de rutina traen los días, no los ejercicios: rellenarlas
+  con ejercicios concretos sin saber qué material tienes sería exactamente
+  el tipo de funcionalidad que aparenta funcionar y no funciona.
+
+### Lo que no está incluido en este V1
+
+Documentado explícitamente, no oculto:
 
 - Sincronización con Apple Health (imposible desde una PWA — ver sección
   "Apple Health" de `ARCHITECTURE.md`).

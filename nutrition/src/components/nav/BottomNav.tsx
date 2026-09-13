@@ -4,11 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { RegisterSheet } from "@/components/register/RegisterSheet";
-import { HomeIcon, CalendarIcon, TrendIcon, SparkleIcon, PlusIcon } from "@/components/ui/icons";
+import { HomeIcon, CalendarIcon, TrendIcon, SparkleIcon, PlusIcon, DumbbellIcon } from "@/components/ui/icons";
 
+/**
+ * Cinco pestañas y el botón central. Entreno entra a la izquierda, junto
+ * a Hoy y Diario, porque es de uso diario; Progreso e IA se consultan de
+ * vez en cuando y se quedan a la derecha.
+ *
+ * El padding horizontal de cada pestaña baja de 1rem a 0.5rem al pasar de
+ * cuatro a cinco: con seis objetivos en 390px, mantenerlo dejaba la barra
+ * desbordada y las etiquetas partidas.
+ */
 const TABS = [
   { href: "/", label: "Hoy", icon: HomeIcon },
   { href: "/diario", label: "Diario", icon: CalendarIcon },
+  { href: "/entreno", label: "Entreno", icon: DumbbellIcon },
 ] as const;
 const TABS_RIGHT = [
   { href: "/progreso", label: "Progreso", icon: TrendIcon },
@@ -40,7 +50,7 @@ export function BottomNav() {
           />
 
           {TABS.map((tab) => (
-            <NavItem key={tab.href} tab={tab} active={pathname === tab.href} />
+            <NavItem key={tab.href} tab={tab} active={isActive(pathname, tab.href)} />
           ))}
 
           <button
@@ -62,7 +72,7 @@ export function BottomNav() {
           </button>
 
           {TABS_RIGHT.map((tab) => (
-            <NavItem key={tab.href} tab={tab} active={pathname === tab.href} />
+            <NavItem key={tab.href} tab={tab} active={isActive(pathname, tab.href)} />
           ))}
         </div>
       </nav>
@@ -81,7 +91,7 @@ function NavItem({
 }) {
   const Icon = tab.icon;
   return (
-    <Link href={tab.href} className="tap-scale relative flex flex-col items-center gap-1 px-4 py-3">
+    <Link href={tab.href} className="tap-scale relative flex min-w-0 flex-1 flex-col items-center gap-1 px-2 py-3">
       {active ? (
         <span
           aria-hidden="true"
@@ -91,10 +101,20 @@ function NavItem({
       ) : null}
       <Icon size={20} className={`relative ${active ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`} />
       <span
-        className={`relative text-[10px] font-semibold ${active ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`}
+        className={`relative truncate text-[10px] font-semibold ${active ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`}
       >
         {tab.label}
       </span>
     </Link>
   );
+}
+
+/**
+ * Una pestaña sigue encendida dentro de sus subpantallas: estando en
+ * /entreno/sesion/abc, "Entreno" tiene que seguir marcado. Sólo "/" se
+ * compara exacto, porque si no estaría encendido en todas.
+ */
+function isActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
 }

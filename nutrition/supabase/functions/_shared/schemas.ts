@@ -115,3 +115,94 @@ export const labelJsonSchema = {
     "fiber_g", "sodium_mg", "salt_g", "legible",
   ],
 };
+
+/* =========================================================================
+   Rutinas de entreno propuestas por la IA
+   =========================================================================
+
+   La regla que gobierna todo esto: el modelo NO inventa ejercicios. Se le
+   manda el catálogo real y sólo puede devolver nombres que estén en él.
+   Lo que no encaje va a `unmatched` y se le enseña al usuario en vez de
+   colarse en la rutina — es el mismo criterio que la regla 1 del proyecto
+   ("la IA nunca inventa un dato cuando existe una fuente mejor") aplicado
+   a los ejercicios.
+
+   Y como esto es una PROPUESTA, nada se escribe aquí: la app la enseña,
+   el usuario la acepta, y entonces se llama a la misma Server Action
+   validada que usa el editor manual (regla 4). */
+
+export const routineExerciseProposalSchema = z.object({
+  exercise_name: z.string(),
+  sets: z.number().int().min(1).max(20),
+  reps_min: z.number().int().min(1).max(100),
+  reps_max: z.number().int().min(1).max(100),
+  rir: z.number().min(0).max(10).nullable(),
+  rest_seconds: z.number().int().min(0).max(900),
+  notes: z.string().nullable(),
+});
+
+export const routineDayProposalSchema = z.object({
+  name: z.string(),
+  notes: z.string().nullable(),
+  exercises: z.array(routineExerciseProposalSchema).max(30),
+});
+
+export const routineProposalSchema = z.object({
+  name: z.string(),
+  goal: z.enum(["fuerza", "hipertrofia", "resistencia", "mantenimiento"]),
+  notes: z.string().nullable(),
+  /** Por qué esta estructura y no otra. Se enseña al usuario tal cual. */
+  rationale: z.string(),
+  days: z.array(routineDayProposalSchema).min(1).max(7),
+  /** Ejercicios que quiso incluir y no están en el catálogo. */
+  unmatched: z.array(z.string()),
+  /** Avisos honestos: lo que no ha podido deducir o le preocupa. */
+  warnings: z.array(z.string()),
+});
+export type RoutineProposal = z.infer<typeof routineProposalSchema>;
+
+export const routineProposalJsonSchema = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    goal: {
+      type: "string",
+      enum: ["fuerza", "hipertrofia", "resistencia", "mantenimiento"],
+    },
+    notes: { type: "string", nullable: true },
+    rationale: { type: "string" },
+    days: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          notes: { type: "string", nullable: true },
+          exercises: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                exercise_name: { type: "string" },
+                sets: { type: "integer" },
+                reps_min: { type: "integer" },
+                reps_max: { type: "integer" },
+                rir: { type: "number", nullable: true },
+                rest_seconds: { type: "integer" },
+                notes: { type: "string", nullable: true },
+              },
+              required: [
+                "exercise_name", "sets", "reps_min", "reps_max",
+                "rir", "rest_seconds", "notes",
+              ],
+            },
+          },
+        },
+        required: ["name", "notes", "exercises"],
+      },
+    },
+    unmatched: { type: "array", items: { type: "string" } },
+    warnings: { type: "array", items: { type: "string" } },
+  },
+  required: ["name", "goal", "notes", "rationale", "days", "unmatched", "warnings"],
+};
