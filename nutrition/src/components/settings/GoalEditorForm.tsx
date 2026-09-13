@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { applyGoalChange } from "@/lib/actions/goals";
+import { useActionRunner } from "@/lib/hooks/useActionRunner";
 import type { NutritionGoalRow } from "@/lib/supabase/types";
 
 export function GoalEditorForm({ goal }: { goal: NutritionGoalRow }) {
@@ -17,12 +18,12 @@ export function GoalEditorForm({ goal }: { goal: NutritionGoalRow }) {
   const [weeklyRateMaxKg, setWeeklyRateMaxKg] = useState(
     goal.weekly_rate_max_kg != null ? String(goal.weekly_rate_max_kg) : "",
   );
-  const [isPending, startTransition] = useTransition();
+  const { run, isPending, error } = useActionRunner();
   const [saved, setSaved] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    startTransition(async () => {
+    run(async () => {
       await applyGoalChange({
         mode,
         kcal: Number(kcal),
@@ -69,6 +70,11 @@ export function GoalEditorForm({ goal }: { goal: NutritionGoalRow }) {
         </div>
       ) : null}
 
+      {error ? (
+        <p role="alert" className="text-xs text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
       <button
         type="submit"
         disabled={isPending}

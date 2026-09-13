@@ -22,6 +22,7 @@ export default function NuevaRecetaPage() {
   const [results, setResults] = useState<FoodRow[]>([]);
   const [ingredients, setIngredients] = useState<DraftIngredient[]>([]);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleQueryChange(value: string) {
@@ -59,6 +60,7 @@ export default function NuevaRecetaPage() {
   async function handleSave() {
     if (!name.trim() || ingredients.length === 0) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const id = await createRecipe({
         name: name.trim(),
@@ -71,6 +73,16 @@ export default function NuevaRecetaPage() {
         })),
       });
       router.push(`/recetas/${id}`);
+    } catch (e) {
+      // This runs in a plain event handler, not inside startTransition, so
+      // nothing upstream catches it: without this the whole recipe the
+      // user just assembled would fail to save with no message at all.
+      console.error("[recetas/nueva]", e);
+      setSaveError(
+        typeof navigator !== "undefined" && navigator.onLine === false
+          ? "Sin conexión. La receta no se ha guardado; vuelve a intentarlo cuando tengas red."
+          : "No se ha podido guardar la receta. Inténtalo de nuevo.",
+      );
     } finally {
       setSaving(false);
     }
@@ -152,6 +164,12 @@ export default function NuevaRecetaPage() {
           Busca y añade los ingredientes de tu receta.
         </p>
       )}
+
+      {saveError ? (
+        <p role="alert" className="mt-2 text-xs text-[var(--danger)]">
+          {saveError}
+        </p>
+      ) : null}
 
       <button
         type="button"

@@ -1,24 +1,27 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { addWeightEntry } from "@/lib/actions/weight";
+import { useActionRunner } from "@/lib/hooks/useActionRunner";
 import { ScaleIcon, CheckIcon } from "@/components/ui/icons";
 
 export function WeightLogForm() {
   const [weight, setWeight] = useState("");
   const [usualConditions, setUsualConditions] = useState(true);
-  const [isPending, startTransition] = useTransition();
+  const { run, isPending, error } = useActionRunner();
   const [saved, setSaved] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!weight) return;
-    startTransition(async () => {
+    run(async () => {
       await addWeightEntry({
         measuredAt: new Date().toISOString(),
         weightKg: Number(weight),
         isUsualConditions: usualConditions,
       });
+      // Only cleared once the write actually succeeded — on failure the
+      // typed weight stays in the field so it isn't lost.
       setWeight("");
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -53,6 +56,11 @@ export function WeightLogForm() {
           {isPending ? "…" : <CheckIcon size={15} />}
         </button>
       </div>
+      {error ? (
+        <p role="alert" className="pl-[42px] text-[11px] text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
       <label className="flex items-center gap-2 pl-[42px] text-[11px] text-[var(--text-tertiary)]">
         <input type="checkbox" checked={usualConditions} onChange={(e) => setUsualConditions(e.target.checked)} />
         Condiciones habituales (mañana, en ayunas)
