@@ -63,24 +63,32 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --app-bg: #08090c;
-    --surface: #101216;
-    --surface-2: #16191e;
-    --surface-raised: #191c22;
-    --surface-overlay: #1c2027;
-    --border: #23272f;
-    --border-soft: #1a1d23;
-    --border-strong: #30353f;
+    /* ---- Paleta "Symmetry" ------------------------------------------
+       Negro real, no gris muy oscuro: es lo que hace que las tarjetas
+       floten y que el azul queme. Los niveles se separan por muy poco
+       (2-3 puntos) porque en esta estética la profundidad la da el
+       contraste con el negro puro, no el escalonado. */
+    --app-bg: #000000;
+    --surface: #0c0c0f;
+    --surface-2: #121216;
+    --surface-raised: #17171d;
+    --surface-overlay: #1d1d25;
+    --border: #26262e;
+    --border-soft: #17171d;
+    --border-strong: #35353f;
 
-    --text-primary: #f5f7fa;
-    --text-secondary: #9aa1ac;
-    --text-tertiary: #676f7b;
+    --text-primary: #ffffff;
+    --text-secondary: #9b9ba4;
+    --text-tertiary: #6b6b75;
 
-    --accent: #2dd4bf;
-    --accent-2: #5eead4;
-    --accent-fg: #052420;
-    --accent-soft: #113330;
-    --accent-glow: color-mix(in srgb, #2dd4bf 28%, transparent);
+    /* Azul eléctrico: SOLO lo interactivo y lo destacado (el check de una
+       serie, el anillo, la fila activa). Nunca para pintar un dato
+       nutricional — esos conservan su color propio más abajo. */
+    --accent: #2f6bff;
+    --accent-2: #5a8bff;
+    --accent-fg: #ffffff;
+    --accent-soft: #101c33;
+    --accent-glow: color-mix(in srgb, #2f6bff 32%, transparent);
 
     --danger: #f87171;
     --danger-soft: #2a1416;
@@ -109,24 +117,24 @@
 }
 
 :root[data-theme="dark"] {
-  --app-bg: #08090c;
-  --surface: #101216;
-  --surface-2: #16191e;
-  --surface-raised: #191c22;
-  --surface-overlay: #1c2027;
-  --border: #23272f;
-  --border-soft: #1a1d23;
-  --border-strong: #30353f;
+  --app-bg: #000000;
+  --surface: #0c0c0f;
+  --surface-2: #121216;
+  --surface-raised: #17171d;
+  --surface-overlay: #1d1d25;
+  --border: #26262e;
+  --border-soft: #17171d;
+  --border-strong: #35353f;
 
-  --text-primary: #f5f7fa;
-  --text-secondary: #9aa1ac;
-  --text-tertiary: #676f7b;
+  --text-primary: #ffffff;
+  --text-secondary: #9b9ba4;
+  --text-tertiary: #6b6b75;
 
-  --accent: #2dd4bf;
-  --accent-2: #5eead4;
-  --accent-fg: #052420;
-  --accent-soft: #113330;
-  --accent-glow: color-mix(in srgb, #2dd4bf 28%, transparent);
+  --accent: #2f6bff;
+  --accent-2: #5a8bff;
+  --accent-fg: #ffffff;
+  --accent-soft: #101c33;
+  --accent-glow: color-mix(in srgb, #2f6bff 32%, transparent);
 
   --danger: #f87171;
   --danger-soft: #2a1416;
@@ -200,6 +208,19 @@ body::before {
     radial-gradient(820px 620px at 8% -8%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
     radial-gradient(680px 560px at 108% 6%, color-mix(in srgb, var(--metric-weight) 10%, transparent), transparent 60%),
     radial-gradient(760px 640px at 40% 118%, color-mix(in srgb, var(--metric-fat) 8%, transparent), transparent 62%);
+}
+
+/* En oscuro el fondo es negro PLANO. El halo ambiental es lo que separa
+   un negro "de app cara" de un gris azulado: en cuanto hay una nube de
+   color detrás, las tarjetas dejan de recortarse y todo se apelmaza. El
+   modo claro lo conserva, donde sí aporta. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body::before {
+    background: none;
+  }
+}
+:root[data-theme="dark"] body::before {
+  background: none;
 }
 
 /* =========================================================================
@@ -354,6 +375,36 @@ body::before {
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text-primary);
+}
+
+/* La píldora: la voz de botón característica de esta estética. Fondo
+   translúcido, borde finísimo y radio completo. Se usa para acciones
+   secundarias en fila (Tutorial · Reemplazar · Notas) donde varias
+   opciones conviven sin que ninguna grite. */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--surface-2) 85%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+.btn-pill:active:not(:disabled) {
+  transform: scale(0.965);
+  background: var(--surface-raised);
+}
+/* La píldora seleccionada/activa: el azul solo aparece aquí. */
+.btn-pill[aria-pressed="true"],
+.btn-pill[data-active="true"] {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent-2);
 }
 
 .btn-ghost {
