@@ -28,6 +28,19 @@ export const publicConfig = {
 
 /** Server-only configuration. Importing this from client code is a bug. */
 export const serverConfig = {
+  /**
+   * The single fixed account's email (CRITICAL_FLOWS.md rule 8). Read
+   * server-side only: it used to be a literal inside the `"use client"`
+   * login page, which put it in the public JS bundle — anyone could read
+   * the account identifier and only had to guess the one-word password.
+   *
+   * The literal fallback keeps existing deployments working before
+   * ACCOUNT_EMAIL is set as an environment variable; once it is set in
+   * Vercel, the fallback can be deleted.
+   */
+  get accountEmail(): string {
+    return process.env.ACCOUNT_EMAIL ?? "victorhub2008@gmail.com";
+  },
   get supabaseServiceRoleKey(): string | undefined {
     return process.env.SUPABASE_SERVICE_ROLE_KEY;
   },

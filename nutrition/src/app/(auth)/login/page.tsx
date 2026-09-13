@@ -2,18 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/ui/Logo";
 import { LockIcon } from "@/components/ui/icons";
+import { signIn } from "./actions";
 
 // Single-user personal app — there is only ever one account, so the
 // email behind it never needs to be typed or shown. Framing the one
 // field as "Usuario" and using its value as the Supabase Auth password
-// (against this fixed, known email) is what lets sign-in be a single
-// word with no email step at all — no magic link, so it never touches
+// (against that fixed account) is what lets sign-in be a single word
+// with no email step at all — no magic link, so it never touches
 // Supabase's email-sending rate limit either.
-const ACCOUNT_EMAIL = "victorhub2008@gmail.com";
-
+//
+// The account's email itself lives server-side (`signIn` in ./actions.ts,
+// reading serverConfig.accountEmail). It used to be a literal here, which
+// shipped it in the public JS bundle.
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -25,13 +27,9 @@ export default function LoginPage() {
     setStatus("sending");
     setErrorMessage(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email: ACCOUNT_EMAIL,
-      password: username,
-    });
+    const { ok } = await signIn(username);
 
-    if (error) {
+    if (!ok) {
       setStatus("error");
       setErrorMessage("Usuario incorrecto.");
       return;
