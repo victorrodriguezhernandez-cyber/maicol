@@ -263,3 +263,65 @@ export const PaperclipIcon = (p: IconProps) => (
     <path d="M17 8.5 9.7 15.8a3 3 0 0 1-4.2-4.2l7.8-7.8a4.5 4.5 0 1 1 6.4 6.4L11.9 18a6 6 0 0 1-8.5-8.5" />
   </Icon>
 );
+
+/* --- Entreno ----------------------------------------------------------
+   Mismos 24×24 y mismo grosor de trazo que el resto: el apartado nuevo
+   tiene que parecer dibujado por la misma mano que el de nutrición, no
+   pegado encima. */
+
+export const DumbbellIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 9.5v5M6 7.5v9M18 7.5v9M21 9.5v5" />
+    <path d="M6 12h12" />
+  </Icon>
+);
+
+export const TimerIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="13.5" r="7.5" />
+    <path d="M12 9.5v4l2.5 1.5M9.5 2.5h5" />
+  </Icon>
+);
+
+export const TrophyIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+    <path d="M7 5.5H4.5V7a3 3 0 0 0 3 3M17 5.5h2.5V7a3 3 0 0 1-3 3" />
+    <path d="M12 14v3.5M8.5 20.5h7l-.8-3h-5.4l-.8 3Z" />
+  </Icon>
+);
+
+/** La figura del mapa muscular, reducida a un icono. */
+export const BodyIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="4.8" r="2.3" />
+    <path d="M12 7.6c-2.6 0-4.2 1-4.6 2.6l-.9 3.6M12 7.6c2.6 0 4.2 1 4.6 2.6l.9 3.6" />
+    <path d="M9.3 13.2 8.6 21M14.7 13.2l.7 7.8" />
+  </Icon>
+);
+
+export const PlayIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+  </Icon>
+);
+
+export const FlameIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3c3 3.5 5.5 6 5.5 9.5a5.5 5.5 0 0 1-11 0C6.5 10 8 8 9.5 6.5c0 2 1 3 2 3 .8 0 1.2-.8.5-2.5-.5-1.3-.5-2.7 0-4Z" />
+  </Icon>
+);
+
+export const ListIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9 6.5h11M9 12h11M9 17.5h11" />
+    <path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" />
+  </Icon>
+);
+
+export const CopyIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+    <path d="M15.5 8.5v-2a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2" />
+  </Icon>
+);

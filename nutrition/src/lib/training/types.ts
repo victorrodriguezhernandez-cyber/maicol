@@ -204,14 +204,31 @@ export const SET_TYPE_LABELS: Record<SetType, string> = {
 };
 
 /**
- * La letra que se enseña en la columna SERIE. El calentamiento sale como
- * "C" y no numerado, porque no cuenta para nada: mezclarlo en la
- * numeración haría que "serie 3" significara cosas distintas según el día.
+ * La etiqueta de la columna SERIE para cada serie de un ejercicio.
+ *
+ * Las series de trabajo se numeran 1, 2, 3… y el calentamiento sale como
+ * "C" sin numerar: si el calentamiento entrara en la cuenta, "la tercera
+ * serie" significaría cosas distintas según cuántas de aproximación
+ * hicieras ese día, y comparar entre sesiones dejaría de tener sentido.
+ * El dropset sale como "D" por la misma razón — es un añadido a la serie
+ * anterior, no una serie más.
+ *
+ * Devuelve un Map en vez de calcularse mientras se pinta cada fila: un
+ * contador que se incrementa dentro del render es exactamente el patrón
+ * que React rompe al re-renderizar a medias.
  */
-export function setLabel(set: WorkoutSetRow, ordinalAmongWorking: number): string {
-  if (set.set_type === "calentamiento") return "C";
-  if (set.set_type === "dropset") return "D";
-  return String(ordinalAmongWorking);
+export function numberWorkingSets(sets: WorkoutSetRow[]): Map<string, string> {
+  const labels = new Map<string, string>();
+  let working = 0;
+  for (const set of sets) {
+    if (set.set_type === "calentamiento") {
+      labels.set(set.id, "C");
+      continue;
+    }
+    working += 1;
+    labels.set(set.id, set.set_type === "dropset" ? "D" : String(working));
+  }
+  return labels;
 }
 
 /**

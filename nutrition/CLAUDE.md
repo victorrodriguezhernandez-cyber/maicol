@@ -69,7 +69,24 @@ project.
    `serverConfig.accountEmail`. Estuvo incrustado en el componente cliente
    y acabó en el bundle público; como el "Usuario" ES la contraseña, eso
    regalaba medio credencial. Hay un test E2E que falla si reaparece.
-9. **No hay datos ni respuestas de IA simuladas.** Si vas a añadir una
+9. **Toda etiqueta de juicio se puede justificar.** Si una pantalla dice
+   "volumen alto", "por debajo del mínimo" o cualquier valoración
+   parecida, tiene que poder explicarse: el número exacto, el rango con
+   el que se compara, de dónde sale ese rango y su margen de error. Ver
+   `explainVolume()` en `src/lib/training/volume.ts` y el test que
+   recorre los 17 músculos exigiendo que ninguna etiqueta se quede sin
+   explicación. Una etiqueta que no se puede defender no debería existir
+   — y ese es el criterio para cualquier indicador nuevo, no sólo para
+   los de entreno.
+10. **En entreno, la IA tampoco inventa.** `build-routine` recibe el
+   catálogo real y sólo puede devolver nombres que estén en él; al
+   volver, cada nombre se resuelve contra ese mismo catálogo y lo que no
+   coincide va a `unmatched` y se le enseña al usuario, nunca se
+   sustituye por algo parecido. La función devuelve una PROPUESTA y no
+   escribe nada: guardar pasa siempre por `createRoutine`, la misma
+   Server Action validada que usa el editor manual, que vuelve a
+   comprobar que cada id existe. Es la regla 4 aplicada al entreno.
+11. **No hay datos ni respuestas de IA simuladas.** Si vas a añadir una
    funcionalidad que "aparenta" funcionar (un botón que no hace nada real,
    un array hardcoded haciendo de base de datos), no la añadas — o la
    implementas de verdad, o la dejas fuera y lo documentas en el README
@@ -127,6 +144,14 @@ no código fuente). Bórralos con
 si te estorban durante el desarrollo.
 
 ## Qué NO está implementado todavía (no lo des por hecho)
+
+Del apartado de entreno: no hay descanso automático entre ejercicios
+distintos (sólo entre series), no hay gráfica de progresión de carga por
+ejercicio (sólo el historial en lista y las barras semanales por músculo),
+y el cronómetro de descanso **no suena ni vibra** — `navigator.vibrate` no
+existe en Safari de iOS y el audio automático está bloqueado, así que un
+aviso que falla la mitad de las veces sería peor que ninguno (ver el
+comentario en `RestTimer.tsx`).
 
 Ver la lista completa en `README.md` y `AI.md`. Resumen: búsqueda USDA,
 bucle de aprendizaje de correcciones (`ai_corrections`), memoria
