@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { MacroChip } from "@/components/ui/MacroChip";
 import { RingProgress } from "@/components/ui/RingProgress";
 import { AlertIcon, CheckIcon, TrendIcon } from "@/components/ui/icons";
+import { BodyMap } from "@/components/training/BodyMap";
 
 /**
  * Living styleguide — development only (this route 404s in production and
@@ -77,6 +78,36 @@ export default function DesignSystemPage() {
           <SetRow serie={1} previa="8 × 10" kg={8} repes={10} hecha />
           <SetRow serie={2} previa="8 × 10" kg={8} repes={10} />
           <SetRow serie={3} previa="8 × 8" kg={10} repes={8} />
+        </div>
+      </Section>
+
+      <Section title="Mapa muscular">
+        {/* Intensidades de ejemplo para ver que la figura se lee: pecho y
+            dorsal trabajados, pierna a medias, gemelos en frío. */}
+        <div className="surface-panel grid grid-cols-2 gap-2 p-4">
+          <BodyMap
+            view="frente"
+            intensity={{
+              pecho: 0.85,
+              deltoide_anterior: 0.5,
+              deltoide_lateral: 0.3,
+              biceps: 0.6,
+              abdominales: 0.4,
+              cuadriceps: 0.7,
+              antebrazo: 0.2,
+            }}
+          />
+          <BodyMap
+            view="espalda"
+            intensity={{
+              dorsal: 0.9,
+              espalda_alta: 0.55,
+              triceps: 0.45,
+              gluteo: 0.65,
+              isquiotibiales: 0.5,
+              deltoide_posterior: 0.25,
+            }}
+          />
         </div>
       </Section>
 
