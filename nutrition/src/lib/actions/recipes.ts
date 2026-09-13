@@ -56,8 +56,14 @@ export async function createRecipe(input: CreateRecipeInput) {
 }
 
 export async function deleteRecipe(recipeId: string) {
+  const parsedId = z.string().uuid().parse(recipeId);
   const supabase = await createClient();
-  const { error } = await supabase.from("recipes").delete().eq("id", recipeId);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const { error } = await supabase.from("recipes").delete().eq("id", parsedId);
   if (error) throw error;
   revalidatePath("/recetas");
 }

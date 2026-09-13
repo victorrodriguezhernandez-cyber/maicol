@@ -247,16 +247,28 @@ export async function addMealItemForDate(input: AddMealItemForDateInput) {
 }
 
 export async function deleteMeal(mealId: string) {
+  const parsedId = z.string().uuid().parse(mealId);
   const supabase = await createClient();
-  const { error } = await supabase.from("meals").delete().eq("id", mealId);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const { error } = await supabase.from("meals").delete().eq("id", parsedId);
   if (error) throw error;
   revalidatePath("/");
   revalidatePath("/diario");
 }
 
 export async function deleteMealItem(mealItemId: string) {
+  const parsedId = z.string().uuid().parse(mealItemId);
   const supabase = await createClient();
-  const { error } = await supabase.from("meal_items").delete().eq("id", mealItemId);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const { error } = await supabase.from("meal_items").delete().eq("id", parsedId);
   if (error) throw error;
   revalidatePath("/");
   revalidatePath("/diario");

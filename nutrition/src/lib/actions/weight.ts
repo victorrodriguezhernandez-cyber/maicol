@@ -95,8 +95,14 @@ export async function setWeightEntryForDate(input: SetWeightEntryForDateInput) {
 }
 
 export async function deleteWeightEntry(id: string) {
+  const parsedId = z.string().uuid().parse(id);
   const supabase = await createClient();
-  const { error } = await supabase.from("weight_entries").delete().eq("id", id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const { error } = await supabase.from("weight_entries").delete().eq("id", parsedId);
   if (error) throw error;
   revalidatePath("/progreso");
   revalidatePath("/");
@@ -131,8 +137,14 @@ export async function addMeasurement(input: z.infer<typeof addMeasurementSchema>
 }
 
 export async function deleteMeasurement(id: string) {
+  const parsedId = z.string().uuid().parse(id);
   const supabase = await createClient();
-  const { error } = await supabase.from("body_measurements").delete().eq("id", id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const { error } = await supabase.from("body_measurements").delete().eq("id", parsedId);
   if (error) throw error;
   revalidatePath("/progreso/medidas");
 }
@@ -163,10 +175,28 @@ export async function createProgressPhotoRecord(input: z.infer<typeof createProg
   revalidatePath("/progreso/fotos");
 }
 
+const deleteProgressPhotoSchema = z.object({
+  id: z.string().uuid(),
+  storagePath: z.string().min(1),
+});
+
 export async function deleteProgressPhoto(id: string, storagePath: string) {
+  const parsed = deleteProgressPhotoSchema.parse({ id, storagePath });
   const supabase = await createClient();
-  await supabase.storage.from("progress-images").remove([storagePath]);
-  const { error } = await supabase.from("progress_photos").delete().eq("id", id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  // Defense in depth: the Storage RLS policy already restricts removal to
+  // the caller's own `<user_id>/…` folder, but reject an obviously
+  // mismatched path here too rather than relying solely on that policy.
+  if (!parsed.storagePath.startsWith(`${user.id}/`)) {
+    throw new Error("Ruta de almacenamiento no válida para este usuario");
+  }
+
+  await supabase.storage.from("progress-images").remove([parsed.storagePath]);
+  const { error } = await supabase.from("progress_photos").delete().eq("id", parsed.id);
   if (error) throw error;
   revalidatePath("/progreso/fotos");
 }
