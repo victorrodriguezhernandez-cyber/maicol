@@ -393,9 +393,17 @@ function ExerciseCard({
           <button
             type="button"
             onClick={() => {
-              if (confirm(`¿Quitar ${entry.exercise.name} de este entreno?`)) onRemove();
+              // "de este entreno" ya lo decía, pero se puede leer como "lo
+              // borro de la rutina". Quitar un ejercicio de la rutina para
+              // siempre se hace en el editor de rutinas, no aquí, y
+              // confundir las dos cosas te cambia el plan sin querer.
+              const aviso =
+                `¿Quitar ${entry.exercise.name} sólo de hoy?\n\n` +
+                `Tu rutina no cambia: el próximo día vuelve a aparecer. ` +
+                `Para quitarlo de todos los días, edita la rutina.`;
+              if (confirm(aviso)) onRemove();
             }}
-            aria-label={`Quitar ${entry.exercise.name}`}
+            aria-label={`Quitar ${entry.exercise.name} sólo de hoy`}
             className="tap-scale flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-tertiary)]"
           >
             <CloseIcon size={14} />
