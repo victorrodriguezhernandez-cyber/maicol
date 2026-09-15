@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { invokeAi, mensajeDeFallo } from "@/lib/ai/invoke";
 import { applyGoalChange } from "@/lib/actions/goals";
 import {
   createMeal,
@@ -34,6 +35,13 @@ interface ChatMessage {
 // payload since each kind below casts it to what it actually needs; the
 // real validation happens server-side in the Server Action being called,
 // same as any other write in this app.
+/** Lo que devuelve la Edge Function `ai-coach` cuando todo va bien. */
+interface CoachReply {
+  conversationId: string;
+  reply: string;
+  action: ActionProposal | null;
+}
+
 interface ActionProposal {
   kind: "add_meal_item" | "update_weight_entry" | "delete_meal" | "duplicate_meal" | "goal_change";
   risk: "safe" | "destructive";
@@ -102,25 +110,30 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
 
     startTransition(async () => {
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke("ai-coach", {
-        body: { conversationId, message },
+      // Sólo "sin_configurar" significa que falta de verdad la clave
+      // GEMINI_API_KEY. Agotar la cuota del día, un fallo de red o un bug
+      // son problemas distintos y cada uno tiene que decir lo suyo, no
+      // señalar una configuración que sí está bien.
+      const { data, fallo } = await invokeAi<CoachReply>(supabase, "ai-coach", {
+        conversationId,
+        message,
       });
-      // Only "ai_unavailable" means the GEMINI_API_KEY secret is actually
-      // missing. Any other failure (network hiccup, a transient error from
-      // Gemini, a bug) is a different problem and must say so honestly
-      // instead of pointing the user at a config issue that isn't real.
-      if (data?.error === "ai_unavailable") {
-        setUnavailable(true);
+      if (fallo) {
+        if (fallo.tipo === "sin_configurar") {
+          setUnavailable(true);
+          return;
+        }
+        setErrorMessage(mensajeDeFallo(fallo, "hablar con el Coach"));
         return;
       }
-      if (error || data?.error) {
-        setErrorMessage("Hubo un error al hablar con el Coach IA. Inténtalo de nuevo en unos segundos.");
+      if (!data) {
+        setErrorMessage("El Coach no ha devuelto respuesta. Inténtalo de nuevo.");
         return;
       }
       setConversationId(data.conversationId);
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
 
-      const action = data.action as ActionProposal | null;
+      const action = data.action;
       if (!action) return;
       if (action.risk === "safe") {
         await executeAction(action);

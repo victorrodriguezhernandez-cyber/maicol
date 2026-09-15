@@ -6,7 +6,12 @@
 // the client to show a confirmation UI for (section 33: no silent writes).
 import { handleOptions, corsHeaders } from "../_shared/cors.ts";
 import { requireUser } from "../_shared/auth.ts";
-import { GeminiUnavailableError, getGeminiModel, withGeminiRetry } from "../_shared/gemini.ts";
+import {
+  GeminiQuotaError,
+  GeminiUnavailableError,
+  getGeminiModel,
+  withGeminiRetry,
+} from "../_shared/gemini.ts";
 import { computeTrend, weeklyRate } from "../_shared/trend.ts";
 import { todayIso, toLocalDateKey, localDayBoundsUtc } from "../_shared/date.ts";
 import { GoogleGenAI, type FunctionDeclaration, Type } from "npm:@google/genai@^1.0.0";
@@ -314,6 +319,15 @@ Deno.serve(async (req) => {
     return json({ conversationId, reply: finalText, action }, 200);
   } catch (e) {
     if (e instanceof Response) return withCors(e);
+    if (e instanceof GeminiQuotaError) {
+      // 429 y no 503: no es que la IA esté mal configurada, es que se
+      // acabó la cuota del plan. Son problemas distintos y la app tiene
+      // que poder decir cuál es.
+      return json(
+        { error: "ai_quota", daily: e.daily, retryAfterSeconds: e.retryAfterSeconds },
+        429,
+      );
+    }
     if (e instanceof GeminiUnavailableError) return json({ error: "ai_unavailable" }, 503);
     console.error(e);
     return json({ error: "internal_error" }, 500);

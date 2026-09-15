@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { invokeAi, mensajeDeFallo } from "@/lib/ai/invoke";
 import { compressImageToBase64 } from "@/lib/image";
 import { createRoutine, setActiveRoutine } from "@/lib/actions/training";
 import { GOAL_LABELS, EQUIPMENT_LABELS, type RoutineGoal, type Equipment } from "@/lib/training/types";
@@ -242,26 +243,25 @@ function AiForm({
     onError(null);
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke("build-routine", {
-        body: { text, equipment: equipment.length ? equipment : undefined },
+      // `invokeAi` lee el cuerpo de la respuesta. `invoke` a secas deja el
+      // motivo encerrado en el error y todo acababa en el mensaje genérico.
+      const { data, fallo } = await invokeAi<Proposal>(supabase, "build-routine", {
+        text,
+        equipment: equipment.length ? equipment : undefined,
       });
-      if (error) {
-        onError("No se ha podido montar la rutina. Inténtalo de nuevo en unos segundos.");
-        return;
-      }
-      if (data?.error === "ai_unavailable") {
-        onError("La IA no está disponible ahora mismo. Puedes montar la rutina a mano mientras tanto.");
-        return;
-      }
-      if (data?.error) {
-        onError("La IA ha devuelto algo que no se ha podido leer. Prueba a contárselo de otra forma.");
+      if (fallo) {
+        onError(
+          fallo.tipo === "sin_configurar"
+            ? "La IA no está disponible ahora mismo. Puedes montar la rutina a mano mientras tanto."
+            : mensajeDeFallo(fallo, "montar la rutina"),
+        );
         return;
       }
       if (!data?.days?.length) {
         onError("No ha salido ninguna rutina de ahí. Prueba a decir cuántos días puedes entrenar y qué material tienes.");
         return;
       }
-      onProposal(data as Proposal);
+      onProposal(data);
     } finally {
       setLoading(false);
     }
@@ -352,19 +352,17 @@ function PhotoForm({
     onError(null);
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke("build-routine", {
-        body: {
-          imageBase64: photo.data,
-          imageMimeType: photo.mimeType,
-          text: note.trim() || undefined,
-        },
+      const { data, fallo } = await invokeAi<Proposal>(supabase, "build-routine", {
+        imageBase64: photo.data,
+        imageMimeType: photo.mimeType,
+        text: note.trim() || undefined,
       });
-      if (error) {
-        onError("No se ha podido leer la rutina de la foto. Prueba con más luz o más cerca.");
-        return;
-      }
-      if (data?.error === "ai_unavailable") {
-        onError("La IA no está disponible ahora mismo.");
+      if (fallo) {
+        onError(
+          fallo.tipo === "otro"
+            ? "No se ha podido leer la rutina de la foto. Prueba con más luz o más cerca."
+            : mensajeDeFallo(fallo, "leer la rutina"),
+        );
         return;
       }
       if (!data?.days?.length) {
@@ -374,7 +372,7 @@ function PhotoForm({
         );
         return;
       }
-      onProposal(data as Proposal);
+      onProposal(data);
     } finally {
       setLoading(false);
     }

@@ -17,6 +17,50 @@ function getClient(): GoogleGenAI {
 
 export class GeminiUnavailableError extends Error {}
 
+/**
+ * La cuota del plan se ha agotado. NO es lo mismo que un error pasajero,
+ * aunque Google devuelva 429 para las dos cosas.
+ *
+ * El plan gratuito tiene un tope POR DÍA (20 peticiones por modelo y
+ * proyecto). Cuando se agota, reintentar no arregla nada: sólo gasta más
+ * cuota y hace esperar al usuario para acabar fallando igual. Y decirle
+ * "inténtalo en unos segundos" es mentira — no vuelve hasta que Google
+ * reinicia el contador.
+ */
+export class GeminiQuotaError extends Error {
+  /** Segundos que Google pide esperar, si los dice. */
+  readonly retryAfterSeconds: number | null;
+  /** true = tope diario; false = tope por minuto, que sí pasa solo. */
+  readonly daily: boolean;
+
+  constructor(message: string, daily: boolean, retryAfterSeconds: number | null) {
+    super(message);
+    this.name = "GeminiQuotaError";
+    this.daily = daily;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+function errorText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+/**
+ * Distingue las dos caras del 429. Google mete el detalle en el cuerpo del
+ * error: `quotaId` acaba en `PerDay...` cuando es el tope diario y en
+ * `PerMinute...` cuando es el de ráfaga.
+ */
+export function asQuotaError(e: unknown): GeminiQuotaError | null {
+  const text = errorText(e);
+  if (!/RESOURCE_EXHAUSTED|exceeded your current quota/i.test(text)) return null;
+  const retry = text.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
+  return new GeminiQuotaError(
+    text,
+    /PerDay/i.test(text),
+    retry ? Math.ceil(Number(retry[1])) : null,
+  );
+}
+
 // Gemini occasionally returns a transient error — a per-minute rate limit
 // (429) or "model currently experiencing high demand" (503 UNAVAILABLE) —
 // that has nothing to do with the key being misconfigured (that's
@@ -24,8 +68,10 @@ export class GeminiUnavailableError extends Error {}
 // couple of times with backoff before giving up, since these are commonly
 // resolved within a second or two.
 export function isTransientGeminiError(e: unknown): boolean {
-  const message = e instanceof Error ? e.message : String(e);
-  return /429|503|rate.?limit|overloaded|unavailable|high demand/i.test(message);
+  // El tope diario NO es pasajero: reintentarlo gasta tres veces la cuota
+  // que queda para conseguir el mismo fallo.
+  if (asQuotaError(e)?.daily) return false;
+  return /429|503|rate.?limit|overloaded|unavailable|high demand/i.test(errorText(e));
 }
 
 export async function withGeminiRetry<T>(fn: () => Promise<T>): Promise<T> {
@@ -34,7 +80,11 @@ export async function withGeminiRetry<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn();
     } catch (e) {
-      if (attempt >= backoffMs.length || !isTransientGeminiError(e)) throw e;
+      const quota = asQuotaError(e);
+      if (quota?.daily) throw quota;
+      if (attempt >= backoffMs.length || !isTransientGeminiError(e)) {
+        throw quota ?? e;
+      }
       await new Promise((resolve) => setTimeout(resolve, backoffMs[attempt]));
     }
   }

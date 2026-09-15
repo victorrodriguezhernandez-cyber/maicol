@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { MealComposer, type DraftItem } from "@/components/register/MealComposer";
 import { aiItemToDraft, type AiMealEstimateResponse } from "@/lib/nutrition/ai-estimate-to-item";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { invokeAi, mensajeDeFallo } from "@/lib/ai/invoke";
 
 type State =
   | { kind: "idle" }
@@ -21,20 +22,20 @@ export default function TextoEntryPage() {
     if (!text.trim()) return;
     setState({ kind: "analyzing" });
     const supabase = createClient();
-    const { data, error } = await supabase.functions.invoke("analyze-text", { body: { text } });
-    if (error) {
-      // error.message here is supabase-js's own generic wrapper text ("Edge
-      // Function returned a non-2xx status code"), not anything useful to
-      // show someone — the specific case worth surfacing (no key configured)
-      // already has its own branch below.
-      setState({ kind: "error", message: "No se ha podido analizar. Inténtalo de nuevo en unos segundos." });
+    // `invokeAi` lee el cuerpo que devolvió la función. `invoke` a secas
+    // no sirve: con cualquier respuesta que no sea 2xx deja `data` en null
+    // y el motivo real encerrado en el error, así que la comprobación de
+    // abajo no se cumplía nunca y todo salía como "error genérico".
+    const { data, fallo } = await invokeAi<AiMealEstimateResponse>(supabase, "analyze-text", { text });
+    if (fallo) {
+      if (fallo.tipo === "sin_configurar") {
+        setState({ kind: "unavailable" });
+        return;
+      }
+      setState({ kind: "error", message: mensajeDeFallo(fallo) });
       return;
     }
-    if (data?.error === "ai_unavailable") {
-      setState({ kind: "unavailable" });
-      return;
-    }
-    setState({ kind: "result", result: data as AiMealEstimateResponse });
+    setState({ kind: "result", result: data! });
   }
 
   if (state.kind === "result") {

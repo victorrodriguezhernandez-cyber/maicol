@@ -8,6 +8,7 @@ import { MealComposer, type DraftItem } from "@/components/register/MealComposer
 import { formatKcal } from "@/lib/format";
 import { MacroInline } from "@/components/ui/MacroInline";
 import { TagIcon } from "@/components/ui/icons";
+import { invokeAi, mensajeDeFallo } from "@/lib/ai/invoke";
 
 interface LabelEstimate {
   name: string | null;
@@ -45,19 +46,19 @@ export default function EtiquetaCapturaPage() {
     const photoUrl = URL.createObjectURL(file);
     setState({ kind: "analyzing" });
     const supabase = createClient();
-    const { data: result, error } = await supabase.functions.invoke("analyze-label-photo", {
-      body: { image: { data, mimeType } },
+    // `invokeAi` lee el cuerpo que devolvió la función. `invoke` a secas
+    // no sirve: con cualquier respuesta que no sea 2xx deja `data` en null
+    // y el motivo real encerrado en el error, así que la comprobación de
+    // abajo no se cumplía nunca y todo salía como "error genérico".
+    const { data: result, fallo } = await invokeAi<LabelEstimate>(supabase, "analyze-label-photo", {
+      image: { data, mimeType },
     });
-    if (error) {
-      // error.message here is supabase-js's own generic wrapper text ("Edge
-      // Function returned a non-2xx status code"), not anything useful to
-      // show someone — the specific case worth surfacing (no key configured)
-      // already has its own branch below.
-      setState({ kind: "error", message: "No se ha podido analizar la etiqueta. Inténtalo de nuevo en unos segundos." });
-      return;
-    }
-    if (result?.error === "ai_unavailable") {
-      setState({ kind: "unavailable" });
+    if (fallo) {
+      if (fallo.tipo === "sin_configurar") {
+        setState({ kind: "unavailable" });
+        return;
+      }
+      setState({ kind: "error", message: mensajeDeFallo(fallo, "analizar la etiqueta") });
       return;
     }
     setState({ kind: "review", estimate: result as LabelEstimate, photoUrl });

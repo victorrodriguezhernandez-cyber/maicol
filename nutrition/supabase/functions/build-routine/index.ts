@@ -29,6 +29,7 @@ import { requireUser } from "../_shared/auth.ts";
 import {
   generateStructured,
   getGeminiModel,
+  GeminiQuotaError,
   GeminiUnavailableError,
 } from "../_shared/gemini.ts";
 import {
@@ -161,6 +162,15 @@ Deno.serve(async (req) => {
         responseSchema: routineProposalJsonSchema,
       });
     } catch (e) {
+      if (e instanceof GeminiQuotaError) {
+        // 429 y no 503: no es que la IA esté mal configurada, es que se
+        // acabó la cuota del plan. Son problemas distintos y la app tiene
+        // que poder decir cuál es.
+        return json(
+          { error: "ai_quota", daily: e.daily, retryAfterSeconds: e.retryAfterSeconds },
+          429,
+        );
+      }
       if (e instanceof GeminiUnavailableError) {
         return json({ error: "ai_unavailable", message: e.message }, 503);
       }
