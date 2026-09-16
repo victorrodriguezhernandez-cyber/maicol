@@ -172,6 +172,40 @@ function nombreMaterial(equipment: Equipment): string {
   }
 }
 
+/**
+ * El trabajo que hizo una sesión: kilos movidos (repeticiones × peso).
+ * En peso corporal se cuentan repeticiones, que es lo único que varía.
+ */
+function trabajoTotal(series: SerieHecha[], sinPeso: boolean): number {
+  return series.reduce(
+    (total, s) => total + (s.reps ?? 0) * (sinPeso ? 1 : s.weightKg ?? 0),
+    0,
+  );
+}
+
+/**
+ * Las repeticiones por serie que hacen falta HOY para no hacer menos
+ * trabajo que la última vez con el peso que se recomienda.
+ *
+ * Es la regla que impide que un consejo de progresión te mande hacia
+ * atrás. Sin ella, un rango de repeticiones puede hacer daño: si hiciste
+ * 13, 10 y 10 con 10 kg (310 kg), decirte "vuelve al suelo del rango, 3
+ * de 8" son 240 kg — setenta menos de los que ya moviste. Con el mismo
+ * peso, prescribir menos de lo que ya has demostrado no es progresar, es
+ * retroceder con buena letra.
+ *
+ * Sólo aplica cuando el peso NO sube. Al subir peso el trabajo baja a
+ * propósito y eso sí es progreso: mueves más carga por repetición.
+ */
+function repsParaNoRetroceder(
+  trabajoAnterior: number,
+  sets: number,
+  pesoPorRep: number,
+): number {
+  if (sets <= 0 || pesoPorRep <= 0) return 0;
+  return Math.ceil(trabajoAnterior / (sets * pesoPorRep));
+}
+
 /** El mapa de "la previa" convertido en la lista que espera el motor. */
 export function seriesDesdePrevias(previous: ReadonlyMap<number, PreviousSet>): SerieHecha[] {
   return [...previous.entries()].map(([setNumber, s]) => ({ setNumber, ...s }));
@@ -302,6 +336,14 @@ export function recomendarCarga(
     .join(", ");
   const laUltimaVez = `La última vez hiciste ${resumen}.`;
 
+  // El suelo de hoy: con el mismo peso, nunca menos trabajo que el otro día.
+  const trabajoAnterior = trabajoTotal(trabajo, sinPeso);
+  const sinRetroceso = repsParaNoRetroceder(
+    trabajoAnterior,
+    objetivo.sets,
+    sinPeso ? 1 : pesoSugerido ?? 0,
+  );
+
   // El mismo aviso vale en varias ramas: la fatiga se dispara igual
   // bajando el peso que aguantándolo a costa de las repeticiones.
   const avisoDeCaida =
@@ -318,16 +360,34 @@ export function recomendarCarga(
   // empeorarlo; bajarlo, tirar un peso con el que sí puedes.
   if (bajoElPeso) {
     const kg = decimal(pesoSugerido!);
+
+    // Sólo las series que hiciste al peso alto dicen qué aguantas con él.
+    const alPesoAlto = trabajo.filter((s) => (s.weightKg ?? 0) >= pesoPrimera);
+    const repsAlPesoAlto = alPesoAlto.map((s) => s.reps ?? 0);
+    const sostenidas = Math.min(...repsAlPesoAlto); // lo que repetiste con él
+    const mejor = Math.max(...repsAlPesoAlto); // lo que diste en fresco
+
+    // Tres suelos y un techo. El objetivo es el más exigente de los
+    // suelos, pero nunca más de lo que diste en la primera serie: nadie
+    // sostiene fatigado más de lo que hizo descansado.
+    const objetivoReps = Math.min(
+      mejor,
+      Math.max(objetivo.repsMin, sostenidas, sinRetroceso),
+    );
+    const trabajoHoy = objetivoReps * objetivo.sets * (sinPeso ? 1 : pesoSugerido!);
+
     return {
       cambio: "consolida",
       weightKg: pesoSugerido,
-      reps: objetivo.repsMin,
-      titulo: `Sostén ${kg} kg en las ${objetivo.sets} series`,
+      reps: objetivoReps,
+      titulo: `Sostén ${kg} kg × ${objetivoReps} en las ${objetivo.sets} series`,
       detalle: [
         laUltimaVez,
-        `Bajaste de ${decimal(pesoPrimera)} a ${decimal(pesoMin)} kg a mitad de sesión, así que el peso no es el problema: aguantaste ${decimal(pesoPrimera)} kg más de una serie.`,
-        "Lo que pasó es que la primera serie se fue demasiado cerca del fallo y la última lo pagó.",
-        `Hoy: ${objetivo.sets} series de ${objetivo.repsMin} con ${kg} kg, dejando 1-2 repeticiones en recámara en la primera. Cuando las ${objetivo.sets} lleguen a ${objetivo.repsMax}, subes el peso.`,
+        `Bajaste de ${decimal(pesoPrimera)} a ${decimal(pesoMin)} kg a mitad de sesión, así que el peso no es el problema: aguantaste ${decimal(pesoPrimera)} kg en ${alPesoAlto.length} series.`,
+        `Lo que pasó es que la primera se fue demasiado cerca del fallo: ${mejor} y después ${sostenidas} con el mismo peso. Esa diferencia la pagó la última serie.`,
+        `Hoy: ${objetivo.sets} × ${objetivoReps} con ${kg} kg. Son ${decimal(trabajoHoy)} ${sinPeso ? "repeticiones" : "kg"} frente a ${decimal(trabajoAnterior)} de la última vez, así que no es repetir lo mismo: es más trabajo y mejor repartido.`,
+        `El truco está en la primera serie: párate en ${objetivoReps} aunque te sobren fuerzas. Es justamente lo que hace que la última también llegue a ${objetivoReps}.`,
+        `Cuando hagas ${objetivo.repsMax} en las ${objetivo.sets} con ${kg} kg, subes el peso.`,
       ],
     };
   }
@@ -372,13 +432,16 @@ export function recomendarCarga(
   // ── No llegaste al suelo del rango: el peso no se toca ──────────────
   const pordebajo = reps.filter((r) => r < objetivo.repsMin).length;
   if (pordebajo > 0) {
+    // El mínimo del rango es el objetivo, salvo que ya movieras más
+    // trabajo del que ese mínimo da: entonces manda lo que ya hiciste.
+    const objetivoReps = Math.min(objetivo.repsMax, Math.max(objetivo.repsMin, sinRetroceso));
     return {
       cambio: "mantiene",
       weightKg: pesoSugerido,
-      reps: objetivo.repsMin,
+      reps: objetivoReps,
       titulo: sinPeso
-        ? `Repite hasta llegar a ${objetivo.repsMin}`
-        : `Repite ${decimal(pesoSugerido!)} kg`,
+        ? `Apunta a ${objetivoReps} en las ${objetivo.sets} series`
+        : `${decimal(pesoSugerido!)} kg × ${objetivoReps} en las ${objetivo.sets}`,
       detalle: [
         laUltimaVez,
         pordebajo === 1
@@ -393,7 +456,10 @@ export function recomendarCarga(
   }
 
   // ── Dentro del rango: mismo peso, una repetición más ────────────────
-  const objetivoReps = Math.min(objetivo.repsMax, Math.max(...reps) + 1);
+  const objetivoReps = Math.min(
+    objetivo.repsMax,
+    Math.max(Math.max(...reps) + 1, sinRetroceso),
+  );
   return {
     cambio: "mantiene",
     weightKg: pesoSugerido,
