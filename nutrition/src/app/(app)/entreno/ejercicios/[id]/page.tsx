@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { getExercise, getExerciseHistory } from "@/lib/data/training";
+import { getExercise, getExerciseHistory, getTrainingGoal } from "@/lib/data/training";
+import { objetivoDeEjercicio, recomendarCarga } from "@/lib/training/progression";
 import { formatKg, formatDuration, ONE_RM_MAX_REPS } from "@/lib/training/records";
 import { formatWeekday } from "@/lib/training/week";
 import { MUSCLE_LABELS } from "@/lib/training/muscles";
@@ -22,13 +23,35 @@ export default async function EjercicioPage({
   } = await getUser(supabase);
   if (!user) redirect("/login");
 
-  const [exercise, { history, records }] = await Promise.all([
+  const [exercise, { history, records }, objetivoPersonal] = await Promise.all([
     getExercise(supabase, id),
     getExerciseHistory(supabase, id),
+    getTrainingGoal(supabase, user.id),
   ]);
   if (!exercise) notFound();
 
   const timeBased = isTimeBased(exercise);
+
+  // "La próxima vez": el mismo motor que durante el entreno, para que el
+  // consejo no cambie según por dónde lo mires. Se calcula desde la última
+  // sesión registrada de este ejercicio, que es history[0].
+  const ultima = history[0];
+  const recomendacion = recomendarCarga(
+    (ultima?.sets ?? []).map((s) => ({
+      setNumber: s.set_number,
+      weightKg: s.weight_kg,
+      reps: s.reps,
+      rir: s.rir,
+      setType: s.set_type,
+    })),
+    objetivoDeEjercicio(
+      null,
+      { repsMin: exercise.default_reps_min, repsMax: exercise.default_reps_max },
+      ultima?.sets.length ?? 0,
+      { foco: objetivoPersonal?.focus[0] ?? null, equipment: exercise.equipment },
+    ),
+    exercise.equipment,
+  );
 
   return (
     <div className="flex flex-col gap-6 pb-6">
@@ -57,6 +80,35 @@ export default async function EjercicioPage({
           </p>
         </section>
       ) : null}
+
+      {timeBased ? null : (
+        <section className="flex flex-col gap-3">
+          <SectionHeader>La próxima vez</SectionHeader>
+          <div className="surface-panel flex flex-col gap-2 p-4">
+            <p
+              className="text-[15px] font-semibold"
+              style={{
+                color:
+                  recomendacion.cambio === "sube" ? "var(--accent)" : "var(--text-primary)",
+              }}
+            >
+              {recomendacion.titulo}
+            </p>
+            <ul className="flex flex-col gap-1.5">
+              {recomendacion.detalle.map((linea, i) => (
+                <li key={i} className="text-[13px] leading-relaxed text-[var(--text-secondary)]">
+                  {linea}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="text-[11px] leading-relaxed text-[var(--text-tertiary)]">
+            Sale de tu propio historial con doble progresión: el peso no sube hasta llegar al tope
+            del rango en todas las series. Si el ejercicio está en una rutina, el rango que manda
+            es el que pauta la rutina.
+          </p>
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <SectionHeader>Tus récords</SectionHeader>

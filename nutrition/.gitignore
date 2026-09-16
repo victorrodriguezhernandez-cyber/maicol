@@ -56,3 +56,6 @@ next-env.d.ts
 /.svgshot.mjs
 /.extract.mjs
 /.label.mjs
+
+# Artefactos del CLI de Supabase (no son código fuente)
+supabase/.temp/
