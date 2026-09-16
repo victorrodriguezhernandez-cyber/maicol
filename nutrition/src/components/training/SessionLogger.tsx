@@ -19,6 +19,7 @@ import type {
   SetType,
 } from "@/lib/training/types";
 import { isTimeBased, SET_TYPE_LABELS, numberWorkingSets } from "@/lib/training/types";
+import type { Recomendacion } from "@/lib/training/progression";
 import type { NewRecord } from "@/lib/training/records";
 import { formatKg } from "@/lib/training/records";
 import { RestTimer } from "./RestTimer";
@@ -423,6 +424,8 @@ function ExerciseCard({
         </p>
       ) : null}
 
+      <PlanDeHoy recomendacion={entry.recomendacion} />
+
       <div
         className="grid items-center gap-2 px-4 py-2"
         style={{ gridTemplateColumns: "2.2rem 1fr 1fr 1fr 2.4rem" }}
@@ -441,7 +444,7 @@ function ExerciseCard({
           label={labels.get(set.id) ?? "?"}
           previous={entry.previous.get(set.set_number) ?? null}
           timeBased={timeBased}
-          targetRepsMin={entry.target?.repsMin ?? entry.exercise.default_reps_min}
+          sugerido={entry.recomendacion}
           restSeconds={rest}
           exerciseName={entry.exercise.name}
           onSave={onSave}
@@ -462,12 +465,72 @@ function ExerciseCard({
 
 // =========================================================================
 
+/**
+ * "Hoy toca X, y por esto."
+ *
+ * El título se lee de un vistazo mientras cargas la barra; el porqué está
+ * a un toque y trae los números exactos de los que sale (regla 9: una
+ * etiqueta que no se puede defender no debería existir). Se despliega en
+ * vez de estar siempre abierto porque cuando ya sabes qué toca, cuatro
+ * líneas de explicación por ejercicio te tapan la hoja de registro.
+ */
+function PlanDeHoy({ recomendacion }: { recomendacion: Recomendacion }) {
+  const [abierto, setAbierto] = useState(false);
+  const { cambio, titulo, detalle } = recomendacion;
+
+  // Sólo "sube" se resalta: es la única que cambia lo que ibas a hacer.
+  const acentuado = cambio === "sube";
+
+  return (
+    <div
+      className="mx-4 mb-3 rounded-xl px-3 py-2.5"
+      style={{
+        background: "var(--surface-2)",
+        borderLeft: `3px solid ${acentuado ? "var(--accent)" : "var(--border-soft)"}`,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="min-w-0">
+          <span className="text-section block">Hoy toca</span>
+          <span
+            className={`block text-[13.5px] font-semibold ${
+              acentuado ? "text-[var(--accent)]" : "text-[var(--text-primary)]"
+            }`}
+          >
+            {titulo}
+          </span>
+        </span>
+        <span className="shrink-0 text-[11px] font-semibold text-[var(--text-tertiary)]">
+          {abierto ? "Ocultar" : "Por qué"}
+        </span>
+      </button>
+
+      {abierto ? (
+        <ul className="mt-2 flex flex-col gap-1.5 border-t border-[var(--border-soft)] pt-2">
+          {detalle.map((linea, i) => (
+            <li key={i} className="text-[12.5px] leading-relaxed text-[var(--text-secondary)]">
+              {linea}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+// =========================================================================
+
 function SetRow({
   set,
   label,
   previous,
   timeBased,
-  targetRepsMin,
+  sugerido,
   restSeconds,
   exerciseName,
   onSave,
@@ -478,7 +541,8 @@ function SetRow({
   label: string;
   previous: { weightKg: number | null; reps: number | null } | null;
   timeBased: boolean;
-  targetRepsMin: number;
+  /** Lo que el motor recomienda hoy para este ejercicio. */
+  sugerido: Recomendacion;
   restSeconds: number;
   exerciseName: string;
   onSave: SaveSet;
@@ -498,15 +562,24 @@ function SetRow({
   const isWarmup = set.set_type === "calentamiento";
 
   /**
-   * Al marcar una serie sin haber escrito nada, hereda lo de la previa.
+   * Con qué peso y repeticiones se rellena la serie si la marcas sin
+   * haber escrito nada.
    *
-   * Es el caso más común del gimnasio: repites lo del otro día. Obligar a
-   * teclear el mismo número que ya está a la izquierda, en gris, es
-   * trabajo que la app puede hacer sola.
+   * Es lo RECOMENDADO, no lo de la previa: si el motor dice que hoy toca
+   * subir a 16 kg, dejarlo en los 14 del otro día sería enseñarte un
+   * consejo y guardarte lo contrario. El calentamiento se queda con la
+   * previa, porque ahí no se progresa.
+   *
+   * Cuando no hay historial (`sin_datos`) no hay peso que heredar y el
+   * campo se queda vacío: inventarlo sería simular un dato (regla 11).
    */
+  const heredado = isWarmup
+    ? { weightKg: previous?.weightKg ?? null, reps: previous?.reps ?? sugerido.reps }
+    : { weightKg: sugerido.weightKg ?? previous?.weightKg ?? null, reps: sugerido.reps };
+
   function resolveValues() {
-    const w = weight.trim() === "" ? previous?.weightKg ?? null : Number(weight.replace(",", "."));
-    const r = reps.trim() === "" ? previous?.reps ?? targetRepsMin : Number(reps);
+    const w = weight.trim() === "" ? heredado.weightKg : Number(weight.replace(",", "."));
+    const r = reps.trim() === "" ? heredado.reps : Number(reps);
     const d = duration.trim() === "" ? null : Number(duration);
     return { w: Number.isFinite(w as number) ? (w as number) : null, r, d };
   }
@@ -588,7 +661,7 @@ function SetRow({
                 done &&
                 onSave(set, { weightKg: weight ? Number(weight.replace(",", ".")) : null }, true)
               }
-              placeholder={previous?.weightKg != null ? formatKg(previous.weightKg) : "–"}
+              placeholder={heredado.weightKg != null ? formatKg(heredado.weightKg) : "–"}
               aria-label="Kilos"
               className={cellClass}
             />
@@ -597,7 +670,7 @@ function SetRow({
               value={reps}
               onChange={(e) => setReps(e.target.value.replace(/[^0-9]/g, ""))}
               onBlur={() => done && onSave(set, { reps: reps ? Number(reps) : null }, true)}
-              placeholder={previous?.reps != null ? String(previous.reps) : String(targetRepsMin)}
+              placeholder={String(heredado.reps)}
               aria-label="Repeticiones"
               className={cellClass}
             />

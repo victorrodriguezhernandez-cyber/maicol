@@ -1,4 +1,7 @@
 import type { MuscleGroup } from "./muscles";
+import type { PreviousSet, Recomendacion } from "./progression";
+
+export type { PreviousSet };
 
 /**
  * Tipos de fila del apartado de entreno, escritos a mano igual que
@@ -151,7 +154,14 @@ export interface SessionExercise {
    * de serie. Es la columna "PREVIA": sin ella no sabes con qué peso
    * empezar, y es lo único que convierte un registro en una progresión.
    */
-  previous: Map<number, { weightKg: number | null; reps: number | null }>;
+  previous: Map<number, PreviousSet>;
+  /**
+   * Qué peso y qué repeticiones tocan hoy, y por qué. Sale de
+   * `recomendarCarga` (`src/lib/training/progression.ts`) leyendo
+   * `previous` y `target`: nunca de la IA, para que la explicación sea
+   * siempre la razón real (regla 9).
+   */
+  recomendacion: Recomendacion;
 }
 
 export const EQUIPMENT_LABELS: Record<Equipment, string> = {
