@@ -113,29 +113,44 @@ const tools: FunctionDeclaration[] = [
     parameters: { type: Type.OBJECT, properties: { date: { type: Type.STRING } }, required: ["date"] },
   },
   {
-    name: "propose_add_meal_item",
+    name: "propose_add_meal",
     description:
-      "Añade un alimento a una comida de una fecha concreta (crea la comida si ese tipo no existe todavía ese día). Estima tú mismo cantidad y macros del alimento, igual que harías respondiendo en texto — es una acción de bajo riesgo que se ejecuta en cuanto el usuario lo pide, sin confirmación previa.",
+      "Registra una comida en una fecha concreta, DESGLOSADA ingrediente a ingrediente. Es la única forma de registrar comida: un alimento suelto es una lista de un elemento. Estima tú mismo la cantidad y los macros de CADA ingrediente por separado, nunca del plato entero junto — el usuario necesita ver y poder corregir cada peso. Acción de bajo riesgo: se ejecuta en cuanto el usuario lo pide, sin confirmación previa.",
     parameters: {
       type: Type.OBJECT,
       properties: {
         date: { type: Type.STRING, description: "YYYY-MM-DD" },
         meal_type: { type: Type.STRING, enum: ["breakfast", "lunch", "dinner", "snack", "other"] },
-        food_name: { type: Type.STRING },
-        quantity_amount: { type: Type.NUMBER },
-        quantity_unit: { type: Type.STRING },
-        energy_kcal: { type: Type.NUMBER },
-        protein_g: { type: Type.NUMBER },
-        carbohydrates_g: { type: Type.NUMBER },
-        fat_g: { type: Type.NUMBER },
-        fiber_g: { type: Type.NUMBER },
-        confidence: { type: Type.STRING, enum: ["high", "medium", "low"] },
+        meal_name: {
+          type: Type.STRING,
+          description:
+            "Nombre del plato, bien escrito y con mayúscula inicial (p.ej. 'Hamburguesa de pavo con huevo y queso'). Para un alimento suelto, déjalo vacío.",
+        },
+        items: {
+          type: Type.ARRAY,
+          description: "Un elemento por INGREDIENTE, no uno por plato.",
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              food_name: { type: Type.STRING },
+              quantity_amount: { type: Type.NUMBER },
+              quantity_unit: { type: Type.STRING },
+              energy_kcal: { type: Type.NUMBER },
+              protein_g: { type: Type.NUMBER },
+              carbohydrates_g: { type: Type.NUMBER },
+              fat_g: { type: Type.NUMBER },
+              fiber_g: { type: Type.NUMBER },
+              confidence: { type: Type.STRING, enum: ["high", "medium", "low"] },
+            },
+            required: [
+              "food_name", "quantity_amount", "quantity_unit",
+              "energy_kcal", "protein_g", "carbohydrates_g", "fat_g",
+            ],
+          },
+        },
         reason: { type: Type.STRING },
       },
-      required: [
-        "date", "meal_type", "food_name", "quantity_amount", "quantity_unit",
-        "energy_kcal", "protein_g", "carbohydrates_g", "fat_g", "reason",
-      ],
+      required: ["date", "meal_type", "items", "reason"],
     },
   },
   {
@@ -199,6 +214,8 @@ Reglas:
 - Basa cualquier afirmación sobre progreso de peso en la TENDENCIA (get_weight_trend), nunca en un único pesaje.
 - Si los datos son insuficientes para responder, o si lo que pide el usuario podría referirse a más de un registro (p.ej. "el desayuno de siempre" sin un patrón claro, o varias comidas que podrían ser la referida), dilo explícitamente y pregunta para confirmar en vez de actuar sobre el registro equivocado.
 - Puedes actuar de verdad sobre los datos del usuario con las herramientas "propose_*", no solo explicar cómo hacerlo. Añadir un alimento, duplicar una comida y corregir un peso son acciones de bajo riesgo que la aplicación ejecuta en cuanto las propones. Borrar una comida y cambiar el objetivo son acciones importantes: la aplicación siempre pide confirmación explícita al usuario antes de ejecutarlas, así que puedes proponerlas igualmente en cuanto el usuario lo pida o lo acepte.
+- Cuando registres comida, DESGLÓSALA. Si el usuario describe un plato ("una hamburguesa de pavo con queso y huevo"), "meal_name" es el plato y "items" lleva UNA LÍNEA POR INGREDIENTE, cada una con su cantidad y sus macros: pan, pavo, queso, huevo... Nunca metas el plato entero en un solo item con los macros sumados — así el usuario no puede comprobar si te has pasado con el aceite ni corregir sólo el queso.
+- Incluye también lo que no se nombra pero está: el aceite de cocinar, la salsa, el pan. Si no estás seguro de que lleve algo, no lo metas y dilo en tu respuesta.
 - Nunca propongas más de una acción por turno.
 - Nunca modifiques nada por tu cuenta fuera de esas herramientas "propose_*" — son el único camino de escritura.
 - Cuando menciones proteína, carbohidratos o grasas en tu respuesta, escribe siempre la palabra (o "prot."/"carb."/"grasa", que es como los abrevia la propia app) — nunca una sola letra suelta como "P", "C" o "G".`;
@@ -333,6 +350,17 @@ Deno.serve(async (req) => {
     return json({ error: "internal_error" }, 500);
   }
 });
+
+/**
+ * El instante que se guarda para una comida en una fecha dada. Mediodía
+ * de la zona de la app y no medianoche: medianoche está a un cambio de
+ * hora de caerse al día anterior y la comida aparecería en el día que no
+ * es. Misma regla que `mealInstantForDate` en la app.
+ */
+function instanteDelDia(date: string): string {
+  const { start } = localDayBoundsUtc(date);
+  return new Date(new Date(start).getTime() + 12 * 60 * 60 * 1000).toISOString();
+}
 
 async function ensureConversation(
   supabase: SupabaseClient,
@@ -612,7 +640,7 @@ function daysBetween(a: string, b: string): number {
 // find the row, never silently act on invented data.
 // ---------------------------------------------------------------------
 interface ActionProposal {
-  kind: "add_meal_item" | "update_weight_entry" | "delete_meal" | "duplicate_meal" | "goal_change";
+  kind: "add_meal" | "update_weight_entry" | "delete_meal" | "duplicate_meal" | "goal_change";
   risk: "safe" | "destructive";
   summary: string;
   payload: Record<string, unknown>;
@@ -708,28 +736,46 @@ async function buildAction(
   args: Record<string, unknown>,
 ): Promise<{ action: ActionProposal } | { error: string }> {
   switch (name) {
-    case "propose_add_meal_item": {
+    case "propose_add_meal": {
       const date = String(args.date);
       const mealType = String(args.meal_type);
-      const item = {
-        name: String(args.food_name),
-        quantityAmount: Number(args.quantity_amount),
-        quantityUnit: String(args.quantity_unit),
-        energyKcal: Number(args.energy_kcal),
-        proteinG: Number(args.protein_g) || 0,
-        carbohydratesG: Number(args.carbohydrates_g) || 0,
-        fatG: Number(args.fat_g) || 0,
-        fiberG: args.fiber_g != null ? Number(args.fiber_g) : null,
+      const crudos = Array.isArray(args.items) ? (args.items as Record<string, unknown>[]) : [];
+      if (crudos.length === 0) return { error: "no_items" };
+
+      const items = crudos.map((it) => ({
+        name: String(it.food_name),
+        quantityAmount: Number(it.quantity_amount),
+        quantityUnit: String(it.quantity_unit),
+        energyKcal: Number(it.energy_kcal),
+        proteinG: Number(it.protein_g) || 0,
+        carbohydratesG: Number(it.carbohydrates_g) || 0,
+        fatG: Number(it.fat_g) || 0,
+        fiberG: it.fiber_g != null ? Number(it.fiber_g) : null,
+        micronutrients: {},
         source: "ai_text_estimation",
         precisionLevel: "estimated",
-        confidence: (args.confidence as string) ?? "medium",
+        confidence: (it.confidence as string) ?? "medium",
+      }));
+
+      const nombre = typeof args.meal_name === "string" ? args.meal_name.trim() : "";
+      // La comida se monta como una PROPUESTA con la forma exacta que
+      // espera `createMeal`, la misma Server Action validada que usa el
+      // registro manual: la IA no escribe, propone (regla 4).
+      const snapshot = {
+        occurredAt: instanteDelDia(date),
+        mealType,
+        name: nombre || null,
+        items,
       };
+      const cuantos = items.length === 1
+        ? items[0].name
+        : `${items.length} ingredientes`;
       return {
         action: {
-          kind: "add_meal_item",
+          kind: "add_meal",
           risk: "safe",
-          summary: `Añadido a ${MEAL_TYPE_LABEL[mealType] ?? mealType} del ${date}: ${item.name} (${item.quantityAmount} ${item.quantityUnit})`,
-          payload: { date, mealType, item },
+          summary: `${nombre || cuantos} en ${MEAL_TYPE_LABEL[mealType] ?? mealType} del ${date}`,
+          payload: { snapshot },
         },
       };
     }

@@ -114,7 +114,7 @@ export default async function TodayPage() {
         <SectionHeader>Comidas de hoy</SectionHeader>
         <div className="flex flex-col gap-2">
           {orderedGroups.map((g) => (
-            <MealGroup key={g.type} type={g.type} totalKcal={g.totalKcal} items={g.items} />
+            <MealGroup key={g.type} type={g.type} totalKcal={g.totalKcal} items={g.items} date={today} />
           ))}
         </div>
       </section>

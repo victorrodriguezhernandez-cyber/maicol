@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { RegisterSheet } from "@/components/register/RegisterSheet";
 import { formatKcal, MEAL_TYPE_LABELS } from "@/lib/format";
 import { MealTypeIcon } from "@/components/ui/MealTypeIcon";
 import { ChevronDownIcon, PlusIcon } from "@/components/ui/icons";
@@ -26,12 +27,21 @@ export function MealGroup({
   type,
   totalKcal,
   items,
+  date,
 }: {
   type: string;
   totalKcal: number;
   items: MealGroupItem[];
+  /** Día al que pertenece este bloque (YYYY-MM-DD). */
+  date: string;
 }) {
   const [open, setOpen] = useState(items.length > 0 && items.length <= 4);
+  // El "+" abría directamente el formulario manual, así que en un día
+  // pasado la única forma de añadir algo era teclear las calorías y los
+  // macros a mano. Ahora abre la misma hoja que el botón de registrar,
+  // con la comida y el día ya puestos: foto, voz, texto, etiqueta,
+  // buscar, receta y favoritos valen igual para ayer que para hoy.
+  const [registrando, setRegistrando] = useState(false);
   const isEmpty = items.length === 0;
 
   return (
@@ -73,15 +83,23 @@ export function MealGroup({
             </>
           ) : null}
         </button>
-        <Link
-          href={`/registrar/manual?type=${type}`}
+        <button
+          type="button"
+          onClick={() => setRegistrando(true)}
           aria-label={`Añadir a ${MEAL_TYPE_LABELS[type] ?? type}`}
           className="tap-scale flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--accent)]"
           style={{ background: "var(--accent-soft)" }}
         >
           <PlusIcon size={14} />
-        </Link>
+        </button>
       </div>
+
+      <RegisterSheet
+        open={registrando}
+        onOpenChange={setRegistrando}
+        mealType={type}
+        date={date}
+      />
 
       {open && !isEmpty ? (
         <ul className="flex flex-col border-t border-[var(--border-soft)] px-3.5">

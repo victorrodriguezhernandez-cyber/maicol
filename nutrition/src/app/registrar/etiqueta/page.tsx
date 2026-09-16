@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { compressImageToBase64 } from "@/lib/image";
 import { createCustomFood } from "@/lib/actions/foods";
@@ -9,6 +9,7 @@ import { formatKcal } from "@/lib/format";
 import { MacroInline } from "@/components/ui/MacroInline";
 import { TagIcon } from "@/components/ui/icons";
 import { invokeAi, mensajeDeFallo } from "@/lib/ai/invoke";
+import { useRegisterContext } from "@/lib/register-context";
 
 interface LabelEstimate {
   name: string | null;
@@ -36,6 +37,16 @@ type State =
   | { kind: "error"; message: string };
 
 export default function EtiquetaCapturaPage() {
+  // `useRegisterContext` lee la URL, y eso obliga a un límite de Suspense.
+  return (
+    <Suspense fallback={null}>
+      <EtiquetaCapturaInner />
+    </Suspense>
+  );
+}
+
+function EtiquetaCapturaInner() {
+  const { mealType, date } = useRegisterContext();
   const [state, setState] = useState<State>({ kind: "idle" });
   const [quantity, setQuantity] = useState("100");
   const [items, setItems] = useState<DraftItem[]>([]);
@@ -108,7 +119,7 @@ export default function EtiquetaCapturaPage() {
   }
 
   if (items.length > 0) {
-    return <MealComposer initialItems={items} title="Añadir a la comida" />;
+    return <MealComposer initialMealType={mealType} date={date} initialItems={items} title="Añadir a la comida" />;
   }
 
   if (state.kind === "review") {

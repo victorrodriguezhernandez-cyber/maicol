@@ -1,18 +1,14 @@
 "use client";
 
 import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 import { MealComposer } from "@/components/register/MealComposer";
-
-type MealType = "breakfast" | "lunch" | "dinner" | "snack" | "other";
-const VALID_TYPES: MealType[] = ["breakfast", "lunch", "dinner", "snack", "other"];
+import { useRegisterContext } from "@/lib/register-context";
 
 function ManualEntryForm() {
-  // Tapping "+" on a meal-type group in Hoy/Diario links here with
-  // ?type=breakfast so the composer opens already set to that type
-  // instead of falling back to the time-of-day guess.
-  const typeParam = useSearchParams().get("type");
-  const initialMealType = VALID_TYPES.includes(typeParam as MealType) ? (typeParam as MealType) : undefined;
+  // El "+" de una comida del diario trae ?type=breakfast&date=2026-09-14,
+  // así que el compositor abre ya puesto en esa comida y ese día en vez
+  // de adivinar por la hora y registrar en hoy.
+  const { mealType, date } = useRegisterContext();
 
   return (
     <MealComposer
@@ -20,7 +16,8 @@ function ManualEntryForm() {
       title="Introducir manualmente"
       emptyLabel="Introduce gramos, kcal y macros del alimento."
       startWithAddForm
-      initialMealType={initialMealType}
+      initialMealType={mealType}
+      date={date}
     />
   );
 }

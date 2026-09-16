@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { MealComposer, type MealComposerHandle } from "@/components/register/MealComposer";
 import { foodToDraftItem } from "@/lib/nutrition/food-to-item";
 import type { FoodRow } from "@/lib/supabase/types";
 import { formatKcal } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlusIcon, StarIcon } from "@/components/ui/icons";
+import { useRegisterContext } from "@/lib/register-context";
 
 interface Result extends FoodRow {
   rankReason: "recent" | "favorite" | "custom" | "catalog";
@@ -14,6 +15,16 @@ interface Result extends FoodRow {
 }
 
 export default function FavoritosPage() {
+  // `useRegisterContext` lee la URL, y eso obliga a un límite de Suspense.
+  return (
+    <Suspense fallback={null}>
+      <FavoritosInner />
+    </Suspense>
+  );
+}
+
+function FavoritosInner() {
+  const { mealType, date } = useRegisterContext();
   const [results, setResults] = useState<Result[]>([]);
   const [loading, setLoading] = useState(true);
   const composerRef = useRef<MealComposerHandle>(null);
@@ -71,6 +82,8 @@ export default function FavoritosPage() {
       )}
 
       <MealComposer
+        initialMealType={mealType}
+        date={date}
         ref={composerRef}
         initialItems={[]}
         title="Añadir a la comida"

@@ -3,9 +3,12 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MealComposer, type DraftItem } from "@/components/register/MealComposer";
+import { foodToDraftItem } from "@/lib/nutrition/food-to-item";
+import type { FoodRow } from "@/lib/supabase/types";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatKcal } from "@/lib/format";
 import { ChevronRightIcon } from "@/components/ui/icons";
+import { useRegisterContext } from "@/lib/register-context";
 
 interface RecipeSummary {
   id: string;
@@ -15,6 +18,8 @@ interface RecipeSummary {
 
 interface RecipeDetail {
   recipe: { id: string; name: string; servings: number };
+  /** Los ingredientes con su alimento, para poder desglosarlos. */
+  items: { id: string; grams_equivalent: number; foods: FoodRow }[];
   totals: { totalGrams: number; total: { energy_kcal: number; protein_g: number; carbohydrates_g: number; fat_g: number; fiber_g: number | null }; perServing: { energy_kcal: number; protein_g: number; carbohydrates_g: number; fat_g: number; fiber_g: number | null } };
 }
 
@@ -26,7 +31,14 @@ export default function RegistrarRecetaPage() {
   );
 }
 
+/** Los gramos de un ingrediente, con un decimal si es poca cantidad:
+ *  redondear 4,6 g de aceite a 5 g es un 9% de error en ese ingrediente. */
+function redondearGramos(g: number): number {
+  return g < 20 ? Math.round(g * 10) / 10 : Math.round(g);
+}
+
 function RegistrarRecetaInner() {
+  const { mealType, date } = useRegisterContext();
   const searchParams = useSearchParams();
   const recipeId = searchParams.get("recipeId");
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
@@ -67,6 +79,27 @@ function RegistrarRecetaInner() {
       factor = totals.totalGrams > 0 ? value / totals.totalGrams : 0;
     }
 
+    // Un ingrediente = una línea, con sus gramos escalados a la porción.
+    //
+    // Antes la receta entraba como UNA sola línea con los totales, y eso
+    // la dejaba cerrada: no podías quitar el yogur, ni cambiarlo por
+    // otro, ni subir los gramos de un ingrediente sin tocar el resto.
+    // Desglosada, cada línea usa el editor de siempre del compositor.
+    //
+    // Cada línea guarda su `foodId` (de dónde salen los macros) y el
+    // `recipeId` (de qué receta viene), que el esquema permite a la vez.
+    if (detail.items?.length) {
+      setItems(
+        detail.items.map((ing) => ({
+          ...foodToDraftItem(ing.foods, redondearGramos(ing.grams_equivalent * factor)),
+          recipeId: recipe.id,
+        })),
+      );
+      return;
+    }
+
+    // Una receta sin ingredientes legibles no debe dejarte sin registrar
+    // nada: se cae al comportamiento de antes, una línea con los totales.
     setItems([
       {
         key: crypto.randomUUID(),
@@ -148,6 +181,8 @@ function RegistrarRecetaInner() {
       </button>
 
       <MealComposer
+        initialMealType={mealType}
+        date={date}
         key={items.map((i) => i.key).join(",")}
         initialItems={items}
         title="Añadir a la comida"

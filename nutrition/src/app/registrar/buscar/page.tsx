@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { MealComposer, type MealComposerHandle } from "@/components/register/MealComposer";
 import { foodToDraftItem } from "@/lib/nutrition/food-to-item";
 import type { FoodRow } from "@/lib/supabase/types";
 import { formatKcal } from "@/lib/format";
 import { SearchIcon, PlusIcon } from "@/components/ui/icons";
+import { useRegisterContext } from "@/lib/register-context";
 
 interface SearchResult extends FoodRow {
   rankReason: "recent" | "favorite" | "custom" | "catalog";
@@ -19,6 +20,16 @@ const RANK_LABEL: Record<SearchResult["rankReason"], string> = {
 };
 
 export default function BuscarAlimentoPage() {
+  // `useRegisterContext` lee la URL, y eso obliga a un límite de Suspense.
+  return (
+    <Suspense fallback={null}>
+      <BuscarAlimentoInner />
+    </Suspense>
+  );
+}
+
+function BuscarAlimentoInner() {
+  const { mealType, date } = useRegisterContext();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,6 +100,8 @@ export default function BuscarAlimentoPage() {
       ) : null}
 
       <MealComposer
+        initialMealType={mealType}
+        date={date}
         ref={composerRef}
         initialItems={[]}
         title="Añadir a la comida"

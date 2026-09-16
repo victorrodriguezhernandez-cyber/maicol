@@ -137,6 +137,22 @@ export function localDayBoundsUtc(date: string): { start: string; end: string } 
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+/**
+ * El instante que se guarda al registrar una comida en una fecha concreta.
+ *
+ * Para HOY es "ahora", que es lo que quieres: la comida queda en su hora
+ * real. Para un día pasado no hay hora que valga — nadie se acuerda de si
+ * merendó a las 17:40 — así que se ancla a mediodía de esa fecha en la
+ * zona de la app. Mediodía y no medianoche porque medianoche está a un
+ * cambio de hora de caerse al día anterior, y entonces la comida
+ * aparecería en el día equivocado.
+ */
+export function mealInstantForDate(date: string | null | undefined): string {
+  if (!date || date === todayLocalDateString()) return new Date().toISOString();
+  const { start } = localDayBoundsUtc(date);
+  return new Date(new Date(start).getTime() + 12 * 60 * 60 * 1000).toISOString();
+}
+
 export const MEAL_TYPE_LABELS: Record<string, string> = {
   breakfast: "Desayuno",
   lunch: "Comida",

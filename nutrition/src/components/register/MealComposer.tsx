@@ -4,7 +4,14 @@ import { useImperativeHandle, useMemo, useState, useTransition, forwardRef } fro
 import { useRouter } from "next/navigation";
 import { createMeal, type CreateMealInput } from "@/lib/actions/meals";
 import type { MealItemSource, PrecisionLevel } from "@/lib/nutrition/types";
-import { formatKcal, formatGrams, MEAL_TYPE_LABELS } from "@/lib/format";
+import {
+  formatKcal,
+  formatGrams,
+  formatDateHeader,
+  mealInstantForDate,
+  todayLocalDateString,
+  MEAL_TYPE_LABELS,
+} from "@/lib/format";
 import { MacroInline } from "@/components/ui/MacroInline";
 import { estimateQuality, estimateQualityColor } from "@/lib/nutrition/estimate-quality";
 import { TrashIcon, PlusIcon } from "@/components/ui/icons";
@@ -50,6 +57,15 @@ export const MealComposer = forwardRef<MealComposerHandle, {
    * specific meal-type group's "+" (Hoy/Diario), instead of the default
    * time-of-day guess. */
   initialMealType?: "breakfast" | "lunch" | "dinner" | "snack" | "other";
+  /**
+   * Fecha (YYYY-MM-DD) a la que va la comida. Viene del "+" de un día
+   * concreto del diario. Sin ella se registra en hoy, como siempre.
+   *
+   * Existe porque antes CUALQUIER captura se guardaba en el día de hoy
+   * aunque hubieras entrado desde un día pasado, y eso convertía "añadir
+   * la merienda que se me olvidó ayer" en un registro mal puesto.
+   */
+  date?: string | null;
 }>(function MealComposer(
   {
     initialItems,
@@ -57,6 +73,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
     emptyLabel = "Añade al menos un alimento.",
     startWithAddForm = false,
     initialMealType,
+    date,
   },
   ref,
 ) {
@@ -66,6 +83,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
     addItem: (item) => setItems((prev) => [...prev, item]),
   }));
   const [mealType, setMealType] = useState(initialMealType ?? guessMealType());
+  const esOtroDia = Boolean(date) && date !== todayLocalDateString();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -151,7 +169,7 @@ export const MealComposer = forwardRef<MealComposerHandle, {
     if (items.length === 0) return;
     setError(null);
     const payload: CreateMealInput = {
-      occurredAt: new Date().toISOString(),
+      occurredAt: mealInstantForDate(date),
       mealType,
       items: items.map((it) => ({
         foodId: it.foodId ?? null,
@@ -176,12 +194,14 @@ export const MealComposer = forwardRef<MealComposerHandle, {
     startTransition(async () => {
       try {
         await createMeal(payload);
-        router.push("/");
+        // Volver al día al que se ha registrado, no siempre a Hoy: si
+        // estabas rellenando el martes pasado, querías ver el martes.
+        router.push(esOtroDia ? `/diario/${date}` : "/");
       } catch (e) {
         if (typeof navigator !== "undefined" && !navigator.onLine) {
           const { queueMealOffline } = await import("@/lib/offline/sync");
           await queueMealOffline(crypto.randomUUID(), payload);
-          router.push("/");
+          router.push(esOtroDia ? `/diario/${date}` : "/");
           return;
         }
         setError(e instanceof Error ? e.message : "No se pudo guardar la comida.");
@@ -191,6 +211,17 @@ export const MealComposer = forwardRef<MealComposerHandle, {
 
   return (
     <div className="flex flex-col gap-5 pb-32">
+      {/* Registrar en un día que no es hoy tiene que verse ANTES de
+          guardar, no descubrirse después buscando dónde fue a parar. */}
+      {esOtroDia ? (
+        <p
+          className="rounded-xl px-3 py-2 text-xs font-medium"
+          style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+        >
+          Se registrará en {formatDateHeader(new Date(`${date}T12:00:00`))}, no en hoy.
+        </p>
+      ) : null}
+
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-hero-title text-xl text-[var(--text-primary)]">{title}</h1>
         <select

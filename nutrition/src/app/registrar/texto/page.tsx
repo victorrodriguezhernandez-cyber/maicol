@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MealComposer, type DraftItem } from "@/components/register/MealComposer";
 import { aiItemToDraft, type AiMealEstimateResponse } from "@/lib/nutrition/ai-estimate-to-item";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { invokeAi, mensajeDeFallo } from "@/lib/ai/invoke";
+import { useRegisterContext } from "@/lib/register-context";
 
 type State =
   | { kind: "idle" }
@@ -15,6 +16,16 @@ type State =
   | { kind: "error"; message: string };
 
 export default function TextoEntryPage() {
+  // `useRegisterContext` lee la URL, y eso obliga a un límite de Suspense.
+  return (
+    <Suspense fallback={null}>
+      <TextoEntryInner />
+    </Suspense>
+  );
+}
+
+function TextoEntryInner() {
+  const { mealType, date } = useRegisterContext();
   const [text, setText] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
 
@@ -54,7 +65,7 @@ export default function TextoEntryPage() {
             </ul>
           </div>
         ) : null}
-        <MealComposer initialItems={draftItems} title="Revisar estimación" />
+        <MealComposer initialMealType={mealType} date={date} initialItems={draftItems} title="Revisar estimación" />
       </div>
     );
   }

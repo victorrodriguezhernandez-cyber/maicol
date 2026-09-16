@@ -34,8 +34,13 @@ project.
    nunca tiene una vía de escritura propia. La app (`ChatCoach.tsx`)
    ejecuta la propuesta llamando siempre a la misma Server Action
    validada que usaría el resto de la app (`createMeal`, `deleteMeal`,
-   `addMealItemForDate`, `setWeightEntryForDate`, `applyGoalChange`...) —
-   nunca un `insert`/`update` improvisado en el cliente. Lo que varía por
+   `setWeightEntryForDate`, `applyGoalChange`...) — nunca un
+   `insert`/`update` improvisado en el cliente. Registrar comida pasa por
+   `propose_add_meal`, que devuelve la comida DESGLOSADA ingrediente a
+   ingrediente con la forma exacta de `CreateMealInput`: un plato entero
+   en una sola línea con los macros sumados no se puede comprobar ni
+   corregir, y por eso la herramienta de "un alimento suelto" ya no
+   existe (un alimento es una lista de uno). Lo que varía por
    `risk` es solo *cuándo* se ejecuta, no *si* pasa por esa validación:
    `risk: "safe"` (añadir un alimento, duplicar una comida, corregir un
    peso) se ejecuta en cuanto llega, mostrando después una tarjeta

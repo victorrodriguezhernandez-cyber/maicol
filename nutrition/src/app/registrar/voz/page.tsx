@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MealComposer, type DraftItem } from "@/components/register/MealComposer";
 import { aiItemToDraft, type AiMealEstimateResponse } from "@/lib/nutrition/ai-estimate-to-item";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MicIcon } from "@/components/ui/icons";
 import { invokeAi, mensajeDeFallo } from "@/lib/ai/invoke";
+import { useRegisterContext } from "@/lib/register-context";
 
 type State =
   | { kind: "idle" }
@@ -17,6 +18,16 @@ type State =
   | { kind: "error"; message: string };
 
 export default function VozEntryPage() {
+  // `useRegisterContext` lee la URL, y eso obliga a un límite de Suspense.
+  return (
+    <Suspense fallback={null}>
+      <VozEntryInner />
+    </Suspense>
+  );
+}
+
+function VozEntryInner() {
+  const { mealType, date } = useRegisterContext();
   const [state, setState] = useState<State>({ kind: "idle" });
   const [seconds, setSeconds] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -102,7 +113,7 @@ export default function VozEntryPage() {
             </ul>
           </div>
         ) : null}
-        <MealComposer initialItems={draftItems} title="Revisar estimación" />
+        <MealComposer initialMealType={mealType} date={date} initialItems={draftItems} title="Revisar estimación" />
       </div>
     );
   }

@@ -7,10 +7,7 @@ import { applyGoalChange } from "@/lib/actions/goals";
 import {
   createMeal,
   deleteMeal,
-  deleteMealItem,
-  addMealItemForDate,
   type CreateMealInput,
-  type AddMealItemForDateInput,
 } from "@/lib/actions/meals";
 import { setWeightEntryForDate, deleteWeightEntry } from "@/lib/actions/weight";
 import { formatKcal, formatDateTimeShort, MEAL_TYPE_LABELS } from "@/lib/format";
@@ -43,7 +40,7 @@ interface CoachReply {
 }
 
 interface ActionProposal {
-  kind: "add_meal_item" | "update_weight_entry" | "delete_meal" | "duplicate_meal" | "goal_change";
+  kind: "add_meal" | "update_weight_entry" | "delete_meal" | "duplicate_meal" | "goal_change";
   risk: "safe" | "destructive";
   summary: string;
   payload: Record<string, unknown>;
@@ -149,16 +146,23 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
    * for "destructive" ones. */
   async function executeAction(action: ActionProposal) {
     switch (action.kind) {
-      case "add_meal_item": {
-        const payload = action.payload as AddMealItemForDateInput;
-        const result = await addMealItemForDate(payload);
-        const breakdown = await fetchMealBreakdown(result.mealId);
+      case "add_meal": {
+        // La comida llega ya desglosada ingrediente a ingrediente, y se
+        // escribe con la MISMA `createMeal` que el registro manual, así
+        // que se puede abrir y editar línea a línea como cualquier otra.
+        const payload = action.payload as { snapshot: CreateMealInput };
+        const newMealId = await createMeal(payload.snapshot);
+        const totalKcal = payload.snapshot.items.reduce((a, it) => a + it.energyKcal, 0);
         setLastExecuted({
           summary: action.summary,
-          breakdown,
+          breakdown: {
+            mealId: newMealId,
+            mealTypeLabel: MEAL_TYPE_LABELS[payload.snapshot.mealType] ?? payload.snapshot.mealType,
+            totalKcal,
+            items: payload.snapshot.items.map((it) => ({ name: it.name, kcal: it.energyKcal })),
+          },
           undo: async () => {
-            if (result.mealCreated) await deleteMeal(result.mealId);
-            else await deleteMealItem(result.mealItemId);
+            await deleteMeal(newMealId);
           },
         });
         return;
@@ -239,27 +243,6 @@ export function ChatCoach({ currentGoal }: { currentGoal: NutritionGoalRow | nul
         return;
       }
     }
-  }
-
-  /** Reads back the meal's actual current items — used right after
-   * add_meal_item so the "done" card can show the real, current
-   * breakdown of that meal (which may include items logged before this
-   * turn), never just the one item the model added. */
-  async function fetchMealBreakdown(mealId: string): Promise<MealBreakdown | null> {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("meals")
-      .select("id, meal_type, meal_items(name, energy_kcal)")
-      .eq("id", mealId)
-      .maybeSingle();
-    if (!data) return null;
-    const items = (data.meal_items as { name: string; energy_kcal: number }[]) ?? [];
-    return {
-      mealId,
-      mealTypeLabel: MEAL_TYPE_LABELS[data.meal_type as string] ?? (data.meal_type as string),
-      totalKcal: items.reduce((a, it) => a + it.energy_kcal, 0),
-      items: items.map((it) => ({ name: it.name, kcal: it.energy_kcal })),
-    };
   }
 
   function confirmProposal() {

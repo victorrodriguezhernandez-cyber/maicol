@@ -17,6 +17,17 @@ import {
 interface RegisterSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Comida y día a los que va lo que se registre. Se ponen cuando la hoja
+   * se abre desde el "+" de una comida concreta del diario; sin ellos,
+   * cada pantalla decide (tipo por la hora, fecha = hoy).
+   *
+   * Viajan como parámetros en la URL porque cada método de captura es su
+   * propia ruta: sin esto, entrar por foto desde el martes pasado
+   * acababa guardando en hoy.
+   */
+  mealType?: string;
+  date?: string;
 }
 
 // The four fastest, most-used capture methods get a big tile of their
@@ -36,12 +47,21 @@ const SECONDARY_ACTIONS = [
   { href: "/registrar/favoritos", label: "Favoritos y recientes", icon: StarIcon },
 ] as const;
 
-export function RegisterSheet({ open, onOpenChange }: RegisterSheetProps) {
+export function RegisterSheet({ open, onOpenChange, mealType, date }: RegisterSheetProps) {
   const router = useRouter();
+
+  function conContexto(href: string): string {
+    const [ruta, query] = href.split("?");
+    const params = new URLSearchParams(query);
+    if (mealType) params.set("type", mealType);
+    if (date) params.set("date", date);
+    const cola = params.toString();
+    return cola ? `${ruta}?${cola}` : ruta;
+  }
 
   function go(href: string) {
     onOpenChange(false);
-    router.push(href);
+    router.push(conContexto(href));
   }
 
   return (

@@ -8,6 +8,7 @@ import { aiItemToDraft, type AiMealEstimateResponse } from "@/lib/nutrition/ai-e
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CameraIcon, PlusIcon } from "@/components/ui/icons";
 import { invokeAi, mensajeDeFallo } from "@/lib/ai/invoke";
+import { useRegisterContext } from "@/lib/register-context";
 
 type State =
   | { kind: "idle" }
@@ -25,6 +26,7 @@ export default function FotoCapturaPage() {
 }
 
 function FotoCapturaInner() {
+  const { mealType, date } = useRegisterContext();
   const [photos, setPhotos] = useState<{ preview: string; data: string; mimeType: string }[]>([]);
   const [referenceNote, setReferenceNote] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
@@ -85,7 +87,7 @@ function FotoCapturaInner() {
             </p>
           </div>
         ) : null}
-        <MealComposer initialItems={draftItems} title="Revisar estimación" />
+        <MealComposer initialMealType={mealType} date={date} initialItems={draftItems} title="Revisar estimación" />
       </div>
     );
   }
