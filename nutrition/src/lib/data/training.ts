@@ -10,6 +10,7 @@ import type {
   SessionExercise,
   SetType,
   PreviousSet,
+  TrainingGoalRow,
 } from "@/lib/training/types";
 import type { MuscleGroup } from "@/lib/training/muscles";
 import {
@@ -279,11 +280,14 @@ export async function getSessionDetail(
   }
 
   const exerciseIds = [...new Set(rows.map((r) => r.exercise_id))];
-  const previousByExercise = await getPreviousPerformance(
-    supabase,
-    exerciseIds,
-    sessionId,
-  );
+  const [previousByExercise, objetivoPersonal] = await Promise.all([
+    getPreviousPerformance(supabase, exerciseIds, sessionId),
+    // Sólo hace falta para las sesiones libres (sin rutina detrás), pero
+    // se pide siempre: es una fila por índice y ahorra ramificar la
+    // lógica de más abajo.
+    getTrainingGoal(supabase, (session as TrainingSessionRow).user_id),
+  ]);
+  const foco = objetivoPersonal?.focus[0] ?? null;
 
   const exercises: SessionExercise[] = [...byPosition.entries()]
     .sort(([a], [b]) => a - b)
@@ -306,6 +310,7 @@ export async function getSessionDetail(
             target,
             { repsMin: exercise.default_reps_min, repsMax: exercise.default_reps_max },
             previas.length,
+            { foco, equipment: exercise.equipment },
           ),
           exercise.equipment,
         ),
@@ -717,4 +722,41 @@ function weekKey(d: Date): string {
   const { start } = weekBounds(d);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
+}
+
+/**
+ * El objetivo de entreno vigente: la fila abierta (`effective_to` nulo).
+ *
+ * `null` significa que todavía no ha dicho qué persigue, no que no tenga
+ * objetivo — y lo que se enseña entonces es una invitación a decirlo, no
+ * un valor por defecto inventado.
+ */
+export async function getTrainingGoal(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<TrainingGoalRow | null> {
+  const { data, error } = await supabase
+    .from("training_goals")
+    .select("*")
+    .eq("user_id", userId)
+    .is("effective_to", null)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as TrainingGoalRow) ?? null;
+}
+
+/** El historial completo de objetivos, del más reciente al más antiguo. */
+export async function getTrainingGoalHistory(
+  supabase: SupabaseClient,
+  userId: string,
+  limit = 20,
+): Promise<TrainingGoalRow[]> {
+  const { data, error } = await supabase
+    .from("training_goals")
+    .select("*")
+    .eq("user_id", userId)
+    .order("effective_from", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as TrainingGoalRow[];
 }

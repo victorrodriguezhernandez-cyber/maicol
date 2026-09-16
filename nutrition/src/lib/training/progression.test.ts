@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { incrementoMinimo, recomendarCarga } from "./progression";
+import {
+  incrementoMinimo,
+  objetivoDeEjercicio,
+  RANGO_POR_FOCO,
+  recomendarCarga,
+} from "./progression";
 import type { ObjetivoEjercicio, SerieHecha } from "./progression";
 import type { Equipment } from "./types";
 
@@ -28,6 +33,50 @@ describe("incrementoMinimo", () => {
   it("es 0 donde no hay peso que subir", () => {
     for (const eq of ["peso_corporal", "banda", "otro"] as Equipment[]) {
       expect(incrementoMinimo(eq), eq).toBe(0);
+    }
+  });
+});
+
+describe("objetivoDeEjercicio", () => {
+  const porDefecto = { repsMin: 10, repsMax: 15 };
+
+  it("lo que pauta la rutina manda siempre", () => {
+    const o = objetivoDeEjercicio(objetivo, porDefecto, 3, { foco: "fuerza", equipment: "barra" });
+    expect(o).toEqual(objetivo);
+  });
+
+  it("sin rutina, un objetivo de fuerza acorta el rango", () => {
+    const o = objetivoDeEjercicio(null, porDefecto, 3, { foco: "fuerza", equipment: "barra" });
+    expect(o.repsMin).toBe(4);
+    expect(o.repsMax).toBe(6);
+  });
+
+  it("no aplica el rango del objetivo a ejercicios sin peso", () => {
+    // "Haz 4-6 planchas" no significa nada: el continuo fuerza-resistencia
+    // va de cuánta carga mueves.
+    const o = objetivoDeEjercicio(null, porDefecto, 3, {
+      foco: "fuerza",
+      equipment: "peso_corporal",
+    });
+    expect(o.repsMin).toBe(porDefecto.repsMin);
+    expect(o.repsMax).toBe(porDefecto.repsMax);
+  });
+
+  it("sin objetivo guardado usa el rango propio del ejercicio", () => {
+    const o = objetivoDeEjercicio(null, porDefecto, 3, { foco: null, equipment: "barra" });
+    expect(o.repsMin).toBe(porDefecto.repsMin);
+  });
+
+  it("nunca pide menos de 3 series en una sesión libre", () => {
+    expect(objetivoDeEjercicio(null, porDefecto, 1).sets).toBe(3);
+    expect(objetivoDeEjercicio(null, porDefecto, 5).sets).toBe(5);
+  });
+
+  it("cada foco trae su explicación", () => {
+    for (const foco of Object.keys(RANGO_POR_FOCO) as (keyof typeof RANGO_POR_FOCO)[]) {
+      const r = RANGO_POR_FOCO[foco];
+      expect(r.nota.length, foco).toBeGreaterThan(0);
+      expect(r.repsMin, foco).toBeLessThan(r.repsMax);
     }
   });
 });

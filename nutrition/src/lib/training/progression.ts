@@ -1,4 +1,4 @@
-import type { Equipment, SetType } from "./types";
+import type { Equipment, SetType, TrainingFocus } from "./types";
 
 /**
  * Qué peso y qué repeticiones tocan hoy en cada ejercicio, y por qué.
@@ -188,24 +188,78 @@ export function seriesDesdePrevias(previous: ReadonlyMap<number, PreviousSet>): 
 }
 
 /**
+ * El rango de repeticiones que corresponde a cada objetivo.
+ *
+ * Es el continuo clásico fuerza → hipertrofia → resistencia de las
+ * recomendaciones de la NSCA y el ACSM: cargas altas y series cortas
+ * desarrollan sobre todo fuerza, series medias sobre todo tamaño, y
+ * series largas sobre todo aguante. Los bordes NO son una frontera real
+ * — se gana algo de las tres cosas en todo el espectro — así que esto es
+ * dónde apuntar, no una línea que cruzar.
+ *
+ * `nota` es la explicación que se enseña cuando se usa este rango, para
+ * que la recomendación pueda decir de dónde sale (regla 9).
+ */
+export const RANGO_POR_FOCO: Record<
+  TrainingFocus,
+  { repsMin: number; repsMax: number; nota: string }
+> = {
+  fuerza: {
+    repsMin: 4,
+    repsMax: 6,
+    nota: "Tu objetivo es fuerza, así que el rango es corto y pesado (4-6).",
+  },
+  hipertrofia: {
+    repsMin: 8,
+    repsMax: 12,
+    nota: "Tu objetivo es volumen, así que el rango es el de 8-12.",
+  },
+  resistencia: {
+    repsMin: 15,
+    repsMax: 20,
+    nota: "Tu objetivo es resistencia, así que el rango es largo (15-20).",
+  },
+  mantenimiento: {
+    repsMin: 8,
+    repsMax: 12,
+    nota: "Estás manteniendo, así que el rango es el intermedio de 8-12.",
+  },
+  salud: {
+    repsMin: 10,
+    repsMax: 15,
+    nota: "Entrenas por salud, así que el rango es cómodo (10-15).",
+  },
+};
+
+/**
  * El objetivo contra el que se juzga la sesión.
  *
- * Si el ejercicio viene de una rutina, manda lo que pauta la rutina. Si
- * es una sesión libre no hay nada pautado, así que se usa el rango por
- * defecto del propio ejercicio y las series que hiciste la última vez
- * (mínimo 3, que es lo habitual): inventarse un objetivo distinto del que
- * el usuario tiene delante haría que el consejo no cuadrase con su hoja.
+ * Manda siempre lo que pauta la rutina: es lo que el usuario tiene
+ * delante en su hoja, y aconsejarle contra otro número haría que el
+ * consejo no le cuadrara.
+ *
+ * Sin rutina (una sesión libre) se mira su objetivo personal, pero SÓLO
+ * en ejercicios con peso: el continuo fuerza-resistencia va de cuánta
+ * carga mueves, y aplicarlo a una plancha o a unos abdominales daría un
+ * "haz 4-6" que no tiene sentido. Ahí manda el rango propio del
+ * ejercicio, que sí está pensado para él. Sin objetivo guardado, también.
  */
 export function objetivoDeEjercicio(
   target: ObjetivoEjercicio | null,
   porDefecto: { repsMin: number; repsMax: number },
   seriesPrevias: number,
+  contexto?: { foco?: TrainingFocus | null; equipment?: Equipment },
 ): ObjetivoEjercicio {
   if (target) return target;
+
+  const conPeso = contexto?.equipment ? incrementoMinimo(contexto.equipment) > 0 : false;
+  const rango =
+    contexto?.foco && conPeso ? RANGO_POR_FOCO[contexto.foco] : porDefecto;
+
   return {
     sets: Math.max(3, seriesPrevias),
-    repsMin: porDefecto.repsMin,
-    repsMax: porDefecto.repsMax,
+    repsMin: rango.repsMin,
+    repsMax: rango.repsMax,
     rir: null,
   };
 }
