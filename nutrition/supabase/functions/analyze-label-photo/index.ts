@@ -4,7 +4,12 @@
 // that the label is correct.
 import { handleOptions, corsHeaders } from "../_shared/cors.ts";
 import { requireUser } from "../_shared/auth.ts";
-import { generateStructured, GeminiQuotaError, GeminiUnavailableError } from "../_shared/gemini.ts";
+import {
+  generateStructured,
+  getGeminiModel,
+  GeminiQuotaError,
+  GeminiUnavailableError,
+} from "../_shared/gemini.ts";
 import { labelJsonSchema, labelEstimateSchema } from "../_shared/schemas.ts";
 
 interface RequestBody {
@@ -60,7 +65,7 @@ Deno.serve(async (req) => {
     await supabase.from("ai_analyses").insert({
       user_id: user.id,
       analysis_type: "label",
-      model: Deno.env.get("GEMINI_MODEL") ?? "gemini-3.6-flash",
+      model: getGeminiModel(),
       structured_result: parsed.data,
       confidence: parsed.data.legible ? "medium" : "low",
       accepted: false,

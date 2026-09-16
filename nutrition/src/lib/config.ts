@@ -48,7 +48,9 @@ export const serverConfig = {
     return process.env.GEMINI_API_KEY;
   },
   get geminiModel(): string {
-    return process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
+    // Mismo valor por defecto que `_shared/gemini.ts`: el plan gratuito de
+    // `gemini-3.6-flash` da 20 peticiones al día para toda la app.
+    return process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite";
   },
   get usdaApiKey(): string | undefined {
     return process.env.USDA_API_KEY;

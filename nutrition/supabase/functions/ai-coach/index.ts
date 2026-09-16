@@ -7,9 +7,9 @@
 import { handleOptions, corsHeaders } from "../_shared/cors.ts";
 import { requireUser } from "../_shared/auth.ts";
 import {
+  conModeloDeReserva,
   GeminiQuotaError,
   GeminiUnavailableError,
-  getGeminiModel,
   withGeminiRetry,
 } from "../_shared/gemini.ts";
 import { computeTrend, weeklyRate } from "../_shared/trend.ts";
@@ -261,12 +261,14 @@ Deno.serve(async (req) => {
     const toolLog: unknown[] = [];
 
     for (let iteration = 0; iteration < 5; iteration++) {
-      const response = await withGeminiRetry(() =>
-        ai.models.generateContent({
-          model: getGeminiModel(),
-          contents,
-          config: { systemInstruction: buildSystemInstruction(), tools: [{ functionDeclarations: tools }] },
-        }),
+      const response = await conModeloDeReserva((modelo) =>
+        withGeminiRetry(() =>
+          ai.models.generateContent({
+            model: modelo,
+            contents,
+            config: { systemInstruction: buildSystemInstruction(), tools: [{ functionDeclarations: tools }] },
+          }),
+        ),
       );
 
       const calls = response.functionCalls ?? [];
