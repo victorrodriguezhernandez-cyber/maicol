@@ -98,6 +98,21 @@ project.
    como "no implementado todavía" (sección 69 de la especificación
    original, y ver la lista de huecos honestos en `README.md`/`AI.md`).
 
+12. **La carga que toca hoy la decide un algoritmo, no la IA.**
+   `src/lib/training/progression.ts` es doble progresión pura: el peso no
+   sube hasta llegar al tope del rango en TODAS las series, y sube el
+   salto mínimo que permita el material. Es un algoritmo y no una llamada
+   a Gemini porque es instantáneo, gratis, da siempre la misma respuesta
+   con los mismos datos, funciona desde el primer entreno y se puede
+   justificar con el número exacto del que sale (regla 9: cada
+   `Recomendacion` trae su `detalle`). La IA sólo narra por encima. Si
+   tocas ese archivo, toca también su copia
+   `supabase/functions/_shared/progresion.ts` — existe porque los Edge
+   Functions no pueden importar de `src/` (regla 3), y
+   `progression.paridad.test.ts` falla si divergen. Que el coach dé un
+   número distinto del que enseña la pantalla del entreno es peor que no
+   responder.
+
 ## Antes de tocar la base de datos
 
 Lee `DATABASE.md`. Aplica migraciones nuevas con el MCP/CLI de Supabase
