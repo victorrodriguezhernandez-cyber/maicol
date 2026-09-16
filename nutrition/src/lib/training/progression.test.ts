@@ -106,9 +106,52 @@ describe("recomendarCarga", () => {
     );
     expect(r.cambio).toBe("consolida");
     expect(r.weightKg).toBe(14);
-    expect(r.reps).toBe(8);
-    expect(r.detalle.join(" ")).toContain("14");
-    expect(r.detalle.join(" ")).toContain("12");
+    // 10×14 + 8×14 + 8×12 = 348 kg. Tres series de 8 con 14 son 336: menos
+    // trabajo del que ya hizo. El suelo de no-retroceso lo sube a 9.
+    expect(r.reps).toBe(9);
+    expect(r.reps * 3 * 14).toBeGreaterThanOrEqual(348);
+  });
+
+  /**
+   * El caso que rompió la versión anterior, con sus números reales:
+   * curl de muñeca, 13×10 kg, 10×10 kg, 10×8 kg, rango 8-12.
+   *
+   * La regla de "al bajar el peso vuelve al suelo del rango" daba 3×8 con
+   * 10 kg = 240 kg, contra los 310 que ya había movido. Un consejo de
+   * progresión que hace entrenar MENOS con el mismo peso está mal, por
+   * muy bien que suene la explicación.
+   */
+  it("nunca manda hacer menos trabajo del que ya hiciste con ese peso", () => {
+    const r = recomendarCarga(
+      [serie(1, 13, 10), serie(2, 10, 10), serie(3, 10, 8)],
+      objetivo,
+      "mancuernas",
+    );
+    expect(r.weightKg).toBe(10);
+    expect(r.reps).toBe(11);
+    expect(r.reps * 3 * 10).toBeGreaterThan(13 * 10 + 10 * 10 + 10 * 8);
+  });
+
+  it("no pide sostener fatigado más de lo que dio en fresco", () => {
+    // 9 en la primera serie: por mucho que salgan las cuentas, el objetivo
+    // no puede pasar de 9 en las tres.
+    const r = recomendarCarga(
+      [serie(1, 9, 20), serie(2, 9, 20), serie(3, 9, 16)],
+      { sets: 3, repsMin: 8, repsMax: 12, rir: null },
+      "barra",
+    );
+    expect(r.reps).toBeLessThanOrEqual(9);
+  });
+
+  it("el suelo de no-retroceso nunca se salta el tope del rango", () => {
+    // Si las cuentas pidieran más de repsMax, lo que toca es subir peso,
+    // no inflar repeticiones fuera del rango pautado.
+    const r = recomendarCarga(
+      [serie(1, 30, 20), serie(2, 6, 20), serie(3, 6, 20)],
+      { sets: 3, repsMin: 8, repsMax: 12, rir: null },
+      "barra",
+    );
+    expect(r.reps).toBeLessThanOrEqual(12);
   });
 
   it("sube sólo cuando TODAS las series llegan al tope del rango", () => {
