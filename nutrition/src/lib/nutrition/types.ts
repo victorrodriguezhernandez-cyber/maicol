@@ -106,6 +106,16 @@ export const MEAL_ITEM_SOURCES = [
 ] as const;
 export type MealItemSource = (typeof MEAL_ITEM_SOURCES)[number];
 
+/** Las tres fuentes en las que un plato entero puede haber entrado como
+ *  una sola línea, y por tanto las únicas que se pueden desglosar. */
+export function esEstimacionDeIa(source: string): boolean {
+  return (
+    source === "ai_text_estimation" ||
+    source === "ai_photo_estimation" ||
+    source === "ai_voice_estimation"
+  );
+}
+
 /** Maps a source to the precision level it is allowed to claim at most. */
 export function maxPrecisionForSource(source: MealItemSource): PrecisionLevel {
   switch (source) {

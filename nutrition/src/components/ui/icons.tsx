@@ -186,6 +186,17 @@ export const TrashIcon = (p: IconProps) => (
   </Icon>
 );
 
+/** Una línea que se abre en tres: "desglosar en ingredientes". */
+export const SplitIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 12h5" />
+    <path d="M9 12c3 0 3-5 6-5h5" />
+    <path d="M9 12c3 0 3 5 6 5h5" />
+    <path d="m17.5 4.5 2.5 2.5-2.5 2.5" />
+    <path d="m17.5 14.5 2.5 2.5-2.5 2.5" />
+  </Icon>
+);
+
 export const ScaleIcon = (p: IconProps) => (
   <Icon {...p}>
     <rect x="4" y="4" width="16" height="16" rx="4" />

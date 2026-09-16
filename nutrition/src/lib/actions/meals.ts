@@ -273,3 +273,85 @@ export async function deleteMealItem(mealItemId: string) {
   revalidatePath("/");
   revalidatePath("/diario");
 }
+
+const splitMealItemSchema = z.object({
+  mealItemId: z.string().uuid(),
+  items: z.array(itemSchema).min(2),
+});
+export type SplitMealItemInput = z.input<typeof splitMealItemSchema>;
+
+/**
+ * Sustituye UNA línea del diario por sus ingredientes.
+ *
+ * Para qué: una comida estimada por la IA antes de que existiera el
+ * desglose entró como una sola línea ("Lomo con nata, cuscús y
+ * hamburguesa, 980 kcal"), y así no se puede comprobar si se pasó con el
+ * aceite ni corregir sólo un ingrediente. Esto la abre sin tener que
+ * borrarla y volver a dictarla.
+ *
+ * Los ingredientes son una ESTIMACIÓN NUEVA — en la fila vieja no hay
+ * nada guardado de cada uno — así que entran con la precisión que les
+ * corresponde por su fuente (`clampPrecision`, igual que cualquier otra
+ * escritura) y nunca heredan la del original.
+ *
+ * Se borra la línea vieja al final, no al principio: si la inserción
+ * falla, la comida se queda como estaba en vez de perderse.
+ */
+export async function splitMealItem(input: SplitMealItemInput) {
+  const parsed = splitMealItemSchema.parse(input);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  // La comida tiene que ser suya. RLS ya lo impediría, pero fallar aquí
+  // con un mensaje claro es mejor que un error de base de datos.
+  const { data: original } = await supabase
+    .from("meal_items")
+    .select("id, meal_id, meals!inner(user_id)")
+    .eq("id", parsed.mealItemId)
+    .maybeSingle();
+  if (!original) throw new Error("Ese alimento no existe");
+  const dueno = (original.meals as unknown as { user_id: string }).user_id;
+  if (dueno !== user.id) throw new Error("Ese alimento no es tuyo");
+
+  const rows = parsed.items.map((item) => ({
+    meal_id: original.meal_id as string,
+    food_id: item.foodId ?? null,
+    recipe_id: item.recipeId ?? null,
+    name: item.name,
+    quantity_amount: item.quantityAmount,
+    quantity_unit: item.quantityUnit,
+    grams_equivalent: item.gramsEquivalent ?? null,
+    energy_kcal: item.energyKcal,
+    protein_g: item.proteinG,
+    carbohydrates_g: item.carbohydratesG,
+    sugars_g: item.sugarsG ?? null,
+    fat_g: item.fatG,
+    saturated_fat_g: item.saturatedFatG ?? null,
+    fiber_g: item.fiberG ?? null,
+    sodium_mg: item.sodiumMg ?? null,
+    salt_g: item.saltG ?? null,
+    micronutrients: item.micronutrients,
+    precision_level: clampPrecision(item.source, item.precisionLevel),
+    source: item.source,
+    confidence: item.confidence ?? null,
+    range_kcal_min: item.rangeKcalMin ?? null,
+    range_kcal_max: item.rangeKcalMax ?? null,
+    notes: item.notes ?? null,
+  }));
+
+  const { error: insertError } = await supabase.from("meal_items").insert(rows);
+  if (insertError) throw insertError;
+
+  const { error: deleteError } = await supabase
+    .from("meal_items")
+    .delete()
+    .eq("id", parsed.mealItemId);
+  if (deleteError) throw deleteError;
+
+  revalidatePath("/");
+  revalidatePath("/diario");
+  revalidatePath(`/diario/comida/${original.meal_id}`);
+}
