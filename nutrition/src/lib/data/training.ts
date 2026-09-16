@@ -8,8 +8,16 @@ import type {
   TrainingSessionRow,
   WorkoutSetRow,
   SessionExercise,
+  SetType,
+  PreviousSet,
+  TrainingGoalRow,
 } from "@/lib/training/types";
 import type { MuscleGroup } from "@/lib/training/muscles";
+import {
+  objetivoDeEjercicio,
+  recomendarCarga,
+  seriesDesdePrevias,
+} from "@/lib/training/progression";
 import { computeWeeklyVolume, type MuscleVolume } from "@/lib/training/volume";
 import { computeExerciseRecords, type ExerciseRecords, type CompletedSet } from "@/lib/training/records";
 
@@ -272,21 +280,42 @@ export async function getSessionDetail(
   }
 
   const exerciseIds = [...new Set(rows.map((r) => r.exercise_id))];
-  const previousByExercise = await getPreviousPerformance(
-    supabase,
-    exerciseIds,
-    sessionId,
-  );
+  const [previousByExercise, objetivoPersonal] = await Promise.all([
+    getPreviousPerformance(supabase, exerciseIds, sessionId),
+    // Sólo hace falta para las sesiones libres (sin rutina detrás), pero
+    // se pide siempre: es una fila por índice y ahorra ramificar la
+    // lógica de más abajo.
+    getTrainingGoal(supabase, (session as TrainingSessionRow).user_id),
+  ]);
+  const foco = objetivoPersonal?.focus[0] ?? null;
 
   const exercises: SessionExercise[] = [...byPosition.entries()]
     .sort(([a], [b]) => a - b)
-    .map(([position, { exercise, sets: exerciseSets }]) => ({
-      exercise,
-      position,
-      sets: exerciseSets,
-      target: targets.get(exercise.id) ?? null,
-      previous: previousByExercise.get(exercise.id) ?? new Map(),
-    }));
+    .map(([position, { exercise, sets: exerciseSets }]) => {
+      const target = targets.get(exercise.id) ?? null;
+      const previous = previousByExercise.get(exercise.id) ?? new Map();
+      const previas = seriesDesdePrevias(previous);
+      return {
+        exercise,
+        position,
+        sets: exerciseSets,
+        target,
+        previous,
+        // La recomendación se calcula aquí, en el servidor, con los datos
+        // que ya se han traído: no cuesta una consulta más ni depende de
+        // que la IA esté disponible.
+        recomendacion: recomendarCarga(
+          previas,
+          objetivoDeEjercicio(
+            target,
+            { repsMin: exercise.default_reps_min, repsMax: exercise.default_reps_max },
+            previas.length,
+            { foco, equipment: exercise.equipment },
+          ),
+          exercise.equipment,
+        ),
+      };
+    });
 
   return { session: session as TrainingSessionRow, exercises };
 }
@@ -306,8 +335,8 @@ async function getPreviousPerformance(
   supabase: SupabaseClient,
   exerciseIds: string[],
   excludeSessionId: string,
-): Promise<Map<string, Map<number, { weightKg: number | null; reps: number | null }>>> {
-  const result = new Map<string, Map<number, { weightKg: number | null; reps: number | null }>>();
+): Promise<Map<string, Map<number, PreviousSet>>> {
+  const result = new Map<string, Map<number, PreviousSet>>();
   if (exerciseIds.length === 0) return result;
 
   // Una sola consulta para todos los ejercicios; se agrupa en memoria.
@@ -315,7 +344,7 @@ async function getPreviousPerformance(
   // de cada ejercicio, que puede estar a varias sesiones de distancia.
   const { data, error } = await supabase
     .from("workout_sets")
-    .select("exercise_id, session_id, set_number, weight_kg, reps, completed_at, set_type")
+    .select("exercise_id, session_id, set_number, weight_kg, reps, rir, completed_at, set_type")
     .in("exercise_id", exerciseIds)
     .neq("session_id", excludeSessionId)
     .not("completed_at", "is", null)
@@ -330,7 +359,8 @@ async function getPreviousPerformance(
     set_number: number;
     weight_kg: number | null;
     reps: number | null;
-    set_type: string;
+    rir: number | null;
+    set_type: SetType;
   }[]) {
     if (row.set_type === "calentamiento") continue;
 
@@ -344,7 +374,12 @@ async function getPreviousPerformance(
       result.set(row.exercise_id, perSet);
     }
     if (!perSet.has(row.set_number)) {
-      perSet.set(row.set_number, { weightKg: row.weight_kg, reps: row.reps });
+      perSet.set(row.set_number, {
+        weightKg: row.weight_kg,
+        reps: row.reps,
+        rir: row.rir,
+        setType: row.set_type,
+      });
     }
   }
 
@@ -687,4 +722,41 @@ function weekKey(d: Date): string {
   const { start } = weekBounds(d);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
+}
+
+/**
+ * El objetivo de entreno vigente: la fila abierta (`effective_to` nulo).
+ *
+ * `null` significa que todavía no ha dicho qué persigue, no que no tenga
+ * objetivo — y lo que se enseña entonces es una invitación a decirlo, no
+ * un valor por defecto inventado.
+ */
+export async function getTrainingGoal(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<TrainingGoalRow | null> {
+  const { data, error } = await supabase
+    .from("training_goals")
+    .select("*")
+    .eq("user_id", userId)
+    .is("effective_to", null)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as TrainingGoalRow) ?? null;
+}
+
+/** El historial completo de objetivos, del más reciente al más antiguo. */
+export async function getTrainingGoalHistory(
+  supabase: SupabaseClient,
+  userId: string,
+  limit = 20,
+): Promise<TrainingGoalRow[]> {
+  const { data, error } = await supabase
+    .from("training_goals")
+    .select("*")
+    .eq("user_id", userId)
+    .order("effective_from", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as TrainingGoalRow[];
 }

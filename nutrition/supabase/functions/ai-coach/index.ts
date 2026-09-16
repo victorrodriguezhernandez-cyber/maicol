@@ -13,6 +13,11 @@ import {
   withGeminiRetry,
 } from "../_shared/gemini.ts";
 import { computeTrend, weeklyRate } from "../_shared/trend.ts";
+import {
+  objetivoDeEjercicio,
+  recomendarCarga,
+  type SerieHecha,
+} from "../_shared/progresion.ts";
 import { todayIso, toLocalDateKey, localDayBoundsUtc } from "../_shared/date.ts";
 import { GoogleGenAI, type FunctionDeclaration, Type } from "npm:@google/genai@^1.0.0";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@^2.45.0";
@@ -83,6 +88,27 @@ const tools: FunctionDeclaration[] = [
         period_b_end: { type: Type.STRING },
       },
       required: ["period_a_start", "period_a_end", "period_b_start", "period_b_end"],
+    },
+  },
+  {
+    name: "get_training_goal",
+    description:
+      "Qué persigue el usuario entrenando: sus focos en orden (el primero es el principal) y lo que haya escrito con sus palabras. Úsalo antes de aconsejar nada de entreno.",
+  },
+  {
+    name: "get_recent_workouts",
+    description:
+      "Últimos entrenos completados, con cada ejercicio y las series (peso × repeticiones) que hizo. Úsalo para saber qué está entrenando de verdad, no lo que dice su rutina.",
+    parameters: { type: Type.OBJECT, properties: { limit: { type: Type.NUMBER } } },
+  },
+  {
+    name: "get_exercise_progress",
+    description:
+      "Historial de UN ejercicio buscado por nombre: las últimas sesiones con sus series, y lo que el algoritmo de progresión recomienda para la próxima. Úsalo cuando pregunte por un ejercicio concreto.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { exercise_name: { type: Type.STRING }, sessions: { type: Type.NUMBER } },
+      required: ["exercise_name"],
     },
   },
   {
@@ -216,6 +242,9 @@ Reglas:
 - Puedes actuar de verdad sobre los datos del usuario con las herramientas "propose_*", no solo explicar cómo hacerlo. Añadir un alimento, duplicar una comida y corregir un peso son acciones de bajo riesgo que la aplicación ejecuta en cuanto las propones. Borrar una comida y cambiar el objetivo son acciones importantes: la aplicación siempre pide confirmación explícita al usuario antes de ejecutarlas, así que puedes proponerlas igualmente en cuanto el usuario lo pida o lo acepte.
 - Cuando registres comida, DESGLÓSALA. Si el usuario describe un plato ("una hamburguesa de pavo con queso y huevo"), "meal_name" es el plato y "items" lleva UNA LÍNEA POR INGREDIENTE, cada una con su cantidad y sus macros: pan, pavo, queso, huevo... Nunca metas el plato entero en un solo item con los macros sumados — así el usuario no puede comprobar si te has pasado con el aceite ni corregir sólo el queso.
 - Incluye también lo que no se nombra pero está: el aceite de cocinar, la salsa, el pan. Si no estás seguro de que lleve algo, no lo metas y dilo en tu respuesta.
+- Sobre ENTRENO: antes de aconsejar nada, mira su objetivo con get_training_goal (sus focos y lo que haya escrito con sus palabras) y lo que está haciendo de verdad con get_recent_workouts. Si pregunta por un ejercicio concreto, usa get_exercise_progress.
+- get_exercise_progress te devuelve un campo "recommendation" que viene del MISMO algoritmo que el usuario está viendo en la pantalla del entreno. Da ESE peso y ESAS repeticiones, con el motivo que trae en "detalle": si le dices un número distinto del que ve en la app, no sabrá a cuál hacer caso. No lo recalcules por tu cuenta ni lo redondees.
+- No hay ninguna herramienta que escriba nada de entreno. Puedes explicar, comparar y aconsejar, pero para cambiar una rutina o registrar una serie dile que lo haga él en la pantalla de entreno.
 - Nunca propongas más de una acción por turno.
 - Nunca modifiques nada por tu cuenta fuera de esas herramientas "propose_*" — son el único camino de escritura.
 - Cuando menciones proteína, carbohidratos o grasas en tu respuesta, escribe siempre la palabra (o "prot."/"carb."/"grasa", que es como los abrevia la propia app) — nunca una sola letra suelta como "P", "C" o "G".`;
@@ -447,6 +476,134 @@ async function runTool(
       };
     }
 
+    case "get_training_goal":
+      return (
+        await supabase
+          .from("training_goals")
+          .select("focus, notes, effective_from")
+          .eq("user_id", userId)
+          .is("effective_to", null)
+          .maybeSingle()
+      ).data;
+
+    case "get_recent_workouts": {
+      const limit = Math.min(Number(args.limit) || 5, 12);
+      const { data } = await supabase
+        .from("training_sessions")
+        .select(
+          "session_date, notes, workout_sets(set_number, set_type, weight_kg, reps, rir, exercises(name))",
+        )
+        .eq("user_id", userId)
+        .eq("status", "completada")
+        .order("session_date", { ascending: false })
+        .limit(limit);
+
+      // Se agrupa por ejercicio antes de devolverlo: una lista plana de
+      // series sueltas obliga al modelo a reconstruir el entreno, y es
+      // justo ahí donde se inventa que dos series eran del mismo ejercicio.
+      return (data ?? []).map((sesion: Record<string, unknown>) => {
+        const porEjercicio = new Map<string, string[]>();
+        for (const s of (sesion.workout_sets ?? []) as Record<string, unknown>[]) {
+          const nombre = (s.exercises as { name?: string } | null)?.name ?? "¿?";
+          const lista = porEjercicio.get(nombre) ?? [];
+          const peso = s.weight_kg != null ? `${s.weight_kg}kg` : "";
+          const marca = s.set_type === "calentamiento" ? " (calentamiento)" : "";
+          lista.push(`${s.reps ?? "–"}${peso ? `×${peso}` : ""}${marca}`);
+          porEjercicio.set(nombre, lista);
+        }
+        return {
+          date: sesion.session_date,
+          notes: sesion.notes,
+          exercises: [...porEjercicio].map(([name, sets]) => ({ name, sets })),
+        };
+      });
+    }
+
+    case "get_exercise_progress": {
+      const consulta = normalizarNombre(String(args.exercise_name ?? ""));
+      if (!consulta) return { error: "Falta el nombre del ejercicio" };
+
+      const { data: encontrados } = await supabase
+        .from("exercises")
+        .select("id, name, equipment, default_reps_min, default_reps_max")
+        .eq("is_active", true)
+        .ilike("name_normalized", `%${consulta}%`)
+        .limit(5);
+
+      if (!encontrados || encontrados.length === 0) {
+        return { found: false, searched: args.exercise_name };
+      }
+      // Varios candidatos: se devuelven los nombres en vez de elegir uno.
+      // Elegir por él es exactamente cómo acaba respondiendo del ejercicio
+      // equivocado con total seguridad (regla 10).
+      if (encontrados.length > 1) {
+        return { ambiguous: encontrados.map((e: { name: string }) => e.name) };
+      }
+
+      const ejercicio = encontrados[0];
+      const sesiones = Math.min(Number(args.sessions) || 5, 12);
+      const { data: series } = await supabase
+        .from("workout_sets")
+        .select("set_number, set_type, weight_kg, reps, rir, completed_at, session_id")
+        .eq("exercise_id", ejercicio.id)
+        .not("completed_at", "is", null)
+        .order("completed_at", { ascending: false })
+        .limit(sesiones * 12);
+
+      const porSesion = new Map<string, Record<string, unknown>[]>();
+      for (const s of (series ?? []) as Record<string, unknown>[]) {
+        const lista = porSesion.get(String(s.session_id)) ?? [];
+        lista.push(s);
+        porSesion.set(String(s.session_id), lista);
+      }
+      const orden = [...porSesion.values()].slice(0, sesiones);
+      const ultima = orden[0] ?? [];
+
+      const objetivo = await supabase
+        .from("training_goals")
+        .select("focus")
+        .eq("user_id", userId)
+        .is("effective_to", null)
+        .maybeSingle();
+
+      const previas: SerieHecha[] = ultima.map((s) => ({
+        setNumber: Number(s.set_number),
+        weightKg: s.weight_kg as number | null,
+        reps: s.reps as number | null,
+        rir: s.rir as number | null,
+        setType: s.set_type as SerieHecha["setType"],
+      }));
+
+      return {
+        exercise: ejercicio.name,
+        sessions: orden.map((ss) =>
+          ss
+            .sort((a, b) => Number(a.set_number) - Number(b.set_number))
+            .map((s) => `${s.reps ?? "–"}${s.weight_kg != null ? `×${s.weight_kg}kg` : ""}`),
+        ),
+        // La recomendación sale del MISMO motor que la pantalla del
+        // entreno (`_shared/progresion.ts` es su copia literal): si el
+        // coach diera un número distinto del que ve en la app, el
+        // problema sería peor que no responder.
+        recommendation: recomendarCarga(
+          previas,
+          objetivoDeEjercicio(
+            null,
+            {
+              repsMin: ejercicio.default_reps_min,
+              repsMax: ejercicio.default_reps_max,
+            },
+            previas.length,
+            {
+              foco: objetivo.data?.focus?.[0] ?? null,
+              equipment: ejercicio.equipment,
+            },
+          ),
+          ejercicio.equipment,
+        ),
+      };
+    }
+
     case "get_nutrition_adherence": {
       const days = Number(args.days) || 30;
       const macroDays = await dailyMacroSeries(supabase, userId, days);
@@ -623,6 +780,18 @@ function sum<T>(items: T[], fn: (item: T) => number): number {
 }
 function average(values: number[]): number {
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+}
+/**
+ * Minúsculas y sin acentos, igual que `name_normalized` en la base de
+ * datos y que `normalizeExerciseName` en la app: así "press banca"
+ * encuentra "Press de banca con barra" sin depender de cómo lo escriba.
+ */
+function normalizarNombre(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
 }
 function daysBetween(a: string, b: string): number {
   return Math.max(1, Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000));

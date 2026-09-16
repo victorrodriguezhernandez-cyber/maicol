@@ -67,18 +67,36 @@ service role — so it can only ever see the calling user's own data.
 
 ## Coach IA tools
 
-`ai-coach` declares 14 read-only tools and 5 `propose_*` action tools, and
+`ai-coach` declares 17 read-only tools and 5 `propose_*` action tools, and
 lets Gemini's function-calling decide which it needs per message (spec
 section 32):
 
-Read-only: `get_current_goals`, `get_today_nutrition`, `get_day_nutrition`,
-`calculate_remaining_macros`, `get_weight_trend`, `get_weight_history`,
-`get_weekly_summary`, `get_nutrition_adherence`, `get_macro_history`,
-`search_personal_foods`, `get_recent_meals`, `compare_periods`,
-`get_meals_on_date`, `get_weight_entry_on_date`.
+Read-only (nutrition): `get_current_goals`, `get_today_nutrition`,
+`get_day_nutrition`, `calculate_remaining_macros`, `get_weight_trend`,
+`get_weight_history`, `get_weekly_summary`, `get_nutrition_adherence`,
+`get_macro_history`, `search_personal_foods`, `get_recent_meals`,
+`compare_periods`, `get_meals_on_date`, `get_weight_entry_on_date`.
 
-Action tools: `propose_add_meal_item`, `propose_update_weight_entry`,
+Read-only (training): `get_training_goal`, `get_recent_workouts`,
+`get_exercise_progress`.
+
+Action tools: `propose_add_meal`, `propose_update_weight_entry`,
 `propose_duplicate_meal`, `propose_delete_meal`, `propose_goal_change`.
+
+**There is no write path for training.** The coach can explain, compare
+and advise about workouts, but a routine change or a logged set has to go
+through the training screens — and the system prompt says so, so it
+doesn't promise otherwise.
+
+`get_exercise_progress` returns a `recommendation` field produced by
+`_shared/progresion.ts`, a literal copy of `src/lib/training/progression.ts`
+(Edge Functions are a separate Deno deployable and can't import from
+`src/`, same reason as `_shared/trend.ts`). The model is told to hand that
+number over verbatim rather than work one out: if the coach said "sube a
+16" and the workout screen said something else, the user wouldn't know
+which to follow. `progression.paridad.test.ts` runs 240 combinations
+through both copies and also compares the two files character by
+character, so the copies can't drift apart silently.
 
 None of the `propose_*` tools is a database write — the Edge Function has
 no write path of its own. Each one lands in `buildAction()`
@@ -90,7 +108,7 @@ Action the rest of the app uses for that write (`createMeal`, `deleteMeal`,
 an ad-hoc insert/update from the client. `risk` decides *when* that
 happens, never *whether* it's validated:
 
-- `risk: "safe"` (`add_meal_item`, `update_weight_entry`, `duplicate_meal`)
+- `risk: "safe"` (`add_meal`, `update_weight_entry`, `duplicate_meal`)
   executes immediately, then shows a "✅ hecho" card with **Deshacer**
   (undo). Undo is implemented per-kind in `executeAction()` — e.g. undoing
   an added item deletes just that item (or the whole meal, if adding it

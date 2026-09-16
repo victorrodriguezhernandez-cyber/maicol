@@ -935,3 +935,68 @@ export async function deleteSession(sessionId: string) {
   if (error) throw error;
   revalidateTraining();
 }
+
+// =========================================================================
+// Objetivo de entreno
+// =========================================================================
+
+const trainingGoalSchema = z.object({
+  focus: z
+    .array(z.enum(["fuerza", "hipertrofia", "resistencia", "mantenimiento", "salud"]))
+    .min(1, "Elige al menos un objetivo")
+    .max(3, "Tres objetivos a la vez ya no es un objetivo")
+    .refine((f) => new Set(f).size === f.length, "No repitas el mismo objetivo"),
+  notes: z.string().trim().max(1000).nullable().optional(),
+});
+
+export type TrainingGoalInput = z.infer<typeof trainingGoalSchema>;
+
+/**
+ * Cambia el objetivo de entreno cerrando el anterior, nunca pisándolo.
+ *
+ * Es el mismo patrón que `applyGoalChange` para las calorías (regla 7):
+ * el historial es lo que permite mirar atrás y ver con qué objetivo
+ * entrenabas cuando subiste 4 kg en press. Un `update` en la fila abierta
+ * borraría justo eso.
+ *
+ * El caso de cambiar dos veces el mismo día se resuelve igual que allí:
+ * el objetivo de hoy se cierra a su propia `effective_from` en vez de a
+ * ayer, para no crear un periodo que acabe antes de empezar.
+ */
+export async function setTrainingGoal(input: TrainingGoalInput) {
+  const parsed = trainingGoalSchema.parse(input);
+  const { supabase, user } = await requireUser();
+
+  const { data: current, error: readError } = await supabase
+    .from("training_goals")
+    .select("*")
+    .eq("user_id", user.id)
+    .is("effective_to", null)
+    .maybeSingle();
+  if (readError) throw readError;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+
+  if (current) {
+    const { error } = await supabase
+      .from("training_goals")
+      .update({
+        effective_to: yesterday >= current.effective_from ? yesterday : current.effective_from,
+      })
+      .eq("id", current.id);
+    if (error) throw error;
+  }
+
+  const { error: insertError } = await supabase.from("training_goals").insert({
+    user_id: user.id,
+    focus: parsed.focus,
+    notes: parsed.notes?.trim() || null,
+    effective_from: today,
+  });
+  if (insertError) throw insertError;
+
+  revalidatePath("/entreno");
+  revalidatePath("/ajustes/objetivos");
+  revalidatePath("/ia");
+}

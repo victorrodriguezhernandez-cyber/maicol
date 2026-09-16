@@ -1,4 +1,7 @@
 import type { MuscleGroup } from "./muscles";
+import type { PreviousSet, Recomendacion } from "./progression";
+
+export type { PreviousSet };
 
 /**
  * Tipos de fila del apartado de entreno, escritos a mano igual que
@@ -151,7 +154,14 @@ export interface SessionExercise {
    * de serie. Es la columna "PREVIA": sin ella no sabes con qué peso
    * empezar, y es lo único que convierte un registro en una progresión.
    */
-  previous: Map<number, { weightKg: number | null; reps: number | null }>;
+  previous: Map<number, PreviousSet>;
+  /**
+   * Qué peso y qué repeticiones tocan hoy, y por qué. Sale de
+   * `recomendarCarga` (`src/lib/training/progression.ts`) leyendo
+   * `previous` y `target`: nunca de la IA, para que la explicación sea
+   * siempre la razón real (regla 9).
+   */
+  recomendacion: Recomendacion;
 }
 
 export const EQUIPMENT_LABELS: Record<Equipment, string> = {
@@ -187,6 +197,59 @@ export const GOAL_LABELS: Record<RoutineGoal, string> = {
   resistencia: "Resistencia",
   mantenimiento: "Mantenimiento",
 };
+
+/**
+ * Qué persigues entrenando. Es tuyo, no de una rutina concreta: si
+ * cambias de rutina el objetivo sigue siendo el mismo.
+ *
+ * Se guardan VARIOS y en orden — "fuerza y volumen" es una respuesta
+ * legítima y obligar a elegir uno falsearía el objetivo. El primero es
+ * el principal y es el que manda cuando dos focos pedirían rangos de
+ * repeticiones distintos.
+ */
+export type TrainingFocus =
+  | "fuerza"
+  | "hipertrofia"
+  | "resistencia"
+  | "mantenimiento"
+  | "salud";
+
+export const TRAINING_FOCUS: TrainingFocus[] = [
+  "fuerza",
+  "hipertrofia",
+  "resistencia",
+  "mantenimiento",
+  "salud",
+];
+
+export const TRAINING_FOCUS_LABELS: Record<TrainingFocus, string> = {
+  fuerza: "Ganar fuerza",
+  hipertrofia: "Ganar volumen muscular",
+  resistencia: "Ganar resistencia",
+  mantenimiento: "Mantener lo que tengo",
+  salud: "Moverme y estar bien",
+};
+
+/** Qué significa cada foco en la práctica, para no elegir a ciegas. */
+export const TRAINING_FOCUS_HINTS: Record<TrainingFocus, string> = {
+  fuerza: "Mover más peso. Series cortas y pesadas.",
+  hipertrofia: "Más músculo. El rango clásico de repeticiones medias.",
+  resistencia: "Aguantar más. Series largas con menos peso.",
+  mantenimiento: "Conservar lo que ya tienes sin forzar la progresión.",
+  salud: "Entrenar por moverte, sin una cifra que perseguir.",
+};
+
+export interface TrainingGoalRow {
+  id: string;
+  user_id: string;
+  /** En orden: el primero es el principal. */
+  focus: TrainingFocus[];
+  /** Con tus palabras. Contexto para el coach, no para el algoritmo. */
+  notes: string | null;
+  effective_from: string;
+  effective_to: string | null;
+  created_at: string;
+}
 
 export const SOURCE_LABELS: Record<RoutineSource, string> = {
   manual: "Creada a mano",

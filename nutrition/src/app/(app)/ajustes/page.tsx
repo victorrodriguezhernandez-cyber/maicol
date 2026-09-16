@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/icons";
 
 const ACCOUNT_LINKS = [
-  { href: "/ajustes/objetivos", label: "Objetivos nutricionales", icon: ScaleIcon },
+  { href: "/ajustes/objetivos", label: "Objetivos", icon: ScaleIcon },
   { href: "/ajustes/perfil", label: "Perfil y preferencias", icon: UserIcon },
   { href: "/ajustes/seguridad", label: "Seguridad y acceso", icon: LockIcon },
 ] as const;

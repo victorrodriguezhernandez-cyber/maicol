@@ -6,6 +6,11 @@ import type {
   TrainingSessionRow,
   WorkoutSetRow,
 } from "@/lib/training/types";
+import {
+  objetivoDeEjercicio,
+  recomendarCarga,
+  seriesDesdePrevias,
+} from "@/lib/training/progression";
 
 /**
  * Vista previa del registro de entreno — SOLO en desarrollo.
@@ -91,8 +96,29 @@ function set(
   };
 }
 
+/**
+ * La recomendación NO se escribe a mano en el fixture: se calcula con el
+ * mismo motor que en producción, para que esta pantalla enseñe lo que se
+ * va a ver de verdad y no una versión bonita inventada (regla 11).
+ */
+function conRecomendacion(e: Omit<SessionExercise, "recomendacion">): SessionExercise {
+  const previas = seriesDesdePrevias(e.previous);
+  return {
+    ...e,
+    recomendacion: recomendarCarga(
+      previas,
+      objetivoDeEjercicio(
+        e.target,
+        { repsMin: e.exercise.default_reps_min, repsMax: e.exercise.default_reps_max },
+        previas.length,
+      ),
+      e.exercise.equipment,
+    ),
+  };
+}
+
 const EXERCISES: SessionExercise[] = [
-  {
+  conRecomendacion({
     exercise: exercise({
       id: "ex-1",
       name: "Press de banca con barra",
@@ -107,12 +133,12 @@ const EXERCISES: SessionExercise[] = [
     ],
     target: { sets: 3, repsMin: 6, repsMax: 8, rir: 2, restSeconds: 150, notes: null },
     previous: new Map([
-      [2, { weightKg: 70, reps: 8 }],
-      [3, { weightKg: 70, reps: 8 }],
-      [4, { weightKg: 70, reps: 6 }],
+      [2, { weightKg: 70, reps: 8, rir: 2, setType: "normal" as const }],
+      [3, { weightKg: 70, reps: 8, rir: 2, setType: "normal" as const }],
+      [4, { weightKg: 70, reps: 6, rir: 0, setType: "normal" as const }],
     ]),
-  },
-  {
+  }),
+  conRecomendacion({
     exercise: exercise({
       id: "ex-2",
       name: "Press inclinado con mancuernas",
@@ -125,9 +151,9 @@ const EXERCISES: SessionExercise[] = [
     sets: [set(1, {}, 2), set(2, {}, 2), set(3, {}, 2)],
     target: { sets: 3, repsMin: 8, repsMax: 12, rir: 1, restSeconds: 120, notes: "Banco a 30°." },
     previous: new Map([
-      [1, { weightKg: 26, reps: 11 }],
-      [2, { weightKg: 26, reps: 10 }],
-      [3, { weightKg: 24, reps: 10 }],
+      [1, { weightKg: 26, reps: 11, rir: 1, setType: "normal" as const }],
+      [2, { weightKg: 26, reps: 10, rir: 0, setType: "normal" as const }],
+      [3, { weightKg: 24, reps: 10, rir: 0, setType: "normal" as const }],
     ]),
-  },
+  }),
 ];

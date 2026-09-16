@@ -41,6 +41,7 @@ types/constraints.
 | `training_sessions` | una sesión de entreno | dejó de ser un hueco reservado en `0005`: ahora es LA sesión, con estado (`en_curso`/`completada`/`abandonada`), rutina de origen, esfuerzo percibido y el peso corporal de ese día. Un índice parcial garantiza como mucho una sesión `en_curso` por usuario |
 | `exercises` | catálogo de ejercicios | mismo patrón que `foods`: `user_id IS NULL` ⇒ catálogo compartido (129 filas sembradas en `0006`), `user_id` puesto ⇒ ejercicio propio. `secondary_muscles` es lo que hace que una serie cuente media para cada músculo de apoyo |
 | `routines` / `routine_days` / `routine_exercises` | el plan | guardan el OBJETIVO (series, rango de reps, RIR, descanso), nunca el resultado. Un índice parcial único garantiza como mucho una rutina activa por usuario |
+| `training_goals` | qué persigue entrenando | hasta 3 focos EN ORDEN (el primero manda) más un campo libre. Es su propio historial como `nutrition_goals`, con el mismo índice parcial único de un solo objetivo abierto. La dirección del peso (subir/bajar/mantener) NO se duplica aquí: vive en `nutrition_goals.mode` |
 | `workout_sets` | la serie | el dato real de todo el apartado. `completed_at` es lo que convierte una serie planificada en un hecho: sin él no cuenta para volumen, ni récords, ni historial |
 | `ai_analyses` | raw structured result of every AI capture call | one row per photo/label/text/voice analysis, whether or not the user ends up saving it (`accepted`) |
 | `ai_corrections` | learning signal | records `(food_name, dish_context, original_estimate, corrected_value)` when a user edits an AI estimate — not yet fed back into prompts as few-shot examples (see the "Not yet implemented" list in `AI.md`) |
@@ -85,6 +86,13 @@ checks — there is no separate ACL table.
 - `0006_seed_exercises.sql` — los 129 ejercicios del catálogo compartido,
   con `on conflict do nothing` para que re-aplicarla no duplique ni pise
   ediciones.
+- `0007_training_goals.sql` — `training_goals`: el objetivo de entreno
+  del usuario, con historial. `focus` es un `text[]` con CHECK de 1 a 3
+  valores del conjunto permitido, y el orden es significativo (el primero
+  decide el rango de repeticiones de las sesiones libres). Mismo índice
+  parcial único que `nutrition_goals` para que no pueda haber dos
+  objetivos abiertos. RLS con `(select auth.uid())`. Aditiva: no toca
+  ninguna tabla existente.
 
 ### Lo que deliberadamente NO está en el esquema
 
