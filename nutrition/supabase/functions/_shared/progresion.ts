@@ -381,8 +381,12 @@ export function recomendarCarga(
         : `Repite ${decimal(pesoSugerido!)} kg`,
       detalle: [
         laUltimaVez,
-        `${pordebajo} de ${trabajo.length} series se quedaron por debajo de ${objetivo.repsMin}, el mínimo del rango.`,
-        `El peso no sube hasta que las ${objetivo.sets} series lleguen a ${objetivo.repsMax}: subirlo ahora sería hacer menos repeticiones de las pautadas.`,
+        pordebajo === 1
+          ? `1 de ${trabajo.length} series se quedó por debajo de ${objetivo.repsMin}, el mínimo del rango.`
+          : `${pordebajo} de ${trabajo.length} series se quedaron por debajo de ${objetivo.repsMin}, el mínimo del rango.`,
+        sinPeso
+          ? `Lo de ahora es llegar a ${objetivo.repsMin} en las ${objetivo.sets}. El ejercicio no se pone más difícil hasta que las ${objetivo.sets} lleguen a ${objetivo.repsMax}.`
+          : `El peso no sube hasta que las ${objetivo.sets} series lleguen a ${objetivo.repsMax}: subirlo ahora sería hacer menos repeticiones de las pautadas.`,
         ...avisoDeCaida,
       ],
     };
