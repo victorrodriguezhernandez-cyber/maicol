@@ -37,7 +37,7 @@ import { computeExerciseRecords, type ExerciseRecords, type CompletedSet } from 
  */
 
 const EXERCISE_COLUMNS =
-  "id, user_id, name, name_normalized, primary_muscle, secondary_muscles, equipment, mechanic, pattern, is_unilateral, default_reps_min, default_reps_max, default_rest_seconds, cues, is_active, created_at";
+  "id, user_id, name, name_normalized, primary_muscle, secondary_muscles, equipment, mechanic, pattern, is_unilateral, tracks_weight, tracks_reps, tracks_duration, default_reps_min, default_reps_max, default_duration_min, default_duration_max, default_rest_seconds, cues, is_active, created_at";
 
 export interface ExerciseFilters {
   query?: string;
@@ -362,7 +362,7 @@ async function getPreviousPerformance(
   // de cada ejercicio, que puede estar a varias sesiones de distancia.
   const { data, error } = await supabase
     .from("workout_sets")
-    .select("exercise_id, session_id, set_number, weight_kg, reps, rir, completed_at, set_type")
+    .select("exercise_id, session_id, set_number, weight_kg, reps, duration_seconds, rir, completed_at, set_type")
     .in("exercise_id", exerciseIds)
     .neq("session_id", excludeSessionId)
     .not("completed_at", "is", null)
@@ -377,6 +377,7 @@ async function getPreviousPerformance(
     set_number: number;
     weight_kg: number | null;
     reps: number | null;
+    duration_seconds: number | null;
     rir: number | null;
     set_type: SetType;
   }[]) {
@@ -395,6 +396,7 @@ async function getPreviousPerformance(
       perSet.set(row.set_number, {
         weightKg: row.weight_kg,
         reps: row.reps,
+        durationSeconds: row.duration_seconds,
         rir: row.rir,
         setType: row.set_type,
       });

@@ -9,7 +9,7 @@ import { direccionDePeso } from "@/lib/data/training";
 import { formatKg, formatDuration, ONE_RM_MAX_REPS } from "@/lib/training/records";
 import { formatWeekday } from "@/lib/training/week";
 import { MUSCLE_LABELS } from "@/lib/training/muscles";
-import { EQUIPMENT_LABELS, PATTERN_LABELS, isTimeBased } from "@/lib/training/types";
+import { EQUIPMENT_LABELS, PATTERN_LABELS, medicionDe } from "@/lib/training/types";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TrophyIcon, ChevronRightIcon } from "@/components/ui/icons";
@@ -34,7 +34,10 @@ export default async function EjercicioPage({
   ]);
   if (!exercise) notFound();
 
-  const timeBased = isTimeBased(exercise);
+  const medicion = medicionDe(exercise);
+  // El motor sólo decide sobre repeticiones: en un ejercicio de puro
+  // tiempo no hay recomendación que dar todavía.
+  const soloTiempo = medicion.tiempo && !medicion.reps;
 
   // "La próxima vez": el mismo motor que durante el entreno, para que el
   // consejo no cambie según por dónde lo mires. Se calcula desde la última
@@ -50,6 +53,7 @@ export default async function EjercicioPage({
       setNumber: s.set_number,
       weightKg: s.weight_kg,
       reps: s.reps,
+      durationSeconds: s.duration_seconds,
       rir: s.rir,
       setType: s.set_type,
     })),
@@ -85,7 +89,7 @@ export default async function EjercicioPage({
         </section>
       ) : null}
 
-      {timeBased ? null : (
+      {soloTiempo ? null : (
         <section className="flex flex-col gap-3">
           <SectionHeader>La próxima vez</SectionHeader>
           <div className="surface-panel flex flex-col gap-2 p-4">
@@ -218,7 +222,7 @@ export default async function EjercicioPage({
                               : "var(--text-primary)",
                         }}
                       >
-                        {timeBased && s.duration_seconds != null
+                        {medicion.tiempo && s.duration_seconds != null
                           ? formatDuration(s.duration_seconds)
                           : `${s.weight_kg != null ? formatKg(s.weight_kg) : "–"}×${s.reps ?? "–"}`}
                       </span>

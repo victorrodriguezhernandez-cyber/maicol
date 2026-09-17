@@ -53,6 +53,13 @@ export interface SerieHecha {
   setNumber: number;
   weightKg: number | null;
   reps: number | null;
+  /**
+   * Segundos, en los ejercicios que se miden por tiempo (plancha, paseo
+   * del granjero). El motor todavía NO decide sobre tiempo — sólo sobre
+   * repeticiones —, así que hoy este dato sólo se usa para enseñarte la
+   * previa. Extender la progresión al tiempo es su propia tarea.
+   */
+  durationSeconds: number | null;
   /** Repeticiones que dijiste que te quedaban. `null` = no lo anotaste. */
   rir: number | null;
   setType: SetType;
@@ -362,7 +369,7 @@ export function recomendarCarga(
       titulo: "Primera vez: busca tu peso",
       detalle: [
         "No hay ninguna sesión previa de este ejercicio, así que no hay de dónde sacar un peso.",
-        `Empieza con uno que puedas mover ${objetivo.repsMin} veces dejando 2 repeticiones en recámara. Si te sobra, súbelo en la siguiente serie.`,
+        `Empieza con uno que puedas mover ${objetivo.repsMin} ${objetivo.repsMin === 1 ? "vez" : "veces"} dejando 2 repeticiones en recámara. Si te sobra, súbelo en la siguiente serie.`,
         "Desde el próximo entreno ya te digo el peso exacto y por qué.",
       ],
     };

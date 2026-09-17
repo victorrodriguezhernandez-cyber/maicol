@@ -18,8 +18,14 @@ import type {
   WorkoutSetRow,
   SetType,
 } from "@/lib/training/types";
-import { isTimeBased, SET_TYPE_LABELS, numberWorkingSets } from "@/lib/training/types";
-import type { Recomendacion } from "@/lib/training/progression";
+import {
+  medicionDe,
+  rangoDeMedicion,
+  SET_TYPE_LABELS,
+  numberWorkingSets,
+  type Medicion,
+} from "@/lib/training/types";
+import type { PreviousSet, Recomendacion } from "@/lib/training/progression";
 import type { Prescripcion } from "@/lib/training/prescripcion";
 import type { NewRecord } from "@/lib/training/records";
 import { formatKg } from "@/lib/training/records";
@@ -359,7 +365,13 @@ function ExerciseCard({
   onRemove: () => void;
 }) {
   const [showCues, setShowCues] = useState(false);
-  const timeBased = isTimeBased(entry.exercise);
+  const medicion = medicionDe(entry.exercise);
+  // Un ejercicio que sólo se mide por tiempo no tiene rango de
+  // repeticiones que pautar, así que tampoco tiene recomendación: el motor
+  // todavía sólo decide sobre repeticiones y fingir lo contrario sería
+  // inventarse un consejo (regla 11).
+  const soloTiempo = medicion.tiempo && !medicion.reps;
+  const rangoMedido = rangoDeMedicion(entry.exercise);
   const rest = entry.target?.restSeconds ?? entry.exercise.default_rest_seconds;
   const labels = numberWorkingSets(entry.sets);
   // El rango con el que se ha juzgado de verdad la sesión: el de tu
@@ -378,10 +390,12 @@ function ExerciseCard({
             {entry.exercise.name}
           </Link>
           <p className="text-xs text-[var(--text-tertiary)]">
-            {`${entry.target?.sets ?? entry.prescripcion.sets} × ${rango.repsMin}-${rango.repsMax}` +
-              ` · RIR ${entry.target?.rir ?? entry.prescripcion.rir}` +
-              ` · ${rest}s`}
-            {entry.fuenteDelRango === "objetivo" && entry.target ? (
+            {soloTiempo
+              ? `${entry.target?.sets ?? entry.prescripcion.sets} × ${rangoMedido.min}-${rangoMedido.max} s · descanso ${rest}s`
+              : `${entry.target?.sets ?? entry.prescripcion.sets} × ${rango.repsMin}-${rango.repsMax}` +
+                ` · RIR ${entry.target?.rir ?? entry.prescripcion.rir}` +
+                ` · ${rest}s`}
+            {!soloTiempo && entry.fuenteDelRango === "objetivo" && entry.target ? (
               <span className="ml-1.5 text-[var(--accent)]">ajustado</span>
             ) : null}
           </p>
@@ -430,20 +444,29 @@ function ExerciseCard({
         </p>
       ) : null}
 
-      <PlanDeHoy
-        recomendacion={entry.recomendacion}
-        prescripcion={entry.prescripcion}
-        rutinaCorregida={entry.fuenteDelRango === "objetivo" && entry.target != null}
-      />
+      {soloTiempo ? (
+        <p className="mx-4 mb-3 rounded-xl px-3 py-2.5 text-[12.5px] leading-relaxed text-[var(--text-secondary)]" style={{ background: "var(--surface-2)" }}>
+          Este ejercicio se mide por tiempo. Apunta los kilos y los segundos; el
+          consejo automático de carga todavía sólo funciona con repeticiones, así
+          que aquí no te digo un número que no podría justificar.
+        </p>
+      ) : (
+        <PlanDeHoy
+          recomendacion={entry.recomendacion}
+          prescripcion={entry.prescripcion}
+          rutinaCorregida={entry.fuenteDelRango === "objetivo" && entry.target != null}
+        />
+      )}
 
       <div
         className="grid items-center gap-2 px-4 py-2"
-        style={{ gridTemplateColumns: "2.2rem 1fr 1fr 1fr 2.4rem" }}
+        style={{ gridTemplateColumns: plantillaDeColumnas(medicion) }}
       >
         <span className="text-section">Serie</span>
         <span className="text-section">Previa</span>
-        <span className="text-section">{timeBased ? "Seg" : "Kg"}</span>
-        <span className="text-section">{timeBased ? "—" : "Repes"}</span>
+        {medicion.peso ? <span className="text-section">Kg</span> : null}
+        {medicion.reps ? <span className="text-section">Repes</span> : null}
+        {medicion.tiempo ? <span className="text-section">Seg</span> : null}
         <span />
       </div>
 
@@ -453,7 +476,7 @@ function ExerciseCard({
           set={set}
           label={labels.get(set.id) ?? "?"}
           previous={entry.previous.get(set.set_number) ?? null}
-          timeBased={timeBased}
+          medicion={medicion}
           sugerido={entry.recomendacion}
           restSeconds={rest}
           exerciseName={entry.exercise.name}
@@ -556,11 +579,38 @@ function PlanDeHoy({
 
 // =========================================================================
 
+/**
+ * La rejilla de una fila: número de serie, previa, una columna por cada
+ * cosa que mida el ejercicio, y el check.
+ *
+ * Se calcula en vez de estar fija porque no todos los ejercicios miden lo
+ * mismo: un press son kilos y repeticiones, una plancha sólo segundos, y
+ * un paseo del granjero kilos Y segundos. Con la rejilla fija de antes, el
+ * peso del paseo del granjero no tenía dónde ir y se perdía.
+ */
+function plantillaDeColumnas(m: Medicion): string {
+  const medidas = [m.peso, m.reps, m.tiempo].filter(Boolean).length;
+  return `2.2rem 1fr ${Array(medidas).fill("1fr").join(" ")} 2.4rem`;
+}
+
+/** Lo que hiciste la última vez en esta serie, escrito en su unidad. */
+function textoPrevia(p: PreviousSet | null | undefined, m: Medicion): string {
+  if (!p) return "—";
+  const peso = m.peso && p.weightKg != null ? formatKg(p.weightKg) : null;
+  const reps = m.reps && p.reps != null ? String(p.reps) : null;
+  const seg = m.tiempo && p.durationSeconds != null ? `${p.durationSeconds}s` : null;
+  const derecha = [reps, seg].filter(Boolean).join(" · ");
+  if (!peso && !derecha) return "—";
+  if (!peso) return derecha;
+  if (!derecha) return peso;
+  return `${peso} × ${derecha}`;
+}
+
 function SetRow({
   set,
   label,
   previous,
-  timeBased,
+  medicion,
   sugerido,
   restSeconds,
   exerciseName,
@@ -570,8 +620,9 @@ function SetRow({
   set: DraftSet;
   /** Lo que se pinta en la columna SERIE: "1", "2", "C" o "D". */
   label: string;
-  previous: { weightKg: number | null; reps: number | null } | null;
-  timeBased: boolean;
+  previous: PreviousSet | null;
+  /** Qué columnas toca enseñar en este ejercicio. */
+  medicion: Medicion;
   /** Lo que el motor recomienda hoy para este ejercicio. */
   sugerido: Recomendacion;
   restSeconds: number;
@@ -604,15 +655,25 @@ function SetRow({
    * Cuando no hay historial (`sin_datos`) no hay peso que heredar y el
    * campo se queda vacío: inventarlo sería simular un dato (regla 11).
    */
-  const heredado = isWarmup
-    ? { weightKg: previous?.weightKg ?? null, reps: previous?.reps ?? sugerido.reps }
-    : { weightKg: sugerido.weightKg ?? previous?.weightKg ?? null, reps: sugerido.reps };
+  const heredado = {
+    weightKg: isWarmup
+      ? previous?.weightKg ?? null
+      : sugerido.weightKg ?? previous?.weightKg ?? null,
+    reps: isWarmup ? previous?.reps ?? sugerido.reps : sugerido.reps,
+    // El motor no decide sobre tiempo, así que aquí lo que se hereda es
+    // lo que hiciste la otra vez. Es lo único defendible: repetir.
+    durationSeconds: previous?.durationSeconds ?? null,
+  };
 
   function resolveValues() {
     const w = weight.trim() === "" ? heredado.weightKg : Number(weight.replace(",", "."));
     const r = reps.trim() === "" ? heredado.reps : Number(reps);
-    const d = duration.trim() === "" ? null : Number(duration);
-    return { w: Number.isFinite(w as number) ? (w as number) : null, r, d };
+    const d = duration.trim() === "" ? heredado.durationSeconds : Number(duration);
+    return {
+      w: Number.isFinite(w as number) ? (w as number) : null,
+      r,
+      d: Number.isFinite(d as number) ? (d as number) : null,
+    };
   }
 
   function toggleDone() {
@@ -621,19 +682,26 @@ function SetRow({
       return;
     }
     const { w, r, d } = resolveValues();
-    if (timeBased) {
-      if (d == null || d <= 0) {
-        setDetailOpen(true);
-        return;
-      }
-      onSave(set, { durationSeconds: d, weightKg: w }, true, restSeconds, exerciseName);
+
+    // Sin el dato que define el ejercicio no se puede marcar hecha: se
+    // abre la hoja de detalle en vez de guardar una serie vacía.
+    if (medicion.tiempo && (d == null || d <= 0)) {
+      setDetailOpen(true);
       return;
     }
-    onSave(set, { weightKg: w, reps: r }, true, restSeconds, exerciseName);
+
+    const patch: SetPatch = {};
+    if (medicion.peso) patch.weightKg = w;
+    if (medicion.reps) patch.reps = r;
+    if (medicion.tiempo) patch.durationSeconds = d;
+
+    onSave(set, patch, true, restSeconds, exerciseName);
+
     // Rellena la fila con lo que se ha guardado de verdad, para que
     // heredar la previa se vea en pantalla y no quede el hueco vacío.
-    setWeight(w != null ? decimalEs(w) : "");
-    setReps(String(r));
+    if (medicion.peso) setWeight(w != null ? decimalEs(w) : "");
+    if (medicion.reps) setReps(String(r));
+    if (medicion.tiempo) setDuration(d != null ? String(d) : "");
   }
 
   const cellClass =
@@ -644,7 +712,7 @@ function SetRow({
       <div
         className="grid items-center gap-2 border-t border-[var(--border-soft)] px-4 py-1.5"
         style={{
-          gridTemplateColumns: "2.2rem 1fr 1fr 1fr 2.4rem",
+          gridTemplateColumns: plantillaDeColumnas(medicion),
           background: done ? "var(--accent-soft)" : undefined,
           transition: "background-color 180ms ease",
         }}
@@ -660,53 +728,49 @@ function SetRow({
         </button>
 
         <span className="text-metric truncate text-center text-[13px] text-[var(--text-tertiary)]">
-          {previous
-            ? timeBased
-              ? "—"
-              : `${previous.weightKg != null ? formatKg(previous.weightKg) : "–"} × ${previous.reps ?? "–"}`
-            : "—"}
+          {textoPrevia(previous, medicion)}
         </span>
 
-        {timeBased ? (
-          <>
-            <input
-              inputMode="numeric"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value.replace(/[^0-9]/g, ""))}
-              onBlur={() =>
-                done && onSave(set, { durationSeconds: duration ? Number(duration) : null }, true)
-              }
-              placeholder="–"
-              aria-label="Segundos"
-              className={cellClass}
-            />
-            <span className="text-center text-xs text-[var(--text-tertiary)]">—</span>
-          </>
-        ) : (
-          <>
-            <input
-              inputMode="decimal"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, ""))}
-              onBlur={() =>
-                done &&
-                onSave(set, { weightKg: weight ? Number(weight.replace(",", ".")) : null }, true)
-              }
-              placeholder={heredado.weightKg != null ? formatKg(heredado.weightKg) : "–"}
-              aria-label="Kilos"
-              className={cellClass}
-            />
-            <input
-              inputMode="numeric"
-              value={reps}
-              onChange={(e) => setReps(e.target.value.replace(/[^0-9]/g, ""))}
-              onBlur={() => done && onSave(set, { reps: reps ? Number(reps) : null }, true)}
-              placeholder={String(heredado.reps)}
-              aria-label="Repeticiones"
-              className={cellClass}
-            />
-          </>
-        )}
+        {medicion.peso ? (
+          <input
+            inputMode="decimal"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, ""))}
+            onBlur={() =>
+              done &&
+              onSave(set, { weightKg: weight ? Number(weight.replace(",", ".")) : null }, true)
+            }
+            placeholder={heredado.weightKg != null ? formatKg(heredado.weightKg) : "–"}
+            aria-label="Kilos"
+            className={cellClass}
+          />
+        ) : null}
+
+        {medicion.reps ? (
+          <input
+            inputMode="numeric"
+            value={reps}
+            onChange={(e) => setReps(e.target.value.replace(/[^0-9]/g, ""))}
+            onBlur={() => done && onSave(set, { reps: reps ? Number(reps) : null }, true)}
+            placeholder={String(heredado.reps)}
+            aria-label="Repeticiones"
+            className={cellClass}
+          />
+        ) : null}
+
+        {medicion.tiempo ? (
+          <input
+            inputMode="numeric"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value.replace(/[^0-9]/g, ""))}
+            onBlur={() =>
+              done && onSave(set, { durationSeconds: duration ? Number(duration) : null }, true)
+            }
+            placeholder={heredado.durationSeconds != null ? String(heredado.durationSeconds) : "–"}
+            aria-label="Segundos"
+            className={cellClass}
+          />
+        ) : null}
 
         <button
           type="button"
@@ -734,7 +798,7 @@ function SetRow({
         onOpenChange={setDetailOpen}
         set={set}
         label={label}
-        timeBased={timeBased}
+        medicion={medicion}
         onSave={(patch) => {
           onSave(set, patch, done);
           setDetailOpen(false);
@@ -757,7 +821,7 @@ function SetDetailSheet({
   onOpenChange,
   set,
   label,
-  timeBased,
+  medicion,
   onSave,
   onDelete,
 }: {
@@ -765,7 +829,7 @@ function SetDetailSheet({
   onOpenChange: (v: boolean) => void;
   set: DraftSet;
   label: string;
-  timeBased: boolean;
+  medicion: Medicion;
   onSave: (patch: {
     setType?: SetType;
     rir?: number | null;
@@ -810,7 +874,7 @@ function SetDetailSheet({
           </p>
         </div>
 
-        {timeBased ? (
+        {medicion.tiempo ? (
           <label className="flex flex-col gap-1.5">
             <span className="text-section">Segundos</span>
             <input
@@ -858,7 +922,7 @@ function SetDetailSheet({
                 setType,
                 rir: rir.trim() === "" ? null : Number(rir.replace(",", ".")),
                 notes: notes.trim() === "" ? null : notes.trim(),
-                ...(timeBased
+                ...(medicion.tiempo
                   ? { durationSeconds: duration.trim() === "" ? null : Number(duration) }
                   : {}),
               })

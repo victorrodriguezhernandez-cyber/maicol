@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { SessionExercise, TrainingSessionRow } from "@/lib/training/types";
-import { isTimeBased, numberWorkingSets } from "@/lib/training/types";
+import { medicionDe, numberWorkingSets } from "@/lib/training/types";
 import { sessionVolumeKg, formatKg, formatDuration } from "@/lib/training/records";
 import { formatWeekday } from "@/lib/training/week";
 import { DeleteSessionButton } from "./DeleteSessionButton";
@@ -76,7 +76,7 @@ export function SessionSummary({
       {exercises.map((entry) => {
         const done = entry.sets.filter((s) => s.completed_at);
         if (done.length === 0) return null;
-        const timeBased = isTimeBased(entry.exercise);
+        const medicion = medicionDe(entry.exercise);
         const labels = numberWorkingSets(done);
 
         return (
@@ -102,9 +102,15 @@ export function SessionSummary({
                       {labels.get(set.id) ?? "?"}
                     </span>
                     <span className="text-metric text-sm text-[var(--text-primary)]">
-                      {timeBased && set.duration_seconds != null
-                        ? formatDuration(set.duration_seconds)
-                        : `${set.weight_kg != null ? `${formatKg(set.weight_kg)} kg` : "—"} × ${set.reps ?? "—"}`}
+                      {[
+                        medicion.peso && set.weight_kg != null ? `${formatKg(set.weight_kg)} kg` : null,
+                        medicion.reps && set.reps != null ? `${set.reps} reps` : null,
+                        medicion.tiempo && set.duration_seconds != null
+                          ? formatDuration(set.duration_seconds)
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" × ") || "—"}
                       {set.rir != null ? (
                         <span className="text-xs text-[var(--text-tertiary)]"> · RIR {set.rir}</span>
                       ) : null}

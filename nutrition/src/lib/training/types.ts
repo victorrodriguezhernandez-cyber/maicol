@@ -53,8 +53,19 @@ export interface ExerciseRow {
   mechanic: Mechanic;
   pattern: MovementPattern;
   is_unilateral: boolean;
+  /**
+   * Qué se apunta de cada serie. Son tres interruptores independientes
+   * porque se combinan: un paseo del granjero es peso Y tiempo, una
+   * plancha sólo tiempo, un press peso y repeticiones.
+   */
+  tracks_weight: boolean;
+  tracks_reps: boolean;
+  tracks_duration: boolean;
   default_reps_min: number;
   default_reps_max: number;
+  /** Rango por defecto en SEGUNDOS. Nulo si no se mide por tiempo. */
+  default_duration_min: number | null;
+  default_duration_max: number | null;
   default_rest_seconds: number;
   cues: string | null;
   is_active: boolean;
@@ -307,14 +318,45 @@ export function numberWorkingSets(sets: WorkoutSetRow[]): Map<string, string> {
   return labels;
 }
 
+/** Qué columnas tiene que enseñar el registro de un ejercicio. */
+export interface Medicion {
+  peso: boolean;
+  reps: boolean;
+  tiempo: boolean;
+}
+
 /**
- * Un ejercicio se registra por tiempo cuando su patrón lo pide (planchas,
- * paseos del granjero, colgarse de la barra). Lo decide el patrón y no una
- * columna aparte para que no puedan contradecirse.
+ * Qué mide este ejercicio.
+ *
+ * Antes esto se DEDUCÍA del patrón de movimiento: `transporte` valía por
+ * "esto va por tiempo" y la pantalla escondía la columna de peso. Con eso,
+ * un paseo del granjero —que es peso Y tiempo— no tenía dónde apuntar los
+ * kilos y el dato se perdía. Deducirlo nunca podía salir bien: el patrón
+ * dice cómo se mueve el cuerpo, no qué se apunta.
+ *
+ * Ahora lo declara cada ejercicio (migración 0008) y esta función sólo lo
+ * lee.
  */
-export function isTimeBased(exercise: ExerciseRow): boolean {
-  if (exercise.pattern === "transporte") return true;
-  // Un ejercicio de core con rango 1-1 es un isométrico: no tiene sentido
-  // pedir "1 repetición" de una plancha.
-  return exercise.pattern === "core" && exercise.default_reps_max === 1;
+export function medicionDe(exercise: ExerciseRow): Medicion {
+  return {
+    peso: exercise.tracks_weight,
+    reps: exercise.tracks_reps,
+    tiempo: exercise.tracks_duration,
+  };
+}
+
+/** El rango pautado y su unidad, para poder escribirlo en pantalla. */
+export function rangoDeMedicion(exercise: ExerciseRow): {
+  min: number;
+  max: number;
+  unidad: "reps" | "s";
+} {
+  if (exercise.tracks_duration && !exercise.tracks_reps) {
+    return {
+      min: exercise.default_duration_min ?? 30,
+      max: exercise.default_duration_max ?? 60,
+      unidad: "s",
+    };
+  }
+  return { min: exercise.default_reps_min, max: exercise.default_reps_max, unidad: "reps" };
 }

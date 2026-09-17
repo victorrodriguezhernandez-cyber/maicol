@@ -39,7 +39,7 @@ const OBJETIVOS: ObjetivoEjercicio[] = [
 ];
 
 function s(n: number, reps: number, kg: number | null, rir: number | null, t: SetType): SerieHecha {
-  return { setNumber: n, reps, weightKg: kg, rir, setType: t };
+  return { setNumber: n, reps, weightKg: kg, durationSeconds: null, rir, setType: t };
 }
 
 const HISTORIALES: SerieHecha[][] = [

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { numberWorkingSets, isTimeBased } from "./types";
+import { numberWorkingSets, medicionDe, rangoDeMedicion } from "./types";
 import type { WorkoutSetRow, ExerciseRow, SetType } from "./types";
 
 let n = 0;
@@ -35,8 +35,13 @@ function exercise(partial: Partial<ExerciseRow>): ExerciseRow {
     mechanic: "compuesto",
     pattern: "empuje_horizontal",
     is_unilateral: false,
+    tracks_weight: true,
+    tracks_reps: true,
+    tracks_duration: false,
     default_reps_min: 8,
     default_reps_max: 12,
+    default_duration_min: null,
+    default_duration_max: null,
     default_rest_seconds: 90,
     cues: null,
     is_active: true,
@@ -81,25 +86,79 @@ describe("numberWorkingSets", () => {
   });
 });
 
-describe("isTimeBased", () => {
-  it("los transportes se registran por tiempo", () => {
-    expect(isTimeBased(exercise({ pattern: "transporte" }))).toBe(true);
+describe("medicionDe", () => {
+  it("un press pide peso y repeticiones", () => {
+    expect(medicionDe(exercise({}))).toEqual({ peso: true, reps: true, tiempo: false });
   });
 
-  it("un isométrico de core también", () => {
-    // Una plancha con rango 1-1: pedir "1 repetición" no significa nada.
-    expect(
-      isTimeBased(exercise({ pattern: "core", default_reps_min: 1, default_reps_max: 1 })),
-    ).toBe(true);
+  it("una plancha pide sólo tiempo", () => {
+    const plancha = exercise({
+      pattern: "core",
+      equipment: "peso_corporal",
+      tracks_weight: false,
+      tracks_reps: false,
+      tracks_duration: true,
+      default_reps_min: 1,
+      default_reps_max: 1,
+      default_duration_min: 30,
+      default_duration_max: 60,
+    });
+    expect(medicionDe(plancha)).toEqual({ peso: false, reps: false, tiempo: true });
   });
 
-  it("un abdominal normal se registra por repeticiones", () => {
-    expect(
-      isTimeBased(exercise({ pattern: "core", default_reps_min: 15, default_reps_max: 25 })),
-    ).toBe(false);
+  it("un paseo del granjero pide peso Y tiempo", () => {
+    // Éste es el caso que motivó la migración 0008. Antes la medición se
+    // deducía del patrón de movimiento: `transporte` valía por "esto va
+    // por tiempo" y la pantalla escondía la columna de peso, así que los
+    // kilos con los que de verdad caminas no tenían dónde apuntarse y el
+    // dato se perdía. Peso y tiempo no son excluyentes.
+    const granjero = exercise({
+      pattern: "transporte",
+      tracks_weight: true,
+      tracks_reps: false,
+      tracks_duration: true,
+      default_reps_min: 1,
+      default_reps_max: 1,
+      default_duration_min: 20,
+      default_duration_max: 45,
+    });
+    expect(medicionDe(granjero)).toEqual({ peso: true, reps: false, tiempo: true });
   });
 
-  it("un press no se registra por tiempo", () => {
-    expect(isTimeBased(exercise({ pattern: "empuje_horizontal" }))).toBe(false);
+  it("no deduce nada del patrón: lo lee del ejercicio", () => {
+    // Un transporte que sí se cuenta por pasos/repeticiones es legítimo,
+    // y la función tiene que respetarlo en vez de imponer el tiempo.
+    const conReps = exercise({ pattern: "transporte", tracks_duration: false });
+    expect(medicionDe(conReps).tiempo).toBe(false);
+    expect(medicionDe(conReps).reps).toBe(true);
+  });
+});
+
+describe("rangoDeMedicion", () => {
+  it("en repeticiones devuelve el rango de repeticiones", () => {
+    expect(rangoDeMedicion(exercise({}))).toEqual({ min: 8, max: 12, unidad: "reps" });
+  });
+
+  it("en un ejercicio de tiempo devuelve segundos", () => {
+    const plancha = exercise({
+      tracks_reps: false,
+      tracks_duration: true,
+      default_reps_min: 1,
+      default_reps_max: 1,
+      default_duration_min: 30,
+      default_duration_max: 60,
+    });
+    expect(rangoDeMedicion(plancha)).toEqual({ min: 30, max: 60, unidad: "s" });
+  });
+
+  it("si mide tiempo pero también repeticiones, manda el rango de repeticiones", () => {
+    // El número que se persigue es el de repeticiones; el tiempo ahí es
+    // un dato más de la serie, no la pauta.
+    const conAmbos = exercise({
+      tracks_duration: true,
+      default_duration_min: 20,
+      default_duration_max: 40,
+    });
+    expect(rangoDeMedicion(conAmbos).unidad).toBe("reps");
   });
 });

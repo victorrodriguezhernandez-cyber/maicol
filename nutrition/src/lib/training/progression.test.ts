@@ -15,7 +15,7 @@ const objetivo: ObjetivoEjercicio = { sets: 3, repsMin: 8, repsMax: 12, rir: 2 }
 const objetivo8a12: ObjetivoEjercicio = { sets: 3, repsMin: 8, repsMax: 12, rir: 1 };
 
 function serie(setNumber: number, reps: number, weightKg: number | null, extra?: Partial<SerieHecha>): SerieHecha {
-  return { setNumber, reps, weightKg, rir: null, setType: "normal", ...extra };
+  return { setNumber, reps, weightKg, durationSeconds: null, rir: null, setType: "normal", ...extra };
 }
 
 describe("incrementoMinimo", () => {
