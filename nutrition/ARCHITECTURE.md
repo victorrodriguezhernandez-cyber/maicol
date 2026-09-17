@@ -209,8 +209,9 @@ The Supabase project backing this app (`Maicol`, ref
 `pyiukqeuaxonsrrgbfzq`) also hosts tables for an unrelated trading
 dashboard (`zonas_historial`, `niveles_historial`, `analisis_actual`,
 `zones_history`) that predates this app and lives in the repository root
-(`index.html`, `chart.js`, `zones.js` — a static site, not part of this
-Next.js project). This app's migrations (`supabase/migrations/`) only ever
+(a static trading dashboard whose files were removed from the repository
+root in September 2026; the tables stay because they still hold that
+app's data). This app's migrations (`supabase/migrations/`) only ever
 create or alter objects under the table names listed in `DATABASE.md`; they
 never touch that other app's tables. Three of those pre-existing tables
 (`zonas_historial`, `niveles_historial`, `analisis_actual`) currently have

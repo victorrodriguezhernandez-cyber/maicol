@@ -7,11 +7,10 @@ antes de tocar código.
 ## Snapshot exacto de este paquete
 
 - **Repositorio**: `victorrodriguezhernandez-cyber/maicol` (GitHub).
-- **App real**: vive en el subdirectorio `nutrition/` de ese repo — la
-  raíz del repo también contiene una web estática de trading sin
-  relación (`index.html`, `chart.js`, `zones.js`,
-  `el_sensei_espanol.pine`, `supabase.js`) que **no** forma parte de este
-  proyecto. No la toques salvo que te lo pidan explícitamente.
+- **App real**: vive en el subdirectorio `nutrition/` de ese repo, que ya
+  es el único proyecto del repositorio. La web estática de trading que
+  había en la raíz se borró en septiembre de 2026 (sigue en el historial
+  de Git); sus tablas de Supabase se quedaron y no se tocan.
 - **Rama**: `claude/nutrition-ai-app-vj15u0` (también fusionada a `main`,
   que es la rama de producción real en Vercel — ver "Despliegue" abajo).
 - **Commit de referencia de este ZIP**: `ae74368f16b386365bc2ce4d31196dd8cf2cd8b4`

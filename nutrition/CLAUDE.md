@@ -1,10 +1,9 @@
 # CLAUDE.md — guía para futuras sesiones de Claude Code
 
-This file is scoped to `nutrition/` (the actual app). The repository root
-also contains an unrelated trading-platform static site — don't touch
-`index.html`/`chart.js`/`zones.js`/`supabase.js`/`el_sensei_espanol.pine`
-at the repo root unless the user is explicitly asking about that other
-project.
+This file is scoped to `nutrition/`, which is the only project in this
+repository. A trading static site used to live at the repo root; its files
+were removed in September 2026 (they are still in the Git history). Its
+Supabase tables were NOT removed — see "Antes de tocar la base de datos".
 
 @AGENTS.md
 
@@ -178,40 +177,3 @@ bucle de aprendizaje de correcciones (`ai_corrections`), memoria
 estructurada del coach (`ai_memory`), adjuntar fotos de comida guardadas a
 `meal_images`, notificaciones push reales, sincronización con Apple
 Health (imposible desde una PWA).
-
-## El cerebro compartido (`brain/` en la raíz)
-
-Este repositorio lo trabajan por turnos Claude Code, Codex/Astra y
-ChatGPT, que no comparten memoria. `brain/` es la memoria común y
-**`brain/PROTOCOL.md` manda**. Lo de arriba (las 12 reglas) sigue
-mandando sobre el código; esto manda sobre el proceso.
-
-**Antes de cualquier tarea significativa:**
-
-1. `npm run brain:start`
-2. `git pull --ff-only`
-3. Leer `brain/PROTOCOL.md`
-4. Leer `brain/CURRENT_STATE.md`
-5. Leer `brain/HANDOFF.md`
-6. Revisar los commits posteriores al último handoff (el preflight los lista)
-7. Si otro agente tocó código, inspeccionar ese diff antes de escribir
-8. Consultar sólo las `decisions/` y `playbooks/` que afecten a la tarea
-
-**Después de cualquier trabajo significativo:**
-
-1. Pasar los tests que correspondan
-2. Actualizar `brain/CURRENT_STATE.md` (sólo el presente, ≤150 líneas)
-3. Reescribir `brain/HANDOFF.md`; el anterior se archiva en `brain/sessions/`
-4. Actualizar `brain/MANIFEST.json`
-5. Guardar sesión en `brain/sessions/` si aporta algo
-6. `npm run brain:check`
-7. Commit y push
-
-Estados: `draft` → `testing` → `proposed` → `approved`, más `rejected` y
-`superseded`. **Sólo `approved` es conocimiento.** Lo no aprobado vive en
-`brain/proposals/`, nunca en `brain/decisions/`. En diseño y UI **sólo el
-usuario aprueba**: que a un agente le parezca perfecto no vale, y
-`brain-check` falla si se salta esa regla.
-
-Si el cerebro y el código se contradicen, **gana Git**: el cerebro estaba
-mal y se corrige en el mismo commit.

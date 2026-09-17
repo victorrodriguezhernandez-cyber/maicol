@@ -130,6 +130,6 @@ Orden recomendado, de menor a mayor riesgo de romper algo:
    pero el que menos "escala": si haces algo que se ve mejor, considera
    si merece subir a una primitiva en vez de quedar solo ahí.
 
-No toques `index.html`/`chart.js`/`zones.js`/`el_sensei_espanol.pine` en
-la raíz del repo — es una web estática de trading sin relación con esta
-app (ver `ARCHITECTURE.md` → "Shared Supabase project").
+La web estática de trading que había en la raíz del repo se borró en
+septiembre de 2026. Sus tablas de Supabase siguen ahí y no se tocan (ver
+`ARCHITECTURE.md` → "Shared Supabase project").
