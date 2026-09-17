@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  incrementoMinimo,
-  objetivoDeEjercicio,
-  RANGO_POR_FOCO,
-  recomendarCarga,
-} from "./progression";
+import { incrementoMinimo, objetivoDeEjercicio, recomendarCarga } from "./progression";
 import type { ObjetivoEjercicio, SerieHecha } from "./progression";
 import type { Equipment } from "./types";
 
@@ -17,6 +12,7 @@ import type { Equipment } from "./types";
  */
 
 const objetivo: ObjetivoEjercicio = { sets: 3, repsMin: 8, repsMax: 12, rir: 2 };
+const objetivo8a12: ObjetivoEjercicio = { sets: 3, repsMin: 8, repsMax: 12, rir: 1 };
 
 function serie(setNumber: number, reps: number, weightKg: number | null, extra?: Partial<SerieHecha>): SerieHecha {
   return { setNumber, reps, weightKg, rir: null, setType: "normal", ...extra };
@@ -38,46 +34,41 @@ describe("incrementoMinimo", () => {
 });
 
 describe("objetivoDeEjercicio", () => {
-  const porDefecto = { repsMin: 10, repsMax: 15 };
+  const prescrito = { repsMin: 12, repsMax: 20, sets: 3, rir: 1 };
 
-  it("lo que pauta la rutina manda siempre", () => {
-    const o = objetivoDeEjercicio(objetivo, porDefecto, 3, { foco: "fuerza", equipment: "barra" });
-    expect(o).toEqual(objetivo);
+  it("sin rutina detrás manda lo que toca por objetivo", () => {
+    const { objetivo, fuente } = objetivoDeEjercicio(null, prescrito, 3);
+    expect(fuente).toBe("objetivo");
+    expect(objetivo.repsMin).toBe(12);
+    expect(objetivo.repsMax).toBe(20);
   });
 
-  it("sin rutina, un objetivo de fuerza acorta el rango", () => {
-    const o = objetivoDeEjercicio(null, porDefecto, 3, { foco: "fuerza", equipment: "barra" });
-    expect(o.repsMin).toBe(4);
-    expect(o.repsMax).toBe(6);
+  it("respeta la rutina cuando está cerca de lo que toca", () => {
+    // 8-12 contra 8-10 no cambia el peso que sale: no se toca.
+    const cerca = { repsMin: 8, repsMax: 10, sets: 3, rir: 1 };
+    const { objetivo, fuente } = objetivoDeEjercicio(objetivo8a12, cerca, 3);
+    expect(fuente).toBe("rutina");
+    expect(objetivo).toEqual(objetivo8a12);
   });
 
-  it("no aplica el rango del objetivo a ejercicios sin peso", () => {
-    // "Haz 4-6 planchas" no significa nada: el continuo fuerza-resistencia
-    // va de cuánta carga mueves.
-    const o = objetivoDeEjercicio(null, porDefecto, 3, {
-      foco: "fuerza",
-      equipment: "peso_corporal",
-    });
-    expect(o.repsMin).toBe(porDefecto.repsMin);
-    expect(o.repsMax).toBe(porDefecto.repsMax);
+  /**
+   * El caso del curl de muñeca: la rutina ponía 8-12 y para un músculo
+   * pequeño con objetivo de volumen lo que toca son 12-20. Ahí sí se
+   * corrige, porque el peso correcto es otro.
+   */
+  it("corrige la rutina cuando se aleja de verdad", () => {
+    const { objetivo, fuente } = objetivoDeEjercicio(objetivo8a12, prescrito, 3);
+    expect(fuente).toBe("objetivo");
+    expect(objetivo.repsMin).toBe(12);
+    expect(objetivo.repsMax).toBe(20);
+    // Las series siguen siendo las de la rutina: cuántas series haces es
+    // una decisión de volumen semanal, no de rango.
+    expect(objetivo.sets).toBe(objetivo8a12.sets);
   });
 
-  it("sin objetivo guardado usa el rango propio del ejercicio", () => {
-    const o = objetivoDeEjercicio(null, porDefecto, 3, { foco: null, equipment: "barra" });
-    expect(o.repsMin).toBe(porDefecto.repsMin);
-  });
-
-  it("nunca pide menos de 3 series en una sesión libre", () => {
-    expect(objetivoDeEjercicio(null, porDefecto, 1).sets).toBe(3);
-    expect(objetivoDeEjercicio(null, porDefecto, 5).sets).toBe(5);
-  });
-
-  it("cada foco trae su explicación", () => {
-    for (const foco of Object.keys(RANGO_POR_FOCO) as (keyof typeof RANGO_POR_FOCO)[]) {
-      const r = RANGO_POR_FOCO[foco];
-      expect(r.nota.length, foco).toBeGreaterThan(0);
-      expect(r.repsMin, foco).toBeLessThan(r.repsMax);
-    }
+  it("nunca pide menos series de las que ya hiciste en una sesión libre", () => {
+    expect(objetivoDeEjercicio(null, prescrito, 5).objetivo.sets).toBe(5);
+    expect(objetivoDeEjercicio(null, prescrito, 1).objetivo.sets).toBe(3);
   });
 });
 
@@ -287,5 +278,57 @@ describe("recomendarCarga", () => {
       expect(r.detalle.length, JSON.stringify(previas)).toBeGreaterThan(0);
       for (const linea of r.detalle) expect(linea.trim().length).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * Recalibrar: cuando el peso está puesto para otro rango.
+ *
+ * Pasa en los dos casos que más importan — la primera vez que eliges un
+ * peso a ojo, y cuando cambias de objetivo — y es donde un motor que sólo
+ * sabe sumar 2,5 kg se queda corto durante meses.
+ */
+describe("recalibrar el peso cuando el rango cambia", () => {
+  const fuerza: ObjetivoEjercicio = { sets: 3, repsMin: 3, repsMax: 6, rir: 2 };
+
+  it("no sube de 2,5 en 2,5 cuando el peso está puesto para otro rango", () => {
+    // 10 repeticiones con 60 kg, y el rango que toca son 3-6.
+    const r = recomendarCarga([serie(1, 10, 60), serie(2, 9, 60), serie(3, 8, 60)], fuerza, "barra");
+    expect(r.cambio).toBe("sube");
+    // Epley: 60 × (1 + 10/30) = 80 kg de máximo. A 5 repeticiones (el
+    // medio de 3-6) salen 80 / (1 + 5/30) = 68,6 → 67,5 cargable.
+    expect(r.weightKg).toBe(67.5);
+    expect(r.reps).toBe(5);
+    expect(r.detalle.join(" ")).toContain("Epley");
+  });
+
+  it("nunca sube más de un 20% de golpe", () => {
+    // Un máximo estimado altísimo no puede traducirse en un salto brutal.
+    const r = recomendarCarga([serie(1, 20, 40)], fuerza, "barra");
+    expect(r.weightKg).toBeLessThanOrEqual(40 * 1.2);
+    expect(r.detalle.join(" ")).toContain("20%");
+  });
+
+  it("también baja el peso cuando el rango nuevo es mucho más largo", () => {
+    const resistencia: ObjetivoEjercicio = { sets: 3, repsMin: 15, repsMax: 20, rir: 1 };
+    const r = recomendarCarga([serie(1, 5, 80), serie(2, 5, 80), serie(3, 4, 80)], resistencia, "barra");
+    expect(r.cambio).toBe("recalibra");
+    expect(r.weightKg!).toBeLessThan(80);
+  });
+
+  it("no recalibra por estar un poco fuera del rango", () => {
+    // 13 repeticiones con un rango de 12-20 no es "otro rango".
+    const largo: ObjetivoEjercicio = { sets: 3, repsMin: 12, repsMax: 20, rir: 1 };
+    const r = recomendarCarga(
+      [serie(1, 13, 10), serie(2, 10, 10), serie(3, 10, 8)],
+      largo,
+      "mancuernas",
+    );
+    expect(r.cambio).toBe("consolida");
+  });
+
+  it("en peso corporal no recalibra: no hay peso que recalcular", () => {
+    const r = recomendarCarga([serie(1, 30, null), serie(2, 25, null)], fuerza, "peso_corporal");
+    expect(r.cambio).not.toBe("recalibra");
   });
 });

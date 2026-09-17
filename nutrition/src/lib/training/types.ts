@@ -1,5 +1,6 @@
 import type { MuscleGroup } from "./muscles";
-import type { PreviousSet, Recomendacion } from "./progression";
+import type { FuenteDelRango, PreviousSet, Recomendacion } from "./progression";
+import type { Prescripcion } from "./prescripcion";
 
 export type { PreviousSet };
 
@@ -156,10 +157,22 @@ export interface SessionExercise {
    */
   previous: Map<number, PreviousSet>;
   /**
+   * El rango de repeticiones que toca en ESTE ejercicio para tu objetivo,
+   * con su explicación. Sale de `prescribirRango`, que mira el músculo,
+   * el tipo de ejercicio, el material y si estás en déficit.
+   */
+  prescripcion: Prescripcion;
+  /**
+   * Si el rango con el que se ha juzgado la sesión es el de tu rutina o
+   * el que toca por objetivo. `"objetivo"` significa que la app ha
+   * corregido tu rutina porque se alejaba de verdad, y hay que decirlo.
+   */
+  fuenteDelRango: FuenteDelRango;
+  /**
    * Qué peso y qué repeticiones tocan hoy, y por qué. Sale de
    * `recomendarCarga` (`src/lib/training/progression.ts`) leyendo
-   * `previous` y `target`: nunca de la IA, para que la explicación sea
-   * siempre la razón real (regla 9).
+   * `previous` y el rango resuelto: nunca de la IA, para que la
+   * explicación sea siempre la razón real (regla 9).
    */
   recomendacion: Recomendacion;
 }

@@ -11,6 +11,7 @@ import {
   recomendarCarga,
   seriesDesdePrevias,
 } from "@/lib/training/progression";
+import { prescribirRango } from "@/lib/training/prescripcion";
 
 /**
  * Vista previa del registro de entreno — SOLO en desarrollo.
@@ -101,19 +102,17 @@ function set(
  * mismo motor que en producción, para que esta pantalla enseñe lo que se
  * va a ver de verdad y no una versión bonita inventada (regla 11).
  */
-function conRecomendacion(e: Omit<SessionExercise, "recomendacion">): SessionExercise {
+function conRecomendacion(
+  e: Omit<SessionExercise, "recomendacion" | "prescripcion" | "fuenteDelRango">,
+): SessionExercise {
   const previas = seriesDesdePrevias(e.previous);
+  const prescripcion = prescribirRango(e.exercise, "hipertrofia", "mantener");
+  const { objetivo, fuente } = objetivoDeEjercicio(e.target, prescripcion, previas.length);
   return {
     ...e,
-    recomendacion: recomendarCarga(
-      previas,
-      objetivoDeEjercicio(
-        e.target,
-        { repsMin: e.exercise.default_reps_min, repsMax: e.exercise.default_reps_max },
-        previas.length,
-      ),
-      e.exercise.equipment,
-    ),
+    prescripcion,
+    fuenteDelRango: fuente,
+    recomendacion: recomendarCarga(previas, objetivo, e.exercise.equipment),
   };
 }
 

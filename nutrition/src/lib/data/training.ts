@@ -18,6 +18,14 @@ import {
   recomendarCarga,
   seriesDesdePrevias,
 } from "@/lib/training/progression";
+import { prescribirRango, type DireccionPeso } from "@/lib/training/prescripcion";
+
+/** `nutrition_goals.mode` traducido al eje que usa la prescripción. */
+export function direccionDePeso(mode: string | undefined | null): DireccionPeso {
+  if (mode === "lose") return "perder";
+  if (mode === "gain") return "ganar";
+  return "mantener";
+}
 import { computeWeeklyVolume, type MuscleVolume } from "@/lib/training/volume";
 import { computeExerciseRecords, type ExerciseRecords, type CompletedSet } from "@/lib/training/records";
 
@@ -279,15 +287,25 @@ export async function getSessionDetail(
     else byPosition.set(set.exercise_position, { exercise, sets: [set as WorkoutSetRow] });
   }
 
+  const userId = (session as TrainingSessionRow).user_id;
   const exerciseIds = [...new Set(rows.map((r) => r.exercise_id))];
-  const [previousByExercise, objetivoPersonal] = await Promise.all([
+  const [previousByExercise, objetivoPersonal, objetivoComida] = await Promise.all([
     getPreviousPerformance(supabase, exerciseIds, sessionId),
-    // Sólo hace falta para las sesiones libres (sin rutina detrás), pero
-    // se pide siempre: es una fila por índice y ahorra ramificar la
-    // lógica de más abajo.
-    getTrainingGoal(supabase, (session as TrainingSessionRow).user_id),
+    getTrainingGoal(supabase, userId),
+    // La dirección del peso corporal NO es decorado: en déficit lo que
+    // toca es sostener la carga, no empujarla. Ver `prescribirRango`.
+    supabase
+      .from("nutrition_goals")
+      .select("mode")
+      .eq("user_id", userId)
+      .is("effective_to", null)
+      .maybeSingle(),
   ]);
-  const foco = objetivoPersonal?.focus[0] ?? null;
+
+  // Sin objetivo guardado se asume hipertrofia, que es lo que busca casi
+  // todo el que entrena con pesas, y la pantalla invita a concretarlo.
+  const foco = objetivoPersonal?.focus[0] ?? "hipertrofia";
+  const direccion = direccionDePeso(objetivoComida.data?.mode as string | undefined);
 
   const exercises: SessionExercise[] = [...byPosition.entries()]
     .sort(([a], [b]) => a - b)
@@ -295,25 +313,25 @@ export async function getSessionDetail(
       const target = targets.get(exercise.id) ?? null;
       const previous = previousByExercise.get(exercise.id) ?? new Map();
       const previas = seriesDesdePrevias(previous);
+
+      // Primero QUÉ RANGO toca en este ejercicio (que depende del músculo,
+      // del tipo de ejercicio y de tu objetivo), y sólo después qué peso.
+      // Al revés se afina el peso contra un rango que puede estar mal.
+      const prescripcion = prescribirRango(exercise, foco, direccion);
+      const { objetivo, fuente } = objetivoDeEjercicio(target, prescripcion, previas.length);
+
       return {
         exercise,
         position,
         sets: exerciseSets,
         target,
         previous,
+        prescripcion,
+        fuenteDelRango: fuente,
         // La recomendación se calcula aquí, en el servidor, con los datos
         // que ya se han traído: no cuesta una consulta más ni depende de
         // que la IA esté disponible.
-        recomendacion: recomendarCarga(
-          previas,
-          objetivoDeEjercicio(
-            target,
-            { repsMin: exercise.default_reps_min, repsMax: exercise.default_reps_max },
-            previas.length,
-            { foco, equipment: exercise.equipment },
-          ),
-          exercise.equipment,
-        ),
+        recomendacion: recomendarCarga(previas, objetivo, exercise.equipment),
       };
     });
 

@@ -20,6 +20,7 @@ import type {
 } from "@/lib/training/types";
 import { isTimeBased, SET_TYPE_LABELS, numberWorkingSets } from "@/lib/training/types";
 import type { Recomendacion } from "@/lib/training/progression";
+import type { Prescripcion } from "@/lib/training/prescripcion";
 import type { NewRecord } from "@/lib/training/records";
 import { formatKg } from "@/lib/training/records";
 import { RestTimer } from "./RestTimer";
@@ -361,6 +362,10 @@ function ExerciseCard({
   const timeBased = isTimeBased(entry.exercise);
   const rest = entry.target?.restSeconds ?? entry.exercise.default_rest_seconds;
   const labels = numberWorkingSets(entry.sets);
+  // El rango con el que se ha juzgado de verdad la sesión: el de tu
+  // rutina, o el corregido por objetivo cuando aquél se alejaba.
+  const rango =
+    entry.fuenteDelRango === "rutina" && entry.target ? entry.target : entry.prescripcion;
 
   return (
     <section className="surface-panel overflow-hidden">
@@ -373,11 +378,12 @@ function ExerciseCard({
             {entry.exercise.name}
           </Link>
           <p className="text-xs text-[var(--text-tertiary)]">
-            {entry.target
-              ? `${entry.target.sets} × ${entry.target.repsMin}-${entry.target.repsMax}` +
-                (entry.target.rir != null ? ` · RIR ${entry.target.rir}` : "") +
-                ` · ${rest}s`
-              : `${entry.exercise.default_reps_min}-${entry.exercise.default_reps_max} reps · ${rest}s`}
+            {`${entry.target?.sets ?? entry.prescripcion.sets} × ${rango.repsMin}-${rango.repsMax}` +
+              ` · RIR ${entry.target?.rir ?? entry.prescripcion.rir}` +
+              ` · ${rest}s`}
+            {entry.fuenteDelRango === "objetivo" && entry.target ? (
+              <span className="ml-1.5 text-[var(--accent)]">ajustado</span>
+            ) : null}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -424,7 +430,11 @@ function ExerciseCard({
         </p>
       ) : null}
 
-      <PlanDeHoy recomendacion={entry.recomendacion} />
+      <PlanDeHoy
+        recomendacion={entry.recomendacion}
+        prescripcion={entry.prescripcion}
+        rutinaCorregida={entry.fuenteDelRango === "objetivo" && entry.target != null}
+      />
 
       <div
         className="grid items-center gap-2 px-4 py-2"
@@ -474,9 +484,30 @@ function ExerciseCard({
  * vez de estar siempre abierto porque cuando ya sabes qué toca, cuatro
  * líneas de explicación por ejercicio te tapan la hoja de registro.
  */
-function PlanDeHoy({ recomendacion }: { recomendacion: Recomendacion }) {
+function PlanDeHoy({
+  recomendacion,
+  prescripcion,
+  rutinaCorregida,
+}: {
+  recomendacion: Recomendacion;
+  prescripcion: Prescripcion;
+  rutinaCorregida: boolean;
+}) {
   const [abierto, setAbierto] = useState(false);
   const { cambio, titulo, detalle } = recomendacion;
+
+  // El porqué completo son dos cosas encadenadas: primero QUÉ RANGO toca
+  // en este ejercicio, y sólo después qué peso sale de tu historial. En
+  // ese orden, porque el peso se decide contra el rango.
+  const porque = [
+    ...(rutinaCorregida
+      ? [
+          `Tu rutina pedía otro rango, pero para este ejercicio y tu objetivo lo que toca son ${prescripcion.repsMin}-${prescripcion.repsMax} repeticiones. Puedes cambiarlo en la rutina si prefieres el tuyo.`,
+        ]
+      : []),
+    ...prescripcion.porque,
+    ...detalle,
+  ];
 
   // Sólo "sube" se resalta: es la única que cambia lo que ibas a hacer.
   const acentuado = cambio === "sube";
@@ -512,7 +543,7 @@ function PlanDeHoy({ recomendacion }: { recomendacion: Recomendacion }) {
 
       {abierto ? (
         <ul className="mt-2 flex flex-col gap-1.5 border-t border-[var(--border-soft)] pt-2">
-          {detalle.map((linea, i) => (
+          {porque.map((linea, i) => (
             <li key={i} className="text-[12.5px] leading-relaxed text-[var(--text-secondary)]">
               {linea}
             </li>

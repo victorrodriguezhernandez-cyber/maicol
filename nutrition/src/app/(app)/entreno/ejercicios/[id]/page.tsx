@@ -1,8 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { getCurrentGoal } from "@/lib/data/nutrition";
 import { getExercise, getExerciseHistory, getTrainingGoal } from "@/lib/data/training";
 import { objetivoDeEjercicio, recomendarCarga } from "@/lib/training/progression";
+import { prescribirRango } from "@/lib/training/prescripcion";
+import { direccionDePeso } from "@/lib/data/training";
 import { formatKg, formatDuration, ONE_RM_MAX_REPS } from "@/lib/training/records";
 import { formatWeekday } from "@/lib/training/week";
 import { MUSCLE_LABELS } from "@/lib/training/muscles";
@@ -23,10 +26,11 @@ export default async function EjercicioPage({
   } = await getUser(supabase);
   if (!user) redirect("/login");
 
-  const [exercise, { history, records }, objetivoPersonal] = await Promise.all([
+  const [exercise, { history, records }, objetivoPersonal, goal] = await Promise.all([
     getExercise(supabase, id),
     getExerciseHistory(supabase, id),
     getTrainingGoal(supabase, user.id),
+    getCurrentGoal(supabase, user.id),
   ]);
   if (!exercise) notFound();
 
@@ -36,6 +40,11 @@ export default async function EjercicioPage({
   // consejo no cambie según por dónde lo mires. Se calcula desde la última
   // sesión registrada de este ejercicio, que es history[0].
   const ultima = history[0];
+  const prescripcion = prescribirRango(
+    exercise,
+    objetivoPersonal?.focus[0] ?? "hipertrofia",
+    direccionDePeso(goal?.mode),
+  );
   const recomendacion = recomendarCarga(
     (ultima?.sets ?? []).map((s) => ({
       setNumber: s.set_number,
@@ -44,12 +53,7 @@ export default async function EjercicioPage({
       rir: s.rir,
       setType: s.set_type,
     })),
-    objetivoDeEjercicio(
-      null,
-      { repsMin: exercise.default_reps_min, repsMax: exercise.default_reps_max },
-      ultima?.sets.length ?? 0,
-      { foco: objetivoPersonal?.focus[0] ?? null, equipment: exercise.equipment },
-    ),
+    objetivoDeEjercicio(null, prescripcion, ultima?.sets.length ?? 0).objetivo,
     exercise.equipment,
   );
 
@@ -102,10 +106,21 @@ export default async function EjercicioPage({
               ))}
             </ul>
           </div>
+          <div className="surface-soft flex flex-col gap-1.5 p-4">
+            <span className="text-section">
+              Por qué {prescripcion.repsMin}-{prescripcion.repsMax} repeticiones
+            </span>
+            {prescripcion.porque.map((linea, i) => (
+              <p key={i} className="text-[12.5px] leading-relaxed text-[var(--text-secondary)]">
+                {linea}
+              </p>
+            ))}
+          </div>
+
           <p className="text-[11px] leading-relaxed text-[var(--text-tertiary)]">
-            Sale de tu propio historial con doble progresión: el peso no sube hasta llegar al tope
-            del rango en todas las series. Si el ejercicio está en una rutina, el rango que manda
-            es el que pauta la rutina.
+            El peso sale de tu propio historial con doble progresión: no sube hasta llegar al tope
+            del rango en todas las series. El rango sale de tu objetivo y de este ejercicio en
+            concreto, no de una cifra igual para todo.
           </p>
         </section>
       )}

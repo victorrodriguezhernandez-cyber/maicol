@@ -31,13 +31,6 @@ type Equipment =
 
 type SetType = "calentamiento" | "normal" | "dropset" | "backoff" | "fallo";
 
-type TrainingFocus =
-  | "fuerza"
-  | "hipertrofia"
-  | "resistencia"
-  | "mantenimiento"
-  | "salud";
-
 /** Una serie ya registrada, tal y como sale de `workout_sets`. */
 export interface SerieHecha {
   setNumber: number;
@@ -68,9 +61,11 @@ export interface ObjetivoEjercicio {
  * - `mantiene`: mismo peso, subiendo repeticiones dentro del rango.
  * - `consolida`: mismo peso pero repartido mejor, porque la sesión
  *   anterior se descompuso a mitad.
+ * - `recalibra`: el peso estaba puesto para otro rango y se recalcula
+ *   entero desde el máximo estimado, no de poco en poco.
  * - `sin_datos`: primera vez con este ejercicio.
  */
-export type Cambio = "sube" | "mantiene" | "consolida" | "sin_datos";
+export type Cambio = "sube" | "mantiene" | "consolida" | "recalibra" | "sin_datos";
 
 export interface Recomendacion {
   cambio: Cambio;
@@ -184,6 +179,41 @@ function trabajoTotal(series: SerieHecha[], sinPeso: boolean): number {
 }
 
 /**
+ * Cuántas repeticiones puede alejarse lo que hiciste del rango que toca
+ * antes de que el peso deje de estar "cerca" y haya que recalcularlo
+ * entero en vez de moverlo de poco en poco.
+ *
+ * Tres, el mismo corte que usa `prescripcion.ts` para decidir si merece
+ * la pena corregir un rango. Es una elección, no un hallazgo.
+ */
+const DESVIACION_PARA_RECALIBRAR = 3;
+
+/**
+ * Lo máximo que se deja subir un peso de golpe al recalibrar: un 20%.
+ *
+ * Recalibrar sale de una fórmula, y una fórmula puede equivocarse. Un
+ * error del 20% se nota en la primera serie y se corrige; un error del
+ * 50% es una lesión. Al bajar no hay tope: menos peso no hace daño.
+ */
+const SALTO_MAXIMO = 1.2;
+
+/**
+ * Máximo estimado con la fórmula de Epley, la misma que usa `records.ts`.
+ *
+ * `peso × (1 + reps/30)`. Es una estimación y deja de ser fiable por
+ * encima de unas 12 repeticiones, así que sólo se usa como punto de
+ * partida: la primera serie de hoy dice si estaba bien.
+ */
+function maximoEstimado(pesoKg: number, reps: number): number {
+  return pesoKg * (1 + reps / 30);
+}
+
+/** El peso al que, con ese máximo estimado, salen esas repeticiones. */
+function pesoParaReps(unaRM: number, reps: number): number {
+  return unaRM / (1 + reps / 30);
+}
+
+/**
  * Las repeticiones por serie que hacen falta HOY para no hacer menos
  * trabajo que la última vez con el peso que se recomienda.
  *
@@ -211,80 +241,81 @@ export function seriesDesdePrevias(previous: ReadonlyMap<number, PreviousSet>): 
   return [...previous.entries()].map(([setNumber, s]) => ({ setNumber, ...s }));
 }
 
-/**
- * El rango de repeticiones que corresponde a cada objetivo.
- *
- * Es el continuo clásico fuerza → hipertrofia → resistencia de las
- * recomendaciones de la NSCA y el ACSM: cargas altas y series cortas
- * desarrollan sobre todo fuerza, series medias sobre todo tamaño, y
- * series largas sobre todo aguante. Los bordes NO son una frontera real
- * — se gana algo de las tres cosas en todo el espectro — así que esto es
- * dónde apuntar, no una línea que cruzar.
- *
- * `nota` es la explicación que se enseña cuando se usa este rango, para
- * que la recomendación pueda decir de dónde sale (regla 9).
- */
-export const RANGO_POR_FOCO: Record<
-  TrainingFocus,
-  { repsMin: number; repsMax: number; nota: string }
-> = {
-  fuerza: {
-    repsMin: 4,
-    repsMax: 6,
-    nota: "Tu objetivo es fuerza, así que el rango es corto y pesado (4-6).",
-  },
-  hipertrofia: {
-    repsMin: 8,
-    repsMax: 12,
-    nota: "Tu objetivo es volumen, así que el rango es el de 8-12.",
-  },
-  resistencia: {
-    repsMin: 15,
-    repsMax: 20,
-    nota: "Tu objetivo es resistencia, así que el rango es largo (15-20).",
-  },
-  mantenimiento: {
-    repsMin: 8,
-    repsMax: 12,
-    nota: "Estás manteniendo, así que el rango es el intermedio de 8-12.",
-  },
-  salud: {
-    repsMin: 10,
-    repsMax: 15,
-    nota: "Entrenas por salud, así que el rango es cómodo (10-15).",
-  },
-};
+/** Un rango prescrito por `prescripcion.ts` para este ejercicio. */
+export interface RangoSugerido {
+  repsMin: number;
+  repsMax: number;
+  sets: number;
+  rir: number;
+}
+
+/** De dónde sale el rango contra el que se juzga la sesión. */
+export type FuenteDelRango = "rutina" | "objetivo";
+
+export interface ObjetivoResuelto {
+  objetivo: ObjetivoEjercicio;
+  fuente: FuenteDelRango;
+}
 
 /**
- * El objetivo contra el que se juzga la sesión.
+ * Cuánto tienen que separarse dos rangos para que merezca la pena
+ * corregir el de la rutina. Ver `SEPARACION_QUE_IMPORTA` en
+ * `prescripcion.ts`: por debajo de tres repeticiones, el peso que sale
+ * es prácticamente el mismo y cambiarlo sólo sería ruido.
+ */
+const SEPARACION_QUE_IMPORTA = 3;
+
+/**
+ * El objetivo contra el que se juzga la sesión: el de tu rutina, salvo
+ * que se aleje de lo que toca para ese ejercicio.
  *
- * Manda siempre lo que pauta la rutina: es lo que el usuario tiene
- * delante en su hoja, y aconsejarle contra otro número haría que el
- * consejo no le cuadrara.
+ * ── Por qué no manda siempre la rutina ─────────────────────────────────
  *
- * Sin rutina (una sesión libre) se mira su objetivo personal, pero SÓLO
- * en ejercicios con peso: el continuo fuerza-resistencia va de cuánta
- * carga mueves, y aplicarlo a una plancha o a unos abdominales daría un
- * "haz 4-6" que no tiene sentido. Ahí manda el rango propio del
- * ejercicio, que sí está pensado para él. Sin objetivo guardado, también.
+ * Antes mandaba, y era un error: el 10-12 de la rutina lo pone alguien
+ * que todavía no sabe cuál es el rango bueno, o lo pone al azar. Afinar
+ * el peso contra un rango inventado es afinar encima de un error, y así
+ * el consejo nunca puede pasar de "repite lo de la otra vez".
+ *
+ * ── Por qué tampoco manda siempre la prescripción ──────────────────────
+ *
+ * Porque tu rutina es tuya. Si pone 8-12 y lo que toca es 8-10, pisarla
+ * no cambia el peso que sale y sólo consigue que la app te lleve la
+ * contraria por nada. Se corrige cuando la diferencia importa de verdad:
+ * tres repeticiones en cualquiera de los dos bordes.
  */
 export function objetivoDeEjercicio(
   target: ObjetivoEjercicio | null,
-  porDefecto: { repsMin: number; repsMax: number },
+  prescrito: RangoSugerido,
   seriesPrevias: number,
-  contexto?: { foco?: TrainingFocus | null; equipment?: Equipment },
-): ObjetivoEjercicio {
-  if (target) return target;
+): ObjetivoResuelto {
+  if (!target) {
+    return {
+      fuente: "objetivo",
+      objetivo: {
+        sets: Math.max(prescrito.sets, seriesPrevias),
+        repsMin: prescrito.repsMin,
+        repsMax: prescrito.repsMax,
+        rir: prescrito.rir,
+      },
+    };
+  }
 
-  const conPeso = contexto?.equipment ? incrementoMinimo(contexto.equipment) > 0 : false;
-  const rango =
-    contexto?.foco && conPeso ? RANGO_POR_FOCO[contexto.foco] : porDefecto;
+  const lejos =
+    Math.abs(target.repsMin - prescrito.repsMin) >= SEPARACION_QUE_IMPORTA ||
+    Math.abs(target.repsMax - prescrito.repsMax) >= SEPARACION_QUE_IMPORTA;
 
+  if (!lejos) return { objetivo: target, fuente: "rutina" };
+
+  // Se corrige el rango, pero las series siguen siendo las de tu rutina:
+  // cuántas series haces es una decisión de volumen semanal, no de rango.
   return {
-    sets: Math.max(3, seriesPrevias),
-    repsMin: rango.repsMin,
-    repsMax: rango.repsMax,
-    rir: null,
+    fuente: "objetivo",
+    objetivo: {
+      sets: target.sets,
+      repsMin: prescrito.repsMin,
+      repsMax: prescrito.repsMax,
+      rir: target.rir ?? prescrito.rir,
+    },
   };
 }
 
@@ -352,6 +383,51 @@ export function recomendarCarga(
           `Caíste de ${primeras} a ${ultimas} repeticiones (${Math.round(caida * 100)}%). Por encima del ${Math.round(CAIDA_EXCESIVA * 100)}% suele significar que la primera serie se llevó muy cerca del fallo, o que descansaste poco entre series.`,
         ]
       : [];
+
+  // ── El peso no va con el rango: se recalcula entero ─────────────────
+  //
+  // Si vienes haciendo 10 repeticiones y el rango que toca son 3-6, el
+  // peso no está "un poco bajo": está puesto para otra cosa. Moverlo de
+  // 2,5 en 2,5 tardaría meses en llegar, y mientras tanto ninguna serie
+  // estaría haciendo lo que debería.
+  //
+  // Pasa en los dos casos que importan: la primera vez que elegiste un
+  // peso a ojo, y cuando cambias de objetivo. Se recalcula desde tu
+  // máximo estimado, que sale de lo que de verdad levantaste.
+  const mejorSerie = trabajo.reduce((a, b) =>
+    maximoEstimado(b.weightKg ?? 0, b.reps ?? 0) > maximoEstimado(a.weightKg ?? 0, a.reps ?? 0)
+      ? b
+      : a,
+  );
+  const repsMejor = mejorSerie.reps ?? 0;
+  const fueraDeRango =
+    repsMejor > objetivo.repsMax + DESVIACION_PARA_RECALIBRAR ||
+    repsMejor < objetivo.repsMin - DESVIACION_PARA_RECALIBRAR;
+
+  if (!sinPeso && fueraDeRango && (mejorSerie.weightKg ?? 0) > 0) {
+    const unaRM = maximoEstimado(mejorSerie.weightKg!, repsMejor);
+    // Se apunta al medio del rango, no al borde: el borde de abajo deja
+    // el peso alto para las últimas series y el de arriba lo deja corto.
+    const objetivoReps = Math.round((objetivo.repsMin + objetivo.repsMax) / 2);
+    const teorico = pesoParaReps(unaRM, objetivoReps);
+    const nuevo = acargable(Math.min(teorico, pesoPrimera * SALTO_MAXIMO), incremento);
+    const sube = nuevo > pesoPrimera;
+
+    return {
+      cambio: sube ? "sube" : "recalibra",
+      weightKg: nuevo,
+      reps: objetivoReps,
+      titulo: `${sube ? "Sube" : "Baja"} a ${decimal(nuevo)} kg × ${objetivoReps}`,
+      detalle: [
+        laUltimaVez,
+        `Ese peso está puesto para otro rango: hiciste ${repsMejor} repeticiones y lo que toca aquí son ${objetivo.repsMin}-${objetivo.repsMax}. Moverlo de ${decimal(incremento)} en ${decimal(incremento)} tardaría meses en llegar.`,
+        `Con ${repsMejor} repeticiones a ${decimal(mejorSerie.weightKg!)} kg, tu máximo estimado es ${decimal(Math.round(unaRM * 10) / 10)} kg (fórmula de Epley). El peso al que salen ${objetivoReps} repeticiones es ${decimal(nuevo)} kg.`,
+        teorico > pesoPrimera * SALTO_MAXIMO
+          ? `La cuenta pedía más, pero de un entreno a otro no se sube más de un 20%: un error de cálculo del 20% se nota en la primera serie y se corrige, uno del 50% es una lesión.`
+          : `Es una estimación, no una medición. Si la primera serie se te queda corta o larga, cámbialo y el próximo entreno se recalcula con el dato nuevo.`,
+      ],
+    };
+  }
 
   // ── Bajaste el peso a media sesión ──────────────────────────────────
   //

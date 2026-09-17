@@ -9,7 +9,7 @@ import {
   type TrainingFocus,
   type TrainingGoalRow,
 } from "@/lib/training/types";
-import { RANGO_POR_FOCO } from "@/lib/training/progression";
+import { TABLA_RANGOS } from "@/lib/training/prescripcion";
 
 /**
  * Qué persigo entrenando.
@@ -32,7 +32,14 @@ export function TrainingGoalForm({ goal }: { goal: TrainingGoalRow | null }) {
   const [guardando, guardar] = useTransition();
 
   const principal = focus[0] ?? null;
-  const rango = principal ? RANGO_POR_FOCO[principal] : null;
+  // Dos ejemplos concretos valen más que la tabla entera: se ve de un
+  // vistazo que el rango NO es el mismo para todo.
+  const ejemplos = principal
+    ? {
+        compuesto: TABLA_RANGOS[principal].compuesto_pesado,
+        aislamiento: TABLA_RANGOS[principal].aislamiento_pequeno,
+      }
+    : null;
 
   function toggle(f: TrainingFocus) {
     setGuardado(false);
@@ -118,10 +125,18 @@ export function TrainingGoalForm({ goal }: { goal: TrainingGoalRow | null }) {
         </p>
       ) : null}
 
-      {rango ? (
+      {ejemplos ? (
         <p className="text-[12px] leading-relaxed text-[var(--text-secondary)]">
-          {rango.nota} Es a lo que apuntan los entrenos sueltos, sin rutina detrás: cuando el
-          ejercicio viene de una rutina manda lo que pauta la rutina.
+          Con ese objetivo, la app te pedirá{" "}
+          <span className="text-metric">
+            {ejemplos.compuesto.repsMin}-{ejemplos.compuesto.repsMax}
+          </span>{" "}
+          repeticiones en un press de banca y{" "}
+          <span className="text-metric">
+            {ejemplos.aislamiento.repsMin}-{ejemplos.aislamiento.repsMax}
+          </span>{" "}
+          en un curl de bíceps. No es el mismo número para todo: depende del músculo, del tipo de
+          ejercicio y del material. En cada ejercicio te dice por qué.
         </p>
       ) : null}
 

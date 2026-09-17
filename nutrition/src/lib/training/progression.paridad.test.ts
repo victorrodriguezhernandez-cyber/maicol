@@ -75,7 +75,6 @@ describe("paridad entre la copia de la app y la del Edge Function", () => {
     for (const eq of EQUIPOS) {
       expect(edge.incrementoMinimo(eq), eq).toBe(app.incrementoMinimo(eq));
     }
-    expect(edge.RANGO_POR_FOCO).toEqual(app.RANGO_POR_FOCO);
   });
 
   /**
