@@ -129,7 +129,15 @@ export default async function EntrenoPage() {
                       ? `/entreno/rutinas/${routine.id}`
                       : null
                   }
-                  hasOpenSession={Boolean(openSession)}
+                  abierto={
+                    openSession
+                      ? {
+                          sessionId: openSession.id,
+                          routineDayId: openSession.routine_day_id,
+                          title: openSession.title ?? "Entreno",
+                        }
+                      : null
+                  }
                 />
               </div>
             ))}
@@ -154,7 +162,7 @@ export default async function EntrenoPage() {
             routineDayId={null}
             dayName="Entreno libre"
             variant="secondary"
-            hasOpenSession={false}
+            abierto={null}
           />
         ) : null}
       </section>

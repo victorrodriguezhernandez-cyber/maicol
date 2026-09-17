@@ -576,23 +576,54 @@ const startSessionSchema = z.object({
  * entreno que se abandone a medias no ensucia ninguna estadística.
  *
  * Sólo puede haber una sesión abierta (índice único en la migración). Si
- * ya hay una, se devuelve esa en vez de fallar: abrir la app en el
- * gimnasio y que te diga "error" porque no cerraste la de ayer sería
- * absurdo.
+ * ya hay una DEL MISMO día, se devuelve esa en vez de fallar: abrir la
+ * app en el gimnasio y que te diga "error" porque no cerraste la de ayer
+ * sería absurdo.
+ *
+ * Si la abierta es de OTRO día, en cambio, NO se abre nada y se devuelve
+ * `{ ok: false, abierta }`. Antes también se devolvía la abierta tal
+ * cual, y eso significaba que pulsar "Empezar" en el día de pierna con
+ * el de empuje a medias te metía en el de empuje sin avisar: el botón
+ * hacía algo distinto de lo que decía.
+ *
+ * Es un valor de vuelta y no un `throw` a propósito. Un error lanzado
+ * desde una Server Action no llega íntegro al cliente — React puede
+ * sustituir la instancia (ver la nota sobre `digest` en los docs de
+ * `instrumentation`) y en producción el mensaje se redacta —, así que
+ * "termina «Empuje A» primero" se convertiría en un error genérico sin
+ * el nombre ni el enlace para ir a terminarlo. Un resultado tipado sí
+ * viaja completo.
  */
+/** Qué pasó al intentar abrir un entreno. */
+export type ResultadoStartSession =
+  | { ok: true; sessionId: string; resumed: boolean }
+  | { ok: false; abierta: { sessionId: string; title: string } };
+
 export async function startSession(
   input: z.input<typeof startSessionSchema> = {},
-): Promise<{ sessionId: string; resumed: boolean }> {
+): Promise<ResultadoStartSession> {
   const parsed = startSessionSchema.parse(input);
   const { supabase, user } = await requireUser();
 
   const { data: open } = await supabase
     .from("training_sessions")
-    .select("id")
+    .select("id, routine_day_id, title")
     .eq("user_id", user.id)
     .eq("status", "en_curso")
     .maybeSingle();
-  if (open) return { sessionId: open.id as string, resumed: true };
+  if (open) {
+    // El mismo día (o el mismo entreno libre): es una continuación.
+    if ((open.routine_day_id as string | null) === (parsed.routineDayId ?? null)) {
+      return { ok: true, sessionId: open.id as string, resumed: true };
+    }
+    return {
+      ok: false,
+      abierta: {
+        sessionId: open.id as string,
+        title: (open.title as string | null) ?? "Entreno",
+      },
+    };
+  }
 
   // Peso corporal del día, para los ejercicios de peso corporal. Si no hay
   // ningún pesaje, se queda a null y la app lo dice en vez de inventarlo.
@@ -670,7 +701,7 @@ export async function startSession(
   }
 
   revalidateTraining();
-  return { sessionId, resumed: false };
+  return { ok: true, sessionId, resumed: false };
 }
 
 /** YYYY-MM-DD en la zona del dispositivo, no en UTC. */
