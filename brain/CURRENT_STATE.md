@@ -6,7 +6,8 @@
 - **Estado:** en desarrollo; último trabajo funcional sin desplegar
 - **Rama activa:** `claude/nutrition-ai-app-vj15u0`
 - **Último agente:** claude
-- **Último commit:** `58f9652`
+- **Último commit de código de la app:** `58f9652`
+- **Último commit del cerebro:** ver `MANIFEST.json`
 - **Actualizado:** 2026-09-17
 
 ## El proyecto en cuatro líneas
