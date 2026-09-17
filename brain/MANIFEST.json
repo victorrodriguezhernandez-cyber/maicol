@@ -4,7 +4,7 @@
   "app_path": "nutrition",
   "active_branch": "claude/nutrition-ai-app-vj15u0",
   "last_agent": "claude",
-  "last_commit": "58f9652",
+  "last_commit": "d33da21",
   "last_handoff": "2026-09-17",
   "updated": "2026-09-17",
   "brain_files": {
@@ -12,6 +12,19 @@
     "state": "brain/CURRENT_STATE.md",
     "handoff": "brain/HANDOFF.md"
   },
-  "statuses": ["draft", "testing", "proposed", "approved", "rejected", "superseded"],
-  "agents": ["user", "claude", "codex", "chatgpt", "shared"]
+  "statuses": [
+    "draft",
+    "testing",
+    "proposed",
+    "approved",
+    "rejected",
+    "superseded"
+  ],
+  "agents": [
+    "user",
+    "claude",
+    "codex",
+    "chatgpt",
+    "shared"
+  ]
 }

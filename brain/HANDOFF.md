@@ -2,7 +2,7 @@
 
 - **Agente:** claude
 - **Fecha:** 2026-09-17
-- **Commit:** pendiente de este mismo cambio (ver `MANIFEST.json`)
+- **Commit:** `d33da21`
 - **Rama:** `claude/nutrition-ai-app-vj15u0`
 
 ## Objetivo
