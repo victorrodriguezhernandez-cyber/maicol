@@ -1,0 +1,47 @@
+# Si cambia código de la aplicación, el cerebro tiene que ir con él.
+#
+# No bloquea cambios de documentación, del propio cerebro ni de la Action:
+# la lista de exentos vive en scripts/brain-check.mjs, que es el mismo
+# script que se ejecuta en local, así que CI y local no pueden discrepar.
+name: brain
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Hace falta el historial para poder comparar contra la base.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Calcular la base de la comparación
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "ref=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.before }}" ] \
+            && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -t "${{ github.event.before }}" >/dev/null 2>&1; then
+            echo "ref=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+          else
+            # Rama nueva o historial no disponible: no hay nada con lo que
+            # comparar, así que sólo se validan los metadatos del cerebro.
+            echo "ref=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: brain-check
+        run: |
+          if [ -n "${{ steps.base.outputs.ref }}" ]; then
+            node scripts/brain-check.mjs --base "${{ steps.base.outputs.ref }}"
+          else
+            node scripts/brain-check.mjs --base HEAD
+          fi
