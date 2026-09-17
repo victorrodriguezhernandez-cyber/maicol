@@ -67,7 +67,23 @@ export interface ExerciseRow {
   default_duration_min: number | null;
   default_duration_max: number | null;
   default_rest_seconds: number;
+  /** El recordatorio corto, para leer entre series. */
   cues: string | null;
+  /**
+   * Los pasos, en orden, para alguien que no ha hecho nunca el
+   * ejercicio. Una línea por paso; la pantalla los numera. Es distinto
+   * de `cues` porque un consejo no es una instrucción: "tumbado a lo
+   * ancho del banco" sólo sirve si ya sabes qué es un pullover.
+   */
+  how_to: string | null;
+  /** Fallos concretos de este ejercicio. Una línea por fallo. */
+  mistakes: string | null;
+  /**
+   * Va en el apartado "Más comunes" del selector. Es una lista curada,
+   * no una medida de uso: no hay datos de lo que usan otros usuarios
+   * (RLS) y un ranking inventado sería un dato falso (regla 11).
+   */
+  is_common: boolean;
   is_active: boolean;
   created_at: string;
 }

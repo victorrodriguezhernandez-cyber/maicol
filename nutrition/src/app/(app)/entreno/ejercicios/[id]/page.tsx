@@ -34,6 +34,12 @@ export default async function EjercicioPage({
   ]);
   if (!exercise) notFound();
 
+  // `how_to` y `mistakes` se guardan con una línea por paso y por fallo.
+  // Una línea vacía de más en el texto no debe salir como un paso en
+  // blanco numerado.
+  const pasos = lineas(exercise.how_to);
+  const fallos = lineas(exercise.mistakes);
+
   const medicion = medicionDe(exercise);
   // El motor sólo decide sobre repeticiones: en un ejercicio de puro
   // tiempo no hay recomendación que dar todavía.
@@ -80,9 +86,49 @@ export default async function EjercicioPage({
         </div>
       </header>
 
+      {pasos.length > 0 ? (
+        <section className="surface-soft flex flex-col gap-2.5 p-4">
+          <span className="text-section">Cómo se hace</span>
+          <ol className="flex flex-col gap-2">
+            {pasos.map((paso, i) => (
+              <li key={i} className="flex gap-2.5">
+                <span
+                  className="text-metric mt-[1px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px]"
+                  style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}
+                >
+                  {i + 1}
+                </span>
+                <span className="text-[13px] leading-relaxed text-[var(--text-secondary)]">
+                  {paso}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
+      {fallos.length > 0 ? (
+        <section className="surface-soft flex flex-col gap-2 p-4">
+          <span className="text-section">Fallos que se cometen aquí</span>
+          <ul className="flex flex-col gap-2">
+            {fallos.map((fallo, i) => (
+              <li
+                key={i}
+                className="border-l-2 pl-2.5 text-[13px] leading-relaxed text-[var(--text-secondary)]"
+                style={{ borderColor: "var(--border)" }}
+              >
+                {fallo}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {exercise.cues ? (
         <section className="surface-soft flex flex-col gap-1.5 p-4">
-          <span className="text-section">Cómo se hace</span>
+          <span className="text-section">
+            {pasos.length > 0 ? "Para acordarte durante la serie" : "Cómo se hace"}
+          </span>
           <p className="text-[13px] leading-relaxed text-[var(--text-secondary)]">
             {exercise.cues}
           </p>
@@ -254,6 +300,15 @@ export default async function EjercicioPage({
       )}
     </div>
   );
+}
+
+/** Un texto de varias líneas en sus líneas, sin las vacías. */
+function lineas(texto: string | null): string[] {
+  if (!texto) return [];
+  return texto
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 }
 
 function Tag({ children }: { children: React.ReactNode }) {

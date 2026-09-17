@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { searchExercises } from "@/lib/data/training";
-import { isMuscleGroup } from "@/lib/training/muscles";
+import { isMuscleGroup, isMuscleRegion } from "@/lib/training/muscles";
 
 /**
  * Búsqueda de ejercicios para el selector.
@@ -24,14 +24,17 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const muscle = searchParams.get("musculo");
+  const region = searchParams.get("zona");
   const equipment = searchParams.get("material");
   const query = searchParams.get("q") ?? "";
 
   const exercises = await searchExercises(supabase, {
     query: query.slice(0, 80),
     muscle: muscle && isMuscleGroup(muscle) ? muscle : undefined,
+    region: region && isMuscleRegion(region) ? region : undefined,
     equipment: equipment ?? undefined,
     mineOnly: searchParams.get("mios") === "1",
+    commonOnly: searchParams.get("comunes") === "1",
   }, 120);
 
   return NextResponse.json(

@@ -12,7 +12,8 @@ import type {
   PreviousSet,
   TrainingGoalRow,
 } from "@/lib/training/types";
-import type { MuscleGroup } from "@/lib/training/muscles";
+import { musclesInRegion } from "@/lib/training/muscles";
+import type { MuscleGroup, MuscleRegion } from "@/lib/training/muscles";
 import {
   objetivoDeEjercicio,
   recomendarCarga,
@@ -37,15 +38,23 @@ import { computeExerciseRecords, type ExerciseRecords, type CompletedSet } from 
  */
 
 const EXERCISE_COLUMNS =
-  "id, user_id, name, name_normalized, primary_muscle, secondary_muscles, equipment, mechanic, pattern, is_unilateral, tracks_weight, tracks_reps, tracks_duration, default_reps_min, default_reps_max, default_duration_min, default_duration_max, default_rest_seconds, cues, is_active, created_at";
+  "id, user_id, name, name_normalized, primary_muscle, secondary_muscles, equipment, mechanic, pattern, is_unilateral, tracks_weight, tracks_reps, tracks_duration, default_reps_min, default_reps_max, default_duration_min, default_duration_max, default_rest_seconds, cues, how_to, mistakes, is_common, is_active, created_at";
 
 export interface ExerciseFilters {
   query?: string;
   muscle?: MuscleGroup;
+  /**
+   * Zona del cuerpo: filtra por TODOS los músculos de la zona a la vez.
+   * Es lo que usa el selector, porque "hombro" es la pregunta real y
+   * "hombro lateral" es un detalle del ejercicio (ver `MUSCLE_REGIONS`).
+   */
+  region?: MuscleRegion;
   equipment?: string;
   mechanic?: string;
   /** Sólo los que ha creado el usuario. */
   mineOnly?: boolean;
+  /** Sólo los marcados como comunes en el catálogo compartido. */
+  commonOnly?: boolean;
 }
 
 /** Minúsculas y sin acentos, igual que el trigger de la base de datos. */
@@ -76,9 +85,11 @@ export async function searchExercises(
     q = q.ilike("name_normalized", `%${normalizeExerciseName(filters.query)}%`);
   }
   if (filters.muscle) q = q.eq("primary_muscle", filters.muscle);
+  if (filters.region) q = q.in("primary_muscle", musclesInRegion(filters.region));
   if (filters.equipment) q = q.eq("equipment", filters.equipment);
   if (filters.mechanic) q = q.eq("mechanic", filters.mechanic);
   if (filters.mineOnly) q = q.not("user_id", "is", null);
+  if (filters.commonOnly) q = q.eq("is_common", true);
 
   const { data, error } = await q;
   if (error) throw error;

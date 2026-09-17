@@ -172,10 +172,37 @@ export const MUSCLE_LABELS: Record<MuscleGroup, string> = {
 };
 
 /**
- * Agrupación de alto nivel, para filtros y para ordenar el mapa. No se
- * guarda en base de datos: es sólo presentación.
+ * Las seis zonas del cuerpo como las nombra cualquiera.
+ *
+ * Existen porque los 17 grupos son la unidad correcta para MEDIR y la
+ * unidad equivocada para ELEGIR. Un filtro con "hombro anterior",
+ * "hombro lateral" y "hombro posterior" obliga a saber anatomía antes de
+ * poder buscar un press de hombro: la pregunta que se hace uno en el
+ * gimnasio es "qué hago de hombro", y la parte concreta es un detalle del
+ * ejercicio, no la puerta de entrada.
+ *
+ * El orden es el que se enseña en pantalla, de arriba abajo del cuerpo.
  */
-export const MUSCLE_REGIONS: Record<MuscleGroup, "torso" | "espalda" | "hombro" | "brazo" | "core" | "pierna"> = {
+export const MUSCLE_REGION_ORDER = [
+  "torso",
+  "espalda",
+  "hombro",
+  "brazo",
+  "core",
+  "pierna",
+] as const;
+
+export type MuscleRegion = (typeof MUSCLE_REGION_ORDER)[number];
+
+export function isMuscleRegion(value: string): value is MuscleRegion {
+  return (MUSCLE_REGION_ORDER as readonly string[]).includes(value);
+}
+
+/**
+ * A qué zona pertenece cada músculo. No se guarda en base de datos: es
+ * presentación, se deriva del músculo primario que sí está guardado.
+ */
+export const MUSCLE_REGIONS: Record<MuscleGroup, MuscleRegion> = {
   pecho: "torso",
   dorsal: "espalda",
   espalda_alta: "espalda",
@@ -195,7 +222,7 @@ export const MUSCLE_REGIONS: Record<MuscleGroup, "torso" | "espalda" | "hombro" 
   gemelos: "pierna",
 };
 
-export const REGION_LABELS: Record<(typeof MUSCLE_REGIONS)[MuscleGroup], string> = {
+export const REGION_LABELS: Record<MuscleRegion, string> = {
   torso: "Pecho",
   espalda: "Espalda",
   hombro: "Hombro",
@@ -203,3 +230,8 @@ export const REGION_LABELS: Record<(typeof MUSCLE_REGIONS)[MuscleGroup], string>
   core: "Core",
   pierna: "Pierna",
 };
+
+/** Los músculos de una zona, en el orden canónico de `MUSCLE_GROUPS`. */
+export function musclesInRegion(region: MuscleRegion): MuscleGroup[] {
+  return MUSCLE_GROUPS.filter((m) => MUSCLE_REGIONS[m] === region);
+}

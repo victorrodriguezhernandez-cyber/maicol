@@ -5,9 +5,12 @@ import Link from "next/link";
 import { SearchIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { Skeleton } from "@/components/ui/Skeleton";
 import {
-  MUSCLE_GROUPS,
   MUSCLE_LABELS,
+  MUSCLE_REGIONS,
+  MUSCLE_REGION_ORDER,
+  REGION_LABELS,
   type MuscleGroup,
+  type MuscleRegion,
 } from "@/lib/training/muscles";
 import { EQUIPMENT_LABELS, type ExerciseRow } from "@/lib/training/types";
 
@@ -18,6 +21,12 @@ import { EQUIPMENT_LABELS, type ExerciseRow } from "@/lib/training/types";
  * sin un parpadeo de esqueletos — y sólo pide al API cuando el usuario
  * toca un filtro o escribe. `touched` es lo que distingue "todavía no ha
  * hecho nada" de "ha filtrado y no hay resultados".
+ *
+ * Los filtros son las seis zonas del cuerpo y no los 17 grupos, igual que
+ * en `ExercisePicker` y por lo mismo: "hombro" es la pregunta, "hombro
+ * lateral" es el detalle del ejercicio. Los dos sitios donde se eligen
+ * ejercicios se navegan igual; que uno pidiera anatomía y el otro no
+ * sería peor que cualquiera de las dos opciones.
  */
 export function ExerciseCatalog({
   initialExercises,
@@ -27,7 +36,12 @@ export function ExerciseCatalog({
   initialMuscle: MuscleGroup | null;
 }) {
   const [query, setQuery] = useState("");
-  const [muscle, setMuscle] = useState<MuscleGroup | null>(initialMuscle);
+  // La zona es lo que se filtra. Si la pantalla llega con un músculo
+  // concreto (se viene del mapa corporal), se abre en SU zona.
+  const [region, setRegion] = useState<MuscleRegion | null>(
+    initialMuscle ? MUSCLE_REGIONS[initialMuscle] : null,
+  );
+  const [commonOnly, setCommonOnly] = useState(false);
   const [mineOnly, setMineOnly] = useState(false);
   const [exercises, setExercises] = useState(initialExercises);
   const [loading, setLoading] = useState(false);
@@ -44,8 +58,9 @@ export function ExerciseCatalog({
 
     const params = new URLSearchParams();
     if (query.trim()) params.set("q", query.trim());
-    if (muscle) params.set("musculo", muscle);
+    if (region) params.set("zona", region);
     if (mineOnly) params.set("mios", "1");
+    if (commonOnly) params.set("comunes", "1");
 
     setLoading(true);
     const timer = setTimeout(() => {
@@ -67,7 +82,7 @@ export function ExerciseCatalog({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query, muscle, mineOnly]);
+  }, [query, region, mineOnly, commonOnly]);
 
   function change<T>(setter: (v: T) => void) {
     return (value: T) => {
@@ -103,21 +118,29 @@ export function ExerciseCatalog({
         </button>
         <button
           type="button"
-          onClick={() => change(setMuscle)(null)}
-          data-active={muscle === null ? "true" : undefined}
+          onClick={() => change(setCommonOnly)(!commonOnly)}
+          data-active={commonOnly ? "true" : undefined}
+          className="btn-pill shrink-0 px-3 py-1.5 text-xs"
+        >
+          Más comunes
+        </button>
+        <button
+          type="button"
+          onClick={() => change(setRegion)(null)}
+          data-active={region === null ? "true" : undefined}
           className="btn-pill shrink-0 px-3 py-1.5 text-xs"
         >
           Todos
         </button>
-        {MUSCLE_GROUPS.map((m) => (
+        {MUSCLE_REGION_ORDER.map((zona) => (
           <button
-            key={m}
+            key={zona}
             type="button"
-            onClick={() => change(setMuscle)(muscle === m ? null : m)}
-            data-active={muscle === m ? "true" : undefined}
+            onClick={() => change(setRegion)(region === zona ? null : zona)}
+            data-active={region === zona ? "true" : undefined}
             className="btn-pill shrink-0 px-3 py-1.5 text-xs"
           >
-            {MUSCLE_LABELS[m]}
+            {REGION_LABELS[zona]}
           </button>
         ))}
       </div>

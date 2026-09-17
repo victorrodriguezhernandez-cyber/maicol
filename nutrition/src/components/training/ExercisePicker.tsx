@@ -5,21 +5,48 @@ import { Sheet } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SearchIcon, PlusIcon } from "@/components/ui/icons";
 import {
-  MUSCLE_GROUPS,
   MUSCLE_LABELS,
   MUSCLE_REGIONS,
+  MUSCLE_REGION_ORDER,
   REGION_LABELS,
   type MuscleGroup,
+  type MuscleRegion,
 } from "@/lib/training/muscles";
 import { EQUIPMENT_LABELS, type ExerciseRow, type Equipment } from "@/lib/training/types";
 import Link from "next/link";
 
 /**
+ * Qué lista se está mirando.
+ *
+ * `"comunes"` es la de arranque: al abrir el selector no hay ninguna
+ * pregunta hecha todavía, y una lista alfabética de todo el catálogo —
+ * que empieza por "Abducción de cadera en máquina" — es peor que inútil
+ * para quien está montando su primera rutina. Los comunes son los que
+ * reconoce cualquiera que haya pisado un gimnasio.
+ */
+type Filtro = { tipo: "comunes" } | { tipo: "todos" } | { tipo: "zona"; zona: MuscleRegion };
+
+/**
  * El selector de ejercicios.
  *
- * Filtra por músculo y por material porque son las dos preguntas reales
- * en el gimnasio: "qué hago de espalda" y "qué puedo hacer con lo que hay
- * libre". El texto libre está para cuando ya sabes el nombre.
+ * ── Por zona, no por los 17 músculos ────────────────────────────────────
+ *
+ * Los filtros eran los 17 grupos musculares, uno por chip: "Hombro
+ * anterior", "Hombro lateral", "Hombro posterior"… Eso obliga a saber
+ * anatomía antes de poder buscar un press de hombro, y la pregunta real
+ * en el gimnasio es "qué hago de hombro". Ahora los chips son las seis
+ * zonas y la parte concreta va DENTRO de cada ejercicio, como nota: ahí
+ * sí importa, porque es lo que distingue una elevación lateral de un
+ * press, y ahí no estorba para elegir.
+ *
+ * Los 17 grupos siguen siendo la unidad con la que se mide el volumen —
+ * eso no cambia. Lo que cambia es que no son la unidad con la que se
+ * elige.
+ *
+ * ── Y por material ──────────────────────────────────────────────────────
+ *
+ * La otra pregunta real: "qué puedo hacer con lo que hay libre". El texto
+ * libre está para cuando ya sabes el nombre.
  *
  * Cada tecleo cancela la petición anterior. Sin eso, escribir rápido deja
  * varias respuestas en vuelo y la lista acaba enseñando los resultados de
@@ -35,14 +62,29 @@ export function ExercisePicker({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onPick: (exerciseId: string, exercise: ExerciseRow) => void;
+  /**
+   * Con qué músculo llega el selector, cuando se abre desde un sitio que
+   * ya lo sabe (el mapa corporal, un hueco de la rutina). Se traduce a su
+   * zona: si vienes de "hombro lateral" quieres ver todo el hombro, no
+   * sólo las laterales.
+   */
   initialMuscle?: MuscleGroup | null;
 }) {
   const [query, setQuery] = useState("");
-  const [muscle, setMuscle] = useState<MuscleGroup | null>(initialMuscle ?? null);
+  const [filtro, setFiltro] = useState<Filtro>(
+    initialMuscle
+      ? { tipo: "zona", zona: MUSCLE_REGIONS[initialMuscle] }
+      : { tipo: "comunes" },
+  );
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [results, setResults] = useState<ExerciseRow[] | null>(null);
   const [failed, setFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Buscar por nombre es una pregunta sobre TODO el catálogo: si el
+  // filtro siguiera puesto en "Más comunes", escribir "sissy" no
+  // encontraría nada y parecería que el ejercicio no existe.
+  const buscando = query.trim().length > 0;
 
   useEffect(() => {
     if (!open) return;
@@ -51,8 +93,11 @@ export function ExercisePicker({
     abortRef.current = controller;
 
     const params = new URLSearchParams();
-    if (query.trim()) params.set("q", query.trim());
-    if (muscle) params.set("musculo", muscle);
+    if (buscando) params.set("q", query.trim());
+    if (!buscando) {
+      if (filtro.tipo === "zona") params.set("zona", filtro.zona);
+      if (filtro.tipo === "comunes") params.set("comunes", "1");
+    }
     if (equipment) params.set("material", equipment);
 
     // Un respiro antes de pedir, para no lanzar una petición por letra.
@@ -72,9 +117,13 @@ export function ExercisePicker({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [open, query, muscle, equipment]);
+  }, [open, query, buscando, filtro, equipment]);
 
   if (!open) return null;
+
+  // Buscando por nombre no hay chip activo: el texto manda sobre el
+  // filtro, y dejar uno encendido diría que también está aplicado.
+  const chipActivo = (f: Filtro) => !buscando && mismoFiltro(f, filtro);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="Elegir ejercicio">
@@ -95,40 +144,42 @@ export function ExercisePicker({
         </div>
 
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-          <button
-            type="button"
-            onClick={() => setMuscle(null)}
-            data-active={muscle === null ? "true" : undefined}
-            className="btn-pill shrink-0 px-3 py-1.5 text-xs"
-          >
-            Todos
-          </button>
-          {MUSCLE_GROUPS.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMuscle(muscle === m ? null : m)}
-              data-active={muscle === m ? "true" : undefined}
-              className="btn-pill shrink-0 px-3 py-1.5 text-xs"
+          <Chip activo={chipActivo({ tipo: "comunes" })} onClick={() => setFiltro({ tipo: "comunes" })}>
+            Más comunes
+          </Chip>
+          {MUSCLE_REGION_ORDER.map((zona) => (
+            <Chip
+              key={zona}
+              activo={chipActivo({ tipo: "zona", zona })}
+              onClick={() => setFiltro({ tipo: "zona", zona })}
             >
-              {MUSCLE_LABELS[m]}
-            </button>
+              {REGION_LABELS[zona]}
+            </Chip>
           ))}
+          <Chip activo={chipActivo({ tipo: "todos" })} onClick={() => setFiltro({ tipo: "todos" })}>
+            Todos
+          </Chip>
         </div>
 
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
           {(Object.keys(EQUIPMENT_LABELS) as Equipment[]).map((eq) => (
-            <button
+            <Chip
               key={eq}
-              type="button"
+              activo={equipment === eq}
               onClick={() => setEquipment(equipment === eq ? null : eq)}
-              data-active={equipment === eq ? "true" : undefined}
-              className="btn-pill shrink-0 px-3 py-1.5 text-xs"
             >
               {EQUIPMENT_LABELS[eq]}
-            </button>
+            </Chip>
           ))}
         </div>
+
+        {!buscando && filtro.tipo === "comunes" ? (
+          <p className="text-[11px] leading-snug text-[var(--text-tertiary)]">
+            Una selección de los que se hacen en casi cualquier gimnasio, para no empezar por una
+            lista alfabética de todo. No es un ranking de uso: la app no ve lo que entrena nadie
+            más. Toca una zona o «Todos» para el catálogo completo.
+          </p>
+        ) : null}
 
         <div className="flex max-h-[45vh] flex-col overflow-y-auto">
           {results === null ? (
@@ -166,8 +217,9 @@ export function ExercisePicker({
                   <span className="truncate text-sm font-medium text-[var(--text-primary)]">
                     {ex.name}
                   </span>
+                  {/* Aquí sí va la parte concreta del músculo: es lo que
+                      distingue dos ejercicios que se llaman parecido. */}
                   <span className="text-[11px] text-[var(--text-tertiary)]">
-                    {REGION_LABELS[MUSCLE_REGIONS[ex.primary_muscle]]} ·{" "}
                     {MUSCLE_LABELS[ex.primary_muscle]} · {EQUIPMENT_LABELS[ex.equipment]}
                     {ex.user_id ? " · tuyo" : ""}
                   </span>
@@ -179,5 +231,31 @@ export function ExercisePicker({
         </div>
       </div>
     </Sheet>
+  );
+}
+
+function mismoFiltro(a: Filtro, b: Filtro): boolean {
+  if (a.tipo === "zona" && b.tipo === "zona") return a.zona === b.zona;
+  return a.tipo === b.tipo;
+}
+
+function Chip({
+  activo,
+  onClick,
+  children,
+}: {
+  activo: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-active={activo ? "true" : undefined}
+      className="btn-pill shrink-0 px-3 py-1.5 text-xs"
+    >
+      {children}
+    </button>
   );
 }
