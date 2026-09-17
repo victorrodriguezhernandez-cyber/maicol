@@ -154,6 +154,60 @@ describe("rangoDeMedicion", () => {
     expect(rangoDeMedicion(plancha)).toEqual({ min: 30, max: 60, unidad: "s" });
   });
 
+  it("el objetivo de la rutina manda sobre el del ejercicio", () => {
+    // Si pusiste 45-60 s en tu rutina, es lo que toca hoy, no el rango
+    // por defecto del catálogo.
+    const plancha = exercise({
+      tracks_reps: false,
+      tracks_duration: true,
+      default_reps_min: 1,
+      default_reps_max: 1,
+      default_duration_min: 30,
+      default_duration_max: 60,
+    });
+    expect(
+      rangoDeMedicion(plancha, {
+        repsMin: 1,
+        repsMax: 1,
+        durationMin: 45,
+        durationMax: 75,
+      }),
+    ).toEqual({ min: 45, max: 75, unidad: "s" });
+  });
+
+  it("un ejercicio de tiempo NUNCA enseña el 1-1 de sus columnas de reps", () => {
+    // Es el caso exacto del texto sin sentido: `target_reps_min/max` son
+    // NOT NULL y valen 1-1 en los ejercicios de tiempo (migración 0022),
+    // así que si la unidad se decidiera por la rutina saldría "1-1 reps".
+    const plancha = exercise({
+      tracks_reps: false,
+      tracks_duration: true,
+      default_reps_min: 1,
+      default_reps_max: 1,
+      default_duration_min: 30,
+      default_duration_max: 60,
+    });
+    const r = rangoDeMedicion(plancha, {
+      repsMin: 1,
+      repsMax: 1,
+      durationMin: null,
+      durationMax: null,
+    });
+    expect(r.unidad).toBe("s");
+    expect(r).not.toEqual({ min: 1, max: 1, unidad: "reps" });
+  });
+
+  it("en un ejercicio de repeticiones, el objetivo de la rutina también manda", () => {
+    expect(
+      rangoDeMedicion(exercise({}), {
+        repsMin: 4,
+        repsMax: 6,
+        durationMin: null,
+        durationMax: null,
+      }),
+    ).toEqual({ min: 4, max: 6, unidad: "reps" });
+  });
+
   it("si mide tiempo pero también repeticiones, manda el rango de repeticiones", () => {
     // El número que se persigue es el de repeticiones; el tiempo ahí es
     // un dato más de la serie, no la pauta.

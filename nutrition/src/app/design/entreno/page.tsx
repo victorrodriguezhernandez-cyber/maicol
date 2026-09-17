@@ -138,7 +138,7 @@ const EXERCISES: SessionExercise[] = [
       set(3, { weight_kg: 72.5, reps: 7, completed_at: "2026-09-13T18:10:00Z", notes: "La última se fue un poco hacia el cuello." }),
       set(4),
     ],
-    target: { sets: 3, repsMin: 6, repsMax: 8, rir: 2, restSeconds: 150, notes: null },
+    target: { sets: 3, repsMin: 6, repsMax: 8, durationMin: null, durationMax: null, rir: 2, restSeconds: 150, notes: null },
     previous: new Map([
       [2, { weightKg: 70, reps: 8, durationSeconds: null, rir: 2, setType: "normal" as const }],
       [3, { weightKg: 70, reps: 8, durationSeconds: null, rir: 2, setType: "normal" as const }],
@@ -156,7 +156,7 @@ const EXERCISES: SessionExercise[] = [
     }),
     position: 2,
     sets: [set(1, {}, 2), set(2, {}, 2), set(3, {}, 2)],
-    target: { sets: 3, repsMin: 8, repsMax: 12, rir: 1, restSeconds: 120, notes: "Banco a 30°." },
+    target: { sets: 3, repsMin: 8, repsMax: 12, durationMin: null, durationMax: null, rir: 1, restSeconds: 120, notes: "Banco a 30°." },
     previous: new Map([
       [1, { weightKg: 26, reps: 11, durationSeconds: null, rir: 1, setType: "normal" as const }],
       [2, { weightKg: 26, reps: 10, durationSeconds: null, rir: 0, setType: "normal" as const }],

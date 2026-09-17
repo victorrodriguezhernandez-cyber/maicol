@@ -55,8 +55,12 @@ interface CatalogEntry {
   equipment: string;
   mechanic: string;
   pattern: string;
+  tracks_reps: boolean;
+  tracks_duration: boolean;
   default_reps_min: number;
   default_reps_max: number;
+  default_duration_min: number | null;
+  default_duration_max: number | null;
   default_rest_seconds: number;
 }
 
@@ -70,6 +74,7 @@ Cómo montar la rutina:
 - Empieza cada día por los compuestos y deja los aislamientos para el final: los compuestos exigen más técnica y más fuerza, y cansados se hacen peor.
 - Rangos de repeticiones según el objetivo: fuerza 3-6, hipertrofia 6-15, resistencia 12-20. Descansos: 2-4 min en compuestos pesados, 60-90 s en aislamientos.
 - RIR: 1-3 en la mayoría de series. 0 sólo en aislamientos y como mucho en la última serie.
+- Algunos ejercicios del catálogo dicen "SE MIDE EN SEGUNDOS". Ésos son aguantes (planchas, colgarse, transportes) y no tienen repeticiones: para ellos pon "reps_min" y "reps_max" a 1 y deja el aguante que toque en la nota del ejercicio, en segundos. No les pongas RIR: no significa nada cuando no hay repeticiones que sobren.
 - Volumen semanal por músculo: apunta a entre 10 y 20 series efectivas de los grupos grandes. Pasarse de ahí genera más fatiga de la que se recupera.
 
 Sé honesto en "warnings":
@@ -105,7 +110,7 @@ Deno.serve(async (req) => {
     let query = supabase
       .from("exercises")
       .select(
-        "id, name, primary_muscle, secondary_muscles, equipment, mechanic, pattern, default_reps_min, default_reps_max, default_rest_seconds",
+        "id, name, primary_muscle, secondary_muscles, equipment, mechanic, pattern, tracks_reps, tracks_duration, default_reps_min, default_reps_max, default_duration_min, default_duration_max, default_rest_seconds",
       )
       .eq("is_active", true)
       .order("name");
@@ -130,13 +135,20 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Cómo se pauta cada ejercicio depende de lo que MIDE. Escribir
+    // "reps habituales: 1-1" para una plancha —que es lo que tienen esas
+    // columnas en los ejercicios de tiempo— le pedía al modelo que
+    // pautara una repetición de plancha.
     const catalogText = entries
-      .map(
-        (e) =>
-          `- ${e.name} | músculo: ${e.primary_muscle}${
-            e.secondary_muscles.length ? ` (+${e.secondary_muscles.join(", ")})` : ""
-          } | material: ${e.equipment} | ${e.mechanic} | patrón: ${e.pattern} | reps habituales: ${e.default_reps_min}-${e.default_reps_max} | descanso: ${e.default_rest_seconds}s`,
-      )
+      .map((e) => {
+        const porTiempo = e.tracks_duration && !e.tracks_reps;
+        const dosis = porTiempo
+          ? `SE MIDE EN SEGUNDOS, no en repeticiones: ${e.default_duration_min ?? 30}-${e.default_duration_max ?? 60} s por serie`
+          : `reps habituales: ${e.default_reps_min}-${e.default_reps_max}`;
+        return `- ${e.name} | músculo: ${e.primary_muscle}${
+          e.secondary_muscles.length ? ` (+${e.secondary_muscles.join(", ")})` : ""
+        } | material: ${e.equipment} | ${e.mechanic} | patrón: ${e.pattern} | ${dosis} | descanso: ${e.default_rest_seconds}s`;
+      })
       .join("\n");
 
     const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [

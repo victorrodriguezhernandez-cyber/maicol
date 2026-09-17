@@ -18,6 +18,7 @@ import {
   recomendarCarga,
   type SerieHecha,
 } from "../_shared/progresion.ts";
+import { prescribirRango, type DireccionPeso } from "../_shared/prescripcion.ts";
 import { todayIso, toLocalDateKey, localDayBoundsUtc } from "../_shared/date.ts";
 import { GoogleGenAI, type FunctionDeclaration, Type } from "npm:@google/genai@^1.0.0";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@^2.45.0";
@@ -525,7 +526,9 @@ async function runTool(
 
       const { data: encontrados } = await supabase
         .from("exercises")
-        .select("id, name, equipment, default_reps_min, default_reps_max")
+        .select(
+          "id, name, equipment, mechanic, primary_muscle, tracks_reps, tracks_duration, default_reps_min, default_reps_max, default_duration_min, default_duration_max",
+        )
         .eq("is_active", true)
         .ilike("name_normalized", `%${consulta}%`)
         .limit(5);
@@ -544,7 +547,9 @@ async function runTool(
       const sesiones = Math.min(Number(args.sessions) || 5, 12);
       const { data: series } = await supabase
         .from("workout_sets")
-        .select("set_number, set_type, weight_kg, reps, rir, completed_at, session_id")
+        .select(
+          "set_number, set_type, weight_kg, reps, duration_seconds, rir, completed_at, session_id",
+        )
         .eq("exercise_id", ejercicio.id)
         .not("completed_at", "is", null)
         .order("completed_at", { ascending: false })
@@ -570,9 +575,45 @@ async function runTool(
         setNumber: Number(s.set_number),
         weightKg: s.weight_kg as number | null,
         reps: s.reps as number | null,
+        durationSeconds: s.duration_seconds as number | null,
         rir: s.rir as number | null,
         setType: s.set_type as SerieHecha["setType"],
       }));
+
+      // Un ejercicio de puro tiempo no tiene recomendación de carga: el
+      // motor sólo decide sobre repeticiones. Antes se le pasaba su rango
+      // de repeticiones, que en esos ejercicios es 1-1, así que el coach
+      // acababa recomendando "1 repetición" de plancha.
+      const soloTiempo = Boolean(ejercicio.tracks_duration) && !ejercicio.tracks_reps;
+
+      // El rango con el que se juzga la sesión sale de `prescribirRango`,
+      // igual que en la pantalla del entreno (`getSessionDetail`). Antes
+      // aquí se usaba el rango por defecto del ejercicio, así que el
+      // coach y la app podían dar números distintos para el mismo
+      // ejercicio — que es exactamente lo que la regla 12 prohíbe.
+      const modo = (
+        await supabase
+          .from("nutrition_goals")
+          .select("mode")
+          .eq("user_id", userId)
+          .is("effective_to", null)
+          .maybeSingle()
+      ).data?.mode as string | undefined;
+      // Los mismos valores que `direccionDePeso` en
+      // `src/lib/data/training.ts`: el modo del objetivo de nutrición es
+      // "lose" / "gain" / "maintain".
+      const direccion: DireccionPeso =
+        modo === "lose" ? "perder" : modo === "gain" ? "ganar" : "mantener";
+      const prescripcion = prescribirRango(
+        {
+          mechanic: ejercicio.mechanic as Parameters<typeof prescribirRango>[0]["mechanic"],
+          primary_muscle:
+            ejercicio.primary_muscle as Parameters<typeof prescribirRango>[0]["primary_muscle"],
+          equipment: ejercicio.equipment as Parameters<typeof prescribirRango>[0]["equipment"],
+        },
+        (objetivo.data?.focus?.[0] ?? "hipertrofia") as Parameters<typeof prescribirRango>[1],
+        direccion,
+      );
 
       return {
         exercise: ejercicio.name,
@@ -581,26 +622,32 @@ async function runTool(
             .sort((a, b) => Number(a.set_number) - Number(b.set_number))
             .map((s) => `${s.reps ?? "–"}${s.weight_kg != null ? `×${s.weight_kg}kg` : ""}`),
         ),
-        // La recomendación sale del MISMO motor que la pantalla del
-        // entreno (`_shared/progresion.ts` es su copia literal): si el
+        // La recomendación sale del MISMO motor y del MISMO rango que la
+        // pantalla del entreno (`_shared/progresion.ts` y
+        // `_shared/prescripcion.ts` son sus copias literales): si el
         // coach diera un número distinto del que ve en la app, el
         // problema sería peor que no responder.
-        recommendation: recomendarCarga(
-          previas,
-          objetivoDeEjercicio(
-            null,
-            {
-              repsMin: ejercicio.default_reps_min,
-              repsMax: ejercicio.default_reps_max,
+        measured_in: soloTiempo ? "segundos" : "repeticiones",
+        recommendation: soloTiempo
+          ? {
+              titulo: `${ejercicio.name} se mide en segundos`,
+              detalle: [
+                `La pauta son ${ejercicio.default_duration_min ?? 30}-${ejercicio.default_duration_max ?? 60} segundos por serie.`,
+                "El motor de carga todavía sólo decide sobre repeticiones, así que aquí no hay un peso recomendado que se pueda justificar. No te inventes uno.",
+              ],
+            }
+          : recomendarCarga(
+              previas,
+              objetivoDeEjercicio(null, prescripcion, previas.length).objetivo,
+              ejercicio.equipment,
+            ),
+        prescribed_range: soloTiempo
+          ? null
+          : {
+              reps_min: prescripcion.repsMin,
+              reps_max: prescripcion.repsMax,
+              why: prescripcion.porque,
             },
-            previas.length,
-            {
-              foco: objetivo.data?.focus?.[0] ?? null,
-              equipment: ejercicio.equipment,
-            },
-          ),
-          ejercicio.equipment,
-        ),
       };
     }
 

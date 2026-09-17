@@ -283,6 +283,8 @@ export async function getSessionDetail(
         sets: p.target_sets,
         repsMin: p.target_reps_min,
         repsMax: p.target_reps_max,
+        durationMin: p.target_duration_min,
+        durationMax: p.target_duration_max,
         rir: p.target_rir,
         restSeconds: p.rest_seconds,
         notes: p.notes,

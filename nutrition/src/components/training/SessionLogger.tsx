@@ -371,7 +371,9 @@ function ExerciseCard({
   // todavía sólo decide sobre repeticiones y fingir lo contrario sería
   // inventarse un consejo (regla 11).
   const soloTiempo = medicion.tiempo && !medicion.reps;
-  const rangoMedido = rangoDeMedicion(entry.exercise);
+  // Con el objetivo de la rutina: si pusiste 45-60 s en tu rutina, es lo
+  // que toca hoy, no el rango por defecto del ejercicio.
+  const rangoMedido = rangoDeMedicion(entry.exercise, entry.target);
   const rest = entry.target?.restSeconds ?? entry.exercise.default_rest_seconds;
   const labels = numberWorkingSets(entry.sets);
   // El rango con el que se ha juzgado de verdad la sesión: el de tu

@@ -106,6 +106,15 @@ checks — there is no separate ACL table.
   porque no tienen kilos.
 - `0021_comunes_de_casa.sql` — amplía "Más comunes" a 72 con los básicos
   de casa, que no existían cuando se marcaron los primeros 52.
+- `0022_rutinas_objetivo_en_segundos.sql` — `target_duration_min/max` en
+  `routine_exercises`. La 0008 arregló el registro; esto arregla la
+  PAUTA: una plancha dentro de una rutina quedaba como "3 × 1-1" y el
+  editor pedía "reps mín." para un ejercicio sin repeticiones.
+  `target_reps_min/max` se quedan NOT NULL con 1-1 en esos casos porque
+  hay rutinas guardadas, y ese 1-1 no se enseña nunca: `rangoDeMedicion`
+  pregunta primero al ejercicio qué mide. CHECK que exige los dos
+  segundos o ninguno, y relleno de las filas ya existentes con el rango
+  por defecto de su ejercicio.
 - `0007_training_goals.sql` — `training_goals`: el objetivo de entreno
   del usuario, con historial. `focus` es un `text[]` con CHECK de 1 a 3
   valores del conjunto permitido, y el orden es significativo (el primero

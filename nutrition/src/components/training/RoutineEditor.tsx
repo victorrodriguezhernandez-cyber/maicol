@@ -17,7 +17,7 @@ import {
   duplicateRoutine,
 } from "@/lib/actions/training";
 import type { RoutineWithDays } from "@/lib/data/training";
-import { GOAL_LABELS, type RoutineGoal } from "@/lib/training/types";
+import { GOAL_LABELS, medicionDe, rangoDeMedicion, type RoutineGoal } from "@/lib/training/types";
 import { MUSCLE_LABELS } from "@/lib/training/muscles";
 import { ExercisePicker } from "./ExercisePicker";
 import { Sheet } from "@/components/ui/Sheet";
@@ -152,7 +152,12 @@ export function RoutineEditor({ routine }: { routine: RoutineWithDays }) {
                   {re.exercises.name}
                 </span>
                 <span className="text-[11px] text-[var(--text-tertiary)]">
-                  {re.target_sets} × {re.target_reps_min}-{re.target_reps_max}
+                  {/* El rango se pregunta al ejercicio: una plancha se
+                      pauta en segundos, no en "1-1 reps". */}
+                  {(() => {
+                    const r = objetivoDeFila(re);
+                    return `${re.target_sets} × ${r.min}-${r.max}${r.unidad === "s" ? " s" : ""}`;
+                  })()}
                   {re.target_rir != null ? ` · RIR ${re.target_rir}` : ""} · {re.rest_seconds}s ·{" "}
                   {MUSCLE_LABELS[re.exercises.primary_muscle]}
                 </span>
@@ -309,6 +314,14 @@ export function RoutineEditor({ routine }: { routine: RoutineWithDays }) {
                 targetSets: 3,
                 targetRepsMin: exercise.default_reps_min,
                 targetRepsMax: exercise.default_reps_max,
+                // Si el ejercicio se mide por tiempo, la rutina arranca
+                // con SU rango en segundos en vez de con un 1-1 vacío.
+                targetDurationMin: exercise.tracks_duration
+                  ? exercise.default_duration_min
+                  : null,
+                targetDurationMax: exercise.tracks_duration
+                  ? exercise.default_duration_max
+                  : null,
                 restSeconds: exercise.default_rest_seconds,
               }),
             "No se ha podido añadir el ejercicio.",
@@ -360,6 +373,18 @@ export function RoutineEditor({ routine }: { routine: RoutineWithDays }) {
 
 // =========================================================================
 
+/** El rango pautado de una fila de rutina, en su unidad de verdad. */
+function objetivoDeFila(
+  re: RoutineWithDays["routine_days"][number]["routine_exercises"][number],
+) {
+  return rangoDeMedicion(re.exercises, {
+    repsMin: re.target_reps_min,
+    repsMax: re.target_reps_max,
+    durationMin: re.target_duration_min,
+    durationMax: re.target_duration_max,
+  });
+}
+
 function TargetSheet({
   entry,
   onClose,
@@ -372,6 +397,8 @@ function TargetSheet({
     targetSets: number;
     targetRepsMin: number;
     targetRepsMax: number;
+    targetDurationMin: number | null;
+    targetDurationMax: number | null;
     targetRir: number | null;
     restSeconds: number;
     notes: string | null;
@@ -379,9 +406,15 @@ function TargetSheet({
   }) => void;
   onDelete: () => void;
 }) {
+  // Qué se pauta lo decide el ejercicio, no el editor: pedir "reps mín."
+  // y "reps máx." en una plancha es pedir un número que no existe.
+  const medicion = medicionDe(entry.exercises);
+  const porTiempo = medicion.tiempo && !medicion.reps;
+  const rango = objetivoDeFila(entry);
+
   const [sets, setSets] = useState(String(entry.target_sets));
-  const [repsMin, setRepsMin] = useState(String(entry.target_reps_min));
-  const [repsMax, setRepsMax] = useState(String(entry.target_reps_max));
+  const [repsMin, setRepsMin] = useState(String(rango.min));
+  const [repsMax, setRepsMax] = useState(String(rango.max));
   const [rir, setRir] = useState(entry.target_rir != null ? String(entry.target_rir) : "");
   const [rest, setRest] = useState(String(entry.rest_seconds));
   const [notes, setNotes] = useState(entry.notes ?? "");
@@ -392,26 +425,39 @@ function TargetSheet({
       <div className="flex flex-col gap-5">
         <div className="grid grid-cols-3 gap-3">
           <NumberField label="Series" value={sets} onChange={setSets} />
-          <NumberField label="Reps mín." value={repsMin} onChange={setRepsMin} />
-          <NumberField label="Reps máx." value={repsMax} onChange={setRepsMax} />
+          <NumberField
+            label={porTiempo ? "Seg. mín." : "Reps mín."}
+            value={repsMin}
+            onChange={setRepsMin}
+          />
+          <NumberField
+            label={porTiempo ? "Seg. máx." : "Reps máx."}
+            value={repsMax}
+            onChange={setRepsMax}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <NumberField label="Descanso (s)" value={rest} onChange={setRest} />
-          <label className="flex flex-col gap-1.5">
-            <span className="text-section">RIR objetivo</span>
-            <input
-              inputMode="decimal"
-              value={rir}
-              onChange={(e) => setRir(e.target.value.replace(/[^0-9.,]/g, ""))}
-              className="input-field text-center"
-              placeholder="—"
-            />
-          </label>
+          {/* El RIR se cuenta en repeticiones que te sobran, así que en un
+              ejercicio de puro tiempo no significa nada. */}
+          {porTiempo ? null : (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-section">RIR objetivo</span>
+              <input
+                inputMode="decimal"
+                value={rir}
+                onChange={(e) => setRir(e.target.value.replace(/[^0-9.,]/g, ""))}
+                className="input-field text-center"
+                placeholder="—"
+              />
+            </label>
+          )}
         </div>
         <p className="-mt-2 text-[11px] leading-relaxed text-[var(--text-tertiary)]">
-          RIR es cuántas repeticiones deberían sobrarte al acabar la serie. Déjalo vacío si
-          prefieres no pautarlo.
+          {porTiempo
+            ? "Este ejercicio se mide en segundos, así que los dos números de arriba son el aguante que buscas por serie."
+            : "RIR es cuántas repeticiones deberían sobrarte al acabar la serie. Déjalo vacío si prefieres no pautarlo."}
         </p>
 
         <label className="flex flex-col gap-1.5">
@@ -447,9 +493,14 @@ function TargetSheet({
             onClick={() =>
               onSave({
                 targetSets: Number(sets) || 3,
-                targetRepsMin: Number(repsMin) || 8,
-                targetRepsMax: Number(repsMax) || 12,
-                targetRir: rir.trim() === "" ? null : Number(rir.replace(",", ".")),
+                // En un ejercicio de tiempo, los dos campos son segundos
+                // y las repeticiones se quedan en 1-1: son columnas NOT
+                // NULL que no se enseñan nunca (migración 0022).
+                targetRepsMin: porTiempo ? 1 : Number(repsMin) || 8,
+                targetRepsMax: porTiempo ? 1 : Number(repsMax) || 12,
+                targetDurationMin: porTiempo ? Number(repsMin) || 30 : null,
+                targetDurationMax: porTiempo ? Number(repsMax) || 60 : null,
+                targetRir: porTiempo || rir.trim() === "" ? null : Number(rir.replace(",", ".")),
                 restSeconds: Number(rest) || 90,
                 notes: notes.trim() || null,
                 supersetGroup: /^[A-Z]$/.test(superset) ? superset : null,

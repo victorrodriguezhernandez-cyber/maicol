@@ -191,6 +191,13 @@ const routineExerciseInputSchema = z.object({
   targetSets: z.coerce.number().int().min(1).max(20).default(3),
   targetRepsMin: z.coerce.number().int().min(1).max(100),
   targetRepsMax: z.coerce.number().int().min(1).max(100),
+  /**
+   * Objetivo en segundos, para los ejercicios que se miden por tiempo.
+   * Se manda en vez de las repeticiones, no además: quién manda lo decide
+   * el ejercicio (`tracks_duration`), no quien llama (migración 0022).
+   */
+  targetDurationMin: z.coerce.number().int().min(1).max(3600).nullable().optional(),
+  targetDurationMax: z.coerce.number().int().min(1).max(3600).nullable().optional(),
   targetRir: z.coerce.number().min(0).max(10).nullable().optional(),
   restSeconds: z.coerce.number().int().min(0).max(900).default(90),
   notes: z.string().trim().max(500).nullable().optional(),
@@ -288,19 +295,46 @@ export async function createRoutine(input: RoutineInput): Promise<string> {
       (days ?? []).map((d) => [d.position as number, d.id as string]),
     );
 
+    // Qué ejercicios se miden por tiempo, para poder rellenar su
+    // objetivo en segundos cuando quien llama no lo manda — la IA de
+    // rutinas y las plantillas sólo hablan de repeticiones. Sin esto, una
+    // plancha entraría en la rutina pautada como "3 × 1-1" (regla 9: un
+    // número que no se puede defender no debería enseñarse).
+    const idsUsados = [...new Set(parsed.days.flatMap((d) => d.exercises.map((e) => e.exerciseId)))];
+    const porTiempo = new Map<string, { min: number | null; max: number | null }>();
+    if (idsUsados.length > 0) {
+      const { data: medidos } = await supabase
+        .from("exercises")
+        .select("id, tracks_reps, tracks_duration, default_duration_min, default_duration_max")
+        .in("id", idsUsados)
+        .eq("tracks_duration", true);
+      for (const m of medidos ?? []) {
+        if (m.tracks_reps) continue;
+        porTiempo.set(m.id as string, {
+          min: m.default_duration_min as number | null,
+          max: m.default_duration_max as number | null,
+        });
+      }
+    }
+
     const exerciseRows = parsed.days.flatMap((d, dayIndex) =>
-      d.exercises.map((e, i) => ({
+      d.exercises.map((e, i) => {
+        const tiempo = porTiempo.get(e.exerciseId);
+        return {
         routine_day_id: dayIdByPosition.get(dayIndex + 1)!,
         exercise_id: e.exerciseId,
         position: i + 1,
         target_sets: e.targetSets,
         target_reps_min: e.targetRepsMin,
         target_reps_max: e.targetRepsMax,
+        target_duration_min: e.targetDurationMin ?? tiempo?.min ?? null,
+        target_duration_max: e.targetDurationMax ?? tiempo?.max ?? null,
         target_rir: e.targetRir ?? null,
         rest_seconds: e.restSeconds,
         notes: e.notes?.trim() || null,
         superset_group: e.supersetGroup ?? null,
-      })),
+        };
+      }),
     );
 
     if (exerciseRows.length > 0) {
@@ -416,6 +450,8 @@ export async function duplicateRoutine(routineId: string): Promise<string> {
         targetSets: e.target_sets,
         targetRepsMin: e.target_reps_min,
         targetRepsMax: e.target_reps_max,
+        targetDurationMin: e.target_duration_min,
+        targetDurationMax: e.target_duration_max,
         targetRir: e.target_rir,
         restSeconds: e.rest_seconds,
         notes: e.notes,
@@ -463,11 +499,32 @@ const addRoutineExerciseSchema = routineExerciseInputSchema.extend({
   routineDayId: z.string().uuid(),
 });
 
-export async function addRoutineExercise(input: z.input<typeof addRoutineExerciseSchema>) {
-  const parsed = addRoutineExerciseSchema.parse(input);
+/**
+ * Los dos rangos van en pareja o no van: la migración 0022 tiene un CHECK
+ * que lo exige, y un error de base de datos no le dice nada al usuario.
+ */
+function comprobarRangos(parsed: {
+  targetRepsMin: number;
+  targetRepsMax: number;
+  targetDurationMin?: number | null;
+  targetDurationMax?: number | null;
+}) {
   if (parsed.targetRepsMax < parsed.targetRepsMin) {
     throw new Error("El máximo de repeticiones no puede ser menor que el mínimo");
   }
+  const min = parsed.targetDurationMin ?? null;
+  const max = parsed.targetDurationMax ?? null;
+  if ((min === null) !== (max === null)) {
+    throw new Error("El objetivo en segundos necesita un mínimo y un máximo");
+  }
+  if (min !== null && max !== null && max < min) {
+    throw new Error("El máximo de segundos no puede ser menor que el mínimo");
+  }
+}
+
+export async function addRoutineExercise(input: z.input<typeof addRoutineExerciseSchema>) {
+  const parsed = addRoutineExerciseSchema.parse(input);
+  comprobarRangos(parsed);
   const { supabase } = await requireUser();
 
   const { data: last } = await supabase
@@ -485,6 +542,8 @@ export async function addRoutineExercise(input: z.input<typeof addRoutineExercis
     target_sets: parsed.targetSets,
     target_reps_min: parsed.targetRepsMin,
     target_reps_max: parsed.targetRepsMax,
+    target_duration_min: parsed.targetDurationMin ?? null,
+    target_duration_max: parsed.targetDurationMax ?? null,
     target_rir: parsed.targetRir ?? null,
     rest_seconds: parsed.restSeconds,
     notes: parsed.notes?.trim() || null,
@@ -499,9 +558,7 @@ export async function updateRoutineExercise(
   input: z.input<typeof routineExerciseInputSchema>,
 ) {
   const parsed = routineExerciseInputSchema.parse(input);
-  if (parsed.targetRepsMax < parsed.targetRepsMin) {
-    throw new Error("El máximo de repeticiones no puede ser menor que el mínimo");
-  }
+  comprobarRangos(parsed);
   const { supabase } = await requireUser();
   const { error } = await supabase
     .from("routine_exercises")
@@ -509,6 +566,8 @@ export async function updateRoutineExercise(
       target_sets: parsed.targetSets,
       target_reps_min: parsed.targetRepsMin,
       target_reps_max: parsed.targetRepsMax,
+      target_duration_min: parsed.targetDurationMin ?? null,
+      target_duration_max: parsed.targetDurationMax ?? null,
       target_rir: parsed.targetRir ?? null,
       rest_seconds: parsed.restSeconds,
       notes: parsed.notes?.trim() || null,

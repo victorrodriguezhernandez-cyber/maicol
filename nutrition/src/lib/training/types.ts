@@ -118,6 +118,13 @@ export interface RoutineExerciseRow {
   target_sets: number;
   target_reps_min: number;
   target_reps_max: number;
+  /**
+   * Objetivo en SEGUNDOS por serie. Nulo en casi todos: sólo lo usan los
+   * ejercicios con `tracks_duration`. Cuál de los dos pares manda no lo
+   * decide la rutina, lo decide el ejercicio (migración 0022).
+   */
+  target_duration_min: number | null;
+  target_duration_max: number | null;
   target_rir: number | null;
   rest_seconds: number;
   notes: string | null;
@@ -173,6 +180,9 @@ export interface SessionExercise {
     sets: number;
     repsMin: number;
     repsMax: number;
+    /** En segundos, si la rutina pauta tiempo en este ejercicio. */
+    durationMin: number | null;
+    durationMax: number | null;
     rir: number | null;
     restSeconds: number;
     notes: string | null;
@@ -361,18 +371,44 @@ export function medicionDe(exercise: ExerciseRow): Medicion {
   };
 }
 
-/** El rango pautado y su unidad, para poder escribirlo en pantalla. */
-export function rangoDeMedicion(exercise: ExerciseRow): {
+/** Lo que pauta la rutina para un ejercicio, si viene de una. */
+export interface ObjetivoDeRutina {
+  repsMin: number;
+  repsMax: number;
+  durationMin: number | null;
+  durationMax: number | null;
+}
+
+/**
+ * El rango pautado y su unidad, para poder escribirlo en pantalla.
+ *
+ * Quién decide la unidad es el EJERCICIO, no la rutina: un ejercicio que
+ * sólo mide tiempo se pauta en segundos aunque su fila de rutina tenga
+ * `target_reps_min/max` a 1-1 (lo tienen, porque esas columnas son NOT
+ * NULL — ver la migración 0022). Enseñar "1-1 reps" en una plancha era
+ * justo el texto sin sentido que motivó todo esto.
+ *
+ * Con `target` gana lo que el usuario puso en su rutina; sin él, el
+ * rango por defecto del ejercicio.
+ */
+export function rangoDeMedicion(
+  exercise: ExerciseRow,
+  target?: ObjetivoDeRutina | null,
+): {
   min: number;
   max: number;
   unidad: "reps" | "s";
 } {
   if (exercise.tracks_duration && !exercise.tracks_reps) {
     return {
-      min: exercise.default_duration_min ?? 30,
-      max: exercise.default_duration_max ?? 60,
+      min: target?.durationMin ?? exercise.default_duration_min ?? 30,
+      max: target?.durationMax ?? exercise.default_duration_max ?? 60,
       unidad: "s",
     };
   }
-  return { min: exercise.default_reps_min, max: exercise.default_reps_max, unidad: "reps" };
+  return {
+    min: target?.repsMin ?? exercise.default_reps_min,
+    max: target?.repsMax ?? exercise.default_reps_max,
+    unidad: "reps",
+  };
 }
