@@ -30,9 +30,18 @@ respuestas de IA simuladas en ningún punto de la aplicación.
 
 El apartado de fuerza es completo y funciona contra la misma base de datos:
 
-- **Catálogo de 129 ejercicios** cubriendo los 17 grupos musculares, cada
-  uno con sus instrucciones de ejecución. Se filtra por músculo, material
-  y tipo. Puedes crear los tuyos propios.
+- **Catálogo de 227 ejercicios** cubriendo los 17 grupos musculares:
+  gimnasio con máquinas y sin ellas, calistenia y anillas, casa sin nada,
+  banda elástica, kettlebell y accesorios de agarre (hand grip incluido).
+  Cada uno trae los PASOS para hacerlo desde cero, no un consejo para
+  quien ya sabe, y los fallos concretos que se cometen en él con su
+  consecuencia. Se elige por zona del cuerpo — "hombro", no "hombro
+  anterior" —, por material, o desde el apartado "Más comunes". Puedes
+  crear los tuyos propios.
+- **Cada ejercicio declara qué se le mide**: kilos, repeticiones y
+  segundos son tres interruptores independientes, así que un paseo del
+  granjero registra peso Y tiempo y una plancha sólo tiempo. La pantalla
+  pinta las columnas que toquen y no pide un número que no exista.
 - **Rutinas** con días, ejercicios, series objetivo, rango de
   repeticiones, RIR, descanso y superseries. Cuatro formas de crear una:
   a mano, desde plantilla, contándoselo a la IA, o fotografiando la que ya

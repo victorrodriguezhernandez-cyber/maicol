@@ -39,7 +39,7 @@ types/constraints.
 | `user_food_stats` | frequency/usual-quantity learning | one row per `(user_id, food_id)`, updated on every `createMeal` |
 | `day_logs` | explicit day completeness | `complete`/`partial`/`not_logged` — lets the adaptive-goal check ignore days you know you under-logged (section 53) |
 | `training_sessions` | una sesión de entreno | dejó de ser un hueco reservado en `0005`: ahora es LA sesión, con estado (`en_curso`/`completada`/`abandonada`), rutina de origen, esfuerzo percibido y el peso corporal de ese día. Un índice parcial garantiza como mucho una sesión `en_curso` por usuario |
-| `exercises` | catálogo de ejercicios | mismo patrón que `foods`: `user_id IS NULL` ⇒ catálogo compartido (129 filas sembradas en `0006`), `user_id` puesto ⇒ ejercicio propio. `secondary_muscles` es lo que hace que una serie cuente media para cada músculo de apoyo |
+| `exercises` | catálogo de ejercicios | mismo patrón que `foods`: `user_id IS NULL` ⇒ catálogo compartido (227 filas: sembradas en `0006` y ampliadas en `0017`-`0020`), `user_id` puesto ⇒ ejercicio propio. `secondary_muscles` es lo que hace que una serie cuente media para cada músculo de apoyo |
 | `routines` / `routine_days` / `routine_exercises` | el plan | guardan el OBJETIVO (series, rango de reps, RIR, descanso), nunca el resultado. Un índice parcial único garantiza como mucho una rutina activa por usuario |
 | `training_goals` | qué persigue entrenando | hasta 3 focos EN ORDEN (el primero manda) más un campo libre. Es su propio historial como `nutrition_goals`, con el mismo índice parcial único de un solo objetivo abierto. La dirección del peso (subir/bajar/mantener) NO se duplica aquí: vive en `nutrition_goals.mode` |
 | `workout_sets` | la serie | el dato real de todo el apartado. `completed_at` es lo que convierte una serie planificada en un hecho: sin él no cuenta para volumen, ni récords, ni historial |
@@ -83,9 +83,29 @@ checks — there is no separate ACL table.
   igual que `meal_items` en `0001`. Índice en cada clave ajena. `anon`
   queda revocado explícitamente (las cinco devuelven `42501`, no una
   lista vacía).
-- `0006_seed_exercises.sql` — los 129 ejercicios del catálogo compartido,
-  con `on conflict do nothing` para que re-aplicarla no duplique ni pise
-  ediciones.
+- `0006_seed_exercises.sql` — los 129 primeros ejercicios del catálogo
+  compartido, con `on conflict do nothing` para que re-aplicarla no
+  duplique ni pise ediciones.
+- `0008_medicion_por_ejercicio.sql` — `tracks_weight`/`tracks_reps`/
+  `tracks_duration` y `default_duration_min`/`max` en `exercises`. Qué se
+  mide de cada ejercicio DEJA de deducirse del patrón de movimiento y
+  pasa a estar declarado: deducirlo hacía que el paseo del granjero —que
+  es peso Y tiempo— no tuviera dónde apuntar los kilos. Dos CHECK: todo
+  ejercicio mide algo (`tracks_reps or tracks_duration`) y quien mide
+  tiempo tiene rango de tiempo.
+- `0009_ejercicios_explicados.sql` — `how_to` (los pasos desde cero),
+  `mistakes` (los fallos de ese ejercicio y su consecuencia) e
+  `is_common` con su índice parcial. `cues` se queda como lo que era: el
+  recordatorio corto de la serie.
+- `0010`-`0016` — el contenido de `how_to` y `mistakes` para los 129
+  ejercicios que ya existían, una migración por zona del cuerpo para que
+  cada una se pueda revisar por separado.
+- `0017`-`0020` — 98 ejercicios nuevos: calistenia y anillas, casa sin
+  material, banda elástica, kettlebell, agarre y accesorios, y máquinas y
+  variantes de gimnasio. Las bandas van con `tracks_weight = false`
+  porque no tienen kilos.
+- `0021_comunes_de_casa.sql` — amplía "Más comunes" a 72 con los básicos
+  de casa, que no existían cuando se marcaron los primeros 52.
 - `0007_training_goals.sql` — `training_goals`: el objetivo de entreno
   del usuario, con historial. `focus` es un `text[]` con CHECK de 1 a 3
   valores del conjunto permitido, y el orden es significativo (el primero
