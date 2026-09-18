@@ -17,12 +17,17 @@ export default async function ProgresoPage() {
   } = await getUser(supabase);
   if (!user) redirect("/login");
 
-  const since = new Date();
-  since.setDate(since.getDate() - 200);
-  // Independent reads — one round trip, not two in a row.
+  // Se traen TODOS los pesajes, no los de los últimos N días.
+  //
+  // Antes se pedían 200, y el selector de la gráfica ofrece "1 año" y
+  // "Todo el historial": los dos habrían enseñado 200 días llamándolos
+  // otra cosa, sin dar ningún error. Un pesaje es una fila diminuta y
+  // aquí hay un solo usuario — pesándose a diario, un año son 365 filas,
+  // así que traerlo entero cuesta menos que mantener dos números
+  // (el del fetch y el del rango más largo) de acuerdo para siempre.
   const [goal, entries] = await Promise.all([
     getCurrentGoal(supabase, user.id),
-    getWeightEntriesSince(supabase, user.id, since.toISOString()),
+    getWeightEntriesSince(supabase, user.id, new Date(0).toISOString()),
   ]);
 
   const points = computeWeightTrend(entries.map((e) => ({ measuredAt: e.measured_at, weightKg: e.weight_kg })));

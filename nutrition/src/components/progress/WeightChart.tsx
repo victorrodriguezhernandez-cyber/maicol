@@ -17,9 +17,10 @@ const RANGES = [
   // aparte en vez de sacarlo del otro poniéndolo en minúsculas: eso daba
   // "en últimos 7 días", sin artículo.
   { label: "7D", days: 7, caption: "Últimos 7 días", dentroDe: "los últimos 7 días" },
-  { label: "30D", days: 30, caption: "Últimos 30 días", dentroDe: "los últimos 30 días" },
+  { label: "1M", days: 30, caption: "Último mes", dentroDe: "el último mes" },
   { label: "3M", days: 90, caption: "Últimos 3 meses", dentroDe: "los últimos 3 meses" },
   { label: "6M", days: 180, caption: "Últimos 6 meses", dentroDe: "los últimos 6 meses" },
+  { label: "1A", days: 365, caption: "Último año", dentroDe: "el último año" },
   { label: "Todo", days: Infinity, caption: "Todo el historial", dentroDe: "todo tu historial" },
 ] as const;
 
@@ -86,7 +87,7 @@ export function WeightChart({
   hoy: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [rangeLabel, setRangeLabel] = useState<(typeof RANGES)[number]["label"]>("30D");
+  const [rangeLabel, setRangeLabel] = useState<(typeof RANGES)[number]["label"]>("1M");
   const range = RANGES.find((r) => r.label === rangeLabel)!;
 
   // Se recorta por FECHA, no por número de puntos.
@@ -247,9 +248,22 @@ export function WeightChart({
 
       {sinLinea ? null : (
         <p className="text-[11px] leading-relaxed text-[var(--text-tertiary)]">
-          La línea es la tendencia, no cada pesaje: los puntos grises son lo que marcó la báscula y la
-        línea es lo que queda al quitarles el agua y la comida de cada día. Por eso sube más despacio
-        que un pesaje suelto — y por eso sirve para saber si de verdad estás ganando.
+          <span className="font-semibold text-[var(--text-secondary)]">Los puntos grises</span> son lo
+          que marcó la báscula cada día que te pesaste.{" "}
+          <span className="font-semibold text-[var(--text-secondary)]">La línea</span> es la
+          tendencia: esos mismos pesajes sin el agua y la comida de cada día.
+          {last ? (
+            <>
+              {" "}
+              Los <span className="font-semibold text-[var(--text-secondary)]">
+                {formatKg(last.trendKg).replace(" kg", "")} kg
+              </span>{" "}
+              de arriba son esa tendencia hoy — no lo que marcaría la báscula si te subieras ahora,
+              sino el peso en el que de verdad estás.
+            </>
+          ) : null}{" "}
+          Es el número que hay que mirar: un pesaje suelto se mueve medio kilo por haber bebido o
+          cenado, y la tendencia no.
         </p>
       )}
 
