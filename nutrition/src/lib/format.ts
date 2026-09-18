@@ -15,6 +15,30 @@ export function formatKg(value: number, decimals = 1): string {
   })} kg`;
 }
 
+/**
+ * Un pesaje tal y como lo escribiste.
+ *
+ * `formatKg` redondea a un decimal, que está bien para una TENDENCIA —un
+ * valor calculado, donde el segundo decimal es precisión falsa— y está
+ * mal para la lectura de la báscula: si te pesas 64,35 y la app te
+ * enseña "64,4", te está corrigiendo un dato que tú mediste. La columna
+ * guarda dos decimales (`numeric(5,2)`), así que el dato está entero y
+ * lo único que fallaba era enseñarlo.
+ *
+ * Hasta dos decimales, y sin ceros de relleno al final: 64,35 · 64,1 ·
+ * 64,0. El primer decimal se mantiene siempre porque en un peso corporal
+ * "64" a secas se lee como una cifra redondeada, que es justo lo
+ * contrario de lo que se quiere decir.
+ */
+export function formatPesaje(value: number): string {
+  const dosDecimales = roundForDisplay(value, 2);
+  const decimales = Number.isInteger(dosDecimales * 10) ? 1 : 2;
+  return `${dosDecimales.toLocaleString("es-ES", {
+    minimumFractionDigits: decimales,
+    maximumFractionDigits: decimales,
+  })} kg`;
+}
+
 export function formatSignedKgPerWeek(value: number, decimals = 2): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${roundForDisplay(value, decimals).toLocaleString("es-ES", {

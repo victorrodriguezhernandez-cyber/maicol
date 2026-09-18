@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { getRecentDaysSummary, type DaySummary } from "@/lib/data/diary";
 import { getCurrentGoal } from "@/lib/data/nutrition";
-import { formatKcal, formatKg, formatGrams, todayLocalDateString } from "@/lib/format";
+import { formatKcal, formatPesaje, formatGrams, todayLocalDateString } from "@/lib/format";
 
 type Tier = "on_target" | "under" | "over" | "none";
 const TIER_COLOR: Record<Tier, string> = {
@@ -90,7 +90,7 @@ export default async function DiarioPage() {
                     </span>
                     {day.weightKg ? (
                       <span className="text-metric shrink-0 text-[11px] text-[var(--text-tertiary)]">
-                        {formatKg(day.weightKg)}
+                        {formatPesaje(day.weightKg)}
                       </span>
                     ) : null}
                   </div>

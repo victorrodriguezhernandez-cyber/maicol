@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { localDayBoundsUtc, mealInstantForDate, todayLocalDateString } from "./format";
+import { formatKg, formatPesaje, localDayBoundsUtc, mealInstantForDate, todayLocalDateString } from "./format";
 
 /**
  * Registrar en un día pasado es exactamente donde un fallo de zona
@@ -41,5 +41,42 @@ describe("mealInstantForDate", () => {
   it("sin fecha se comporta como hoy", () => {
     const t = Date.parse(mealInstantForDate(null));
     expect(Math.abs(t - Date.now())).toBeLessThan(1000);
+  });
+});
+
+/**
+ * Un pesaje se enseña como se midió.
+ *
+ * El caso real que lo motivó: se registró 64,35 kg y la lista de pesajes
+ * enseñaba "64,4 kg". El dato estaba bien guardado —la columna es
+ * `numeric(5,2)`—, lo que redondeaba era la pantalla. Corregirle a
+ * alguien el número que acaba de leer en su báscula es de las cosas que
+ * más rápido te hacen desconfiar de una app.
+ */
+describe("formatPesaje", () => {
+  it("no redondea el segundo decimal que sí mediste", () => {
+    expect(formatPesaje(64.35)).toBe("64,35 kg");
+    expect(formatPesaje(64.05)).toBe("64,05 kg");
+    expect(formatPesaje(70.25)).toBe("70,25 kg");
+  });
+
+  it("no rellena con ceros lo que no medías", () => {
+    // 64,10 en la base de datos es "me pesé 64,1", no "64,10".
+    expect(formatPesaje(64.1)).toBe("64,1 kg");
+    expect(formatPesaje(64.3)).toBe("64,3 kg");
+  });
+
+  it("mantiene siempre un decimal, aunque sea cero", () => {
+    // "64 kg" a secas se lee como una cifra redondeada a ojo, que es lo
+    // contrario de lo que dice un pesaje.
+    expect(formatPesaje(64)).toBe("64,0 kg");
+  });
+
+  it("la tendencia sigue con un decimal: ahí el segundo sería inventado", () => {
+    // `formatKg` no cambia. La tendencia es un valor CALCULADO (un EWMA),
+    // no una medición, y enseñar 64,24 fingiría una precisión que el
+    // número no tiene.
+    expect(formatKg(64.2426)).toBe("64,2 kg");
+    expect(formatKg(0.2426)).toBe("0,2 kg");
   });
 });

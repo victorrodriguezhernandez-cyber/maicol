@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { getCurrentGoal, getWeightEntriesSince } from "@/lib/data/nutrition";
 import { computeWeightTrend, computeWeeklyRate } from "@/lib/nutrition/trend";
-import { formatKg, formatDateTimeShort } from "@/lib/format";
+import { formatPesaje, formatDateTimeShort, todayLocalDateString } from "@/lib/format";
 import { WeightChart } from "@/components/progress/WeightChart";
 import { WeightLogForm } from "@/components/progress/WeightLogForm";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -39,7 +39,19 @@ export default async function ProgresoPage() {
         {points.length === 0 ? (
           <EmptyState title="Todavía no tienes pesajes registrados" description="Registra tu primer peso abajo." />
         ) : (
-          <WeightChart points={points} weeklyRateKg={weeklyRate.weeklyRateKg} />
+          <WeightChart
+            points={points}
+            weeklyRateKg={weeklyRate.weeklyRateKg}
+            ultimoPesaje={
+              entries.length > 0
+                ? {
+                    weightKg: entries[entries.length - 1].weight_kg,
+                    measuredAt: entries[entries.length - 1].measured_at,
+                  }
+                : null
+            }
+            hoy={todayLocalDateString()}
+          />
         )}
         <WeightLogForm />
       </section>
@@ -78,7 +90,7 @@ export default async function ProgresoPage() {
               .map((e) => (
                 <div key={e.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
                   <span className="text-xs text-[var(--text-tertiary)]">{formatDateTimeShort(e.measured_at)}</span>
-                  <span className="text-metric font-semibold text-[var(--text-primary)]">{formatKg(e.weight_kg)}</span>
+                  <span className="text-metric font-semibold text-[var(--text-primary)]">{formatPesaje(e.weight_kg)}</span>
                   <DeleteWeightButton id={e.id} />
                 </div>
               ))}
