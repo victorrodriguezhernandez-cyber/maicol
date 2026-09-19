@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { buscarEnFuentesExternas } from "@/lib/data/external-foods";
-import { ETIQUETA_DE_MOTIVO } from "@/lib/nutrition/busqueda-alimentos";
+import { ETIQUETA_DE_MOTIVO, sufijoDeMarca } from "@/lib/nutrition/busqueda-alimentos";
 import { NutrientPanel } from "@/components/ui/NutrientPanel";
 import { formatKcal } from "@/lib/format";
 import { MacroInline } from "@/components/ui/MacroInline";
@@ -46,11 +46,11 @@ export default async function DesignBuscarPage({
       ) : null}
 
       <ul className="surface-raised flex flex-col divide-y divide-[var(--border-soft)] overflow-hidden">
-        {resultados.map((a) => (
+        {resultados.map(({ alimento: a, repetidos }) => (
           <li key={`${a.fuente}:${a.idExterno}`} className="px-4 py-3">
             <p className="text-sm font-medium text-[var(--text-primary)]">
               {a.nombre}
-              {a.marca ? ` · ${a.marca}` : ""}
+              {sufijoDeMarca(a.marca, repetidos)}
             </p>
             <p className="text-xs text-[var(--text-tertiary)]">
               {ETIQUETA_DE_MOTIVO[a.fuente]} · {formatKcal(a.energyKcal)}/100

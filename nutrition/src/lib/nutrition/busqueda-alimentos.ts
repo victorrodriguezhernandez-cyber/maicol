@@ -30,6 +30,12 @@ interface Comun {
   marca: string | null;
   energyKcal: number;
   basis: "per_100g" | "per_100ml";
+  /**
+   * Cuántas marcas más decían exactamente lo mismo y se han agrupado
+   * detrás de ésta. Se enseña en la fila: esconderlas en silencio sería
+   * hacerle creer que el catálogo tiene menos de lo que tiene.
+   */
+  repetidos?: number;
 }
 
 export type ResultadoBusqueda =
@@ -44,6 +50,23 @@ export type ResultadoBusqueda =
  * una etiqueta. Saber cuál estás cogiendo es parte de poder confiar en
  * el número (regla 9).
  */
+/**
+ * Cómo se nombra un resultado que representa a varias marcas.
+ *
+ * Cuando el grupo tiene una sola marca, se enseña: es ESE producto.
+ * Cuando agrupa varias, la marca concreta se calla — poner "· Sello
+ * Rojo" al lado de una fila que representa a nueve marcas insinúa que
+ * ese es el producto que vas a registrar, y no lo es más que los otros
+ * ocho. Lo honesto es decir cuántas hay.
+ */
+export function sufijoDeMarca(marca: string | null, repetidos = 0): string {
+  if (repetidos > 0) {
+    const total = repetidos + 1;
+    return ` · ${total} marcas con los mismos valores`;
+  }
+  return marca ? ` · ${marca}` : "";
+}
+
 export const ETIQUETA_DE_MOTIVO: Record<MotivoDeResultado, string> = {
   favorite: "Favorito",
   recent: "Reciente",

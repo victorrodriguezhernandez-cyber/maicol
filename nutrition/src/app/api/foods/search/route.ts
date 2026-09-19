@@ -52,18 +52,19 @@ export async function GET(request: NextRequest) {
     const idsGuardados = new Set(
       locales.map((f) => (f.external_id ? `${f.source}:${f.external_id}` : f.id)),
     );
-    for (const externo of externos) {
-      const clave = `${externo.fuente}:${externo.idExterno}`;
+    for (const { alimento, repetidos } of externos) {
+      const clave = `${alimento.fuente}:${alimento.idExterno}`;
       if (idsGuardados.has(clave)) continue;
       resultados.push({
         clave,
         origen: "externo",
-        motivo: externo.fuente,
-        nombre: externo.nombre,
-        marca: externo.marca,
-        energyKcal: externo.energyKcal,
-        basis: externo.basis,
-        externo,
+        motivo: alimento.fuente,
+        nombre: alimento.nombre,
+        marca: alimento.marca,
+        energyKcal: alimento.energyKcal,
+        basis: alimento.basis,
+        repetidos,
+        externo: alimento,
       });
     }
   }

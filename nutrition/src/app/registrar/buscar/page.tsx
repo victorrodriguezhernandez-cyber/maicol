@@ -6,6 +6,7 @@ import { foodToDraftItem } from "@/lib/nutrition/food-to-item";
 import { guardarAlimentoExterno } from "@/lib/actions/foods";
 import {
   ETIQUETA_DE_MOTIVO,
+  sufijoDeMarca,
   type ResultadoBusqueda,
 } from "@/lib/nutrition/busqueda-alimentos";
 import type { FoodRow } from "@/lib/supabase/types";
@@ -122,7 +123,7 @@ function BuscarAlimentoInner() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-[var(--text-primary)]">
                     {resultado.nombre}
-                    {resultado.marca ? ` · ${resultado.marca}` : ""}
+                    {sufijoDeMarca(resultado.marca, resultado.repetidos)}
                   </p>
                   <p className="text-xs text-[var(--text-tertiary)]">
                     {ETIQUETA_DE_MOTIVO[resultado.motivo]} · {formatKcal(resultado.energyKcal)}/100

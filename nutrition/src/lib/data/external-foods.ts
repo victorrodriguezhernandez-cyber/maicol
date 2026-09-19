@@ -5,8 +5,15 @@ import {
   CAMPOS_OFF,
   type AlimentoExterno,
 } from "@/lib/nutrition/external-mapping";
+import {
+  agruparAlimentos,
+  coincideConLaBusqueda,
+  limpiarNombre,
+  type Agrupado,
+} from "@/lib/nutrition/agrupar-alimentos";
 
 export type { AlimentoExterno };
+export type { Agrupado };
 
 /**
  * Buscar alimentos en las bases de datos públicas de composición.
@@ -162,10 +169,22 @@ export async function buscarEnUsda(consulta: string, limite = 8): Promise<Alimen
  * búsqueda sigue devolviendo lo de USDA, y al revés. Que una fuente se
  * caiga no puede dejar el buscador sin resultados.
  */
-export async function buscarEnFuentesExternas(consulta: string): Promise<AlimentoExterno[]> {
+export async function buscarEnFuentesExternas(
+  consulta: string,
+): Promise<Agrupado<AlimentoExterno>[]> {
   const resultados = await Promise.allSettled([
     buscarEnOpenFoodFacts(consulta),
     buscarEnUsda(consulta),
   ]);
-  return resultados.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  const todos = resultados
+    .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+    .map((a) => ({ ...a, nombre: limpiarNombre(a.nombre) }))
+    // Fuera lo que sólo coincidía por la marca: buscando "leche" salían
+    // "Crema" y "Alimento a base de almendras", los dos de la marca
+    // "Lonco leche".
+    .filter((a) => coincideConLaBusqueda(a.nombre, consulta));
+
+  // Y una sola fila por alimento: nueve marcas de la misma leche con los
+  // mismos números son nueve veces la misma decisión.
+  return agruparAlimentos(todos);
 }
