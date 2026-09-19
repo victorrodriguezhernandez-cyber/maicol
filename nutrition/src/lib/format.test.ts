@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { formatKg, formatPesaje, localDayBoundsUtc, mealInstantForDate, todayLocalDateString } from "./format";
+import {
+  formatKg,
+  formatPesaje,
+  localDayBoundsUtc,
+  mealInstantForDate,
+  numeroATexto,
+  parseNumeroEs,
+  todayLocalDateString,
+} from "./format";
 
 /**
  * Registrar en un día pasado es exactamente donde un fallo de zona
@@ -78,5 +86,43 @@ describe("formatPesaje", () => {
     // número no tiene.
     expect(formatKg(64.2426)).toBe("64,2 kg");
     expect(formatKg(0.2426)).toBe("0,2 kg");
+  });
+});
+
+/**
+ * El caso que motivó esto: borras la cantidad de un ingrediente para
+ * escribir otra y el campo se queda en 0 sin aceptar nada más.
+ *
+ * Dos causas, y las dos se ven aquí. Una, `Number("") || 0` convierte
+ * "el campo está vacío" en "la cantidad es cero". Dos, en un teclado
+ * español el separador decimal es la coma, y con `type="number"` una
+ * coma hace que el navegador devuelva "" — lo tecleado se pierde.
+ */
+describe("parseNumeroEs", () => {
+  it("distingue el campo vacío de un cero escrito", () => {
+    // Esta es la línea entera del fallo: vacío NO es 0.
+    expect(parseNumeroEs("")).toBeNull();
+    expect(parseNumeroEs("   ")).toBeNull();
+    expect(parseNumeroEs("0")).toBe(0);
+  });
+
+  it("acepta la coma decimal del teclado español", () => {
+    expect(parseNumeroEs("64,5")).toBe(64.5);
+    expect(parseNumeroEs("0,25")).toBe(0.25);
+    // Y el punto también: un teclado de escritorio da punto.
+    expect(parseNumeroEs("64.5")).toBe(64.5);
+  });
+
+  it("no cuela lo que no es un número", () => {
+    expect(parseNumeroEs("abc")).toBeNull();
+    expect(parseNumeroEs("1,2,3")).toBeNull();
+    expect(parseNumeroEs("-")).toBeNull();
+  });
+
+  it("da la vuelta sin perder el valor", () => {
+    for (const n of [200, 64.5, 0.25, 1]) {
+      expect(parseNumeroEs(numeroATexto(n))).toBe(n);
+    }
+    expect(numeroATexto(64.5)).toBe("64,5");
   });
 });

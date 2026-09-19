@@ -39,6 +39,39 @@ export function formatPesaje(value: number): string {
   })} kg`;
 }
 
+/**
+ * Un número escrito a mano, en español.
+ *
+ * Dos motivos para que exista, y los dos salieron del mismo campo de
+ * cantidad:
+ *
+ * 1. El teclado numérico de un móvil español da COMA. Un
+ *    `<input type="number">` con una coma dentro no vale "64,5": vale
+ *    `""`, porque el navegador considera todo el valor inválido. Lo
+ *    tecleado desaparece sin ningún aviso. Por eso los campos numéricos
+ *    de la app son `type="text"` con `inputMode="decimal"` (mismo
+ *    teclado, sin ese filtro) y pasan por aquí.
+ *
+ * 2. Devuelve `null`, no 0, cuando no hay número. Son cosas distintas:
+ *    0 es una cantidad que alguien ha escrito, `null` es "el campo está
+ *    vacío". Tratar lo segundo como lo primero es exactamente lo que
+ *    dejaba la cantidad clavada en cero — `Number("") || 0` da 0 y a
+ *    partir de ahí ya no había proporción con la que reescalar nada.
+ */
+export function parseNumeroEs(texto: string): number | null {
+  const limpio = texto.trim().replace(",", ".");
+  // `Number("")` y `Number(" ")` valen 0, así que el vacío se corta antes
+  // de llegar a la conversión.
+  if (limpio === "") return null;
+  const numero = Number(limpio);
+  return Number.isFinite(numero) ? numero : null;
+}
+
+/** Un número dentro de un campo de texto, con coma decimal. */
+export function numeroATexto(value: number): string {
+  return String(value).replace(".", ",");
+}
+
 export function formatSignedKgPerWeek(value: number, decimals = 2): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${roundForDisplay(value, decimals).toLocaleString("es-ES", {

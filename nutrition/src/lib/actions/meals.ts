@@ -274,84 +274,58 @@ export async function deleteMealItem(mealItemId: string) {
   revalidatePath("/diario");
 }
 
-const splitMealItemSchema = z.object({
-  mealItemId: z.string().uuid(),
-  items: z.array(itemSchema).min(2),
+const updateMealTypeSchema = z.object({
+  mealId: z.string().uuid(),
+  mealType: z.enum(["breakfast", "lunch", "dinner", "snack", "other"]),
 });
-export type SplitMealItemInput = z.input<typeof splitMealItemSchema>;
+
+export type ResultadoCambioDeTipo = { ok: true } | { ok: false; motivo: string };
 
 /**
- * Sustituye UNA línea del diario por sus ingredientes.
+ * Mueve una comida ya guardada a otro momento del día.
  *
- * Para qué: una comida estimada por la IA antes de que existiera el
- * desglose entró como una sola línea ("Lomo con nata, cuscús y
- * hamburguesa, 980 kcal"), y así no se puede comprobar si se pasó con el
- * aceite ni corregir sólo un ingrediente. Esto la abre sin tener que
- * borrarla y volver a dictarla.
+ * Hacía falta porque no había ninguna forma de corregirlo desde la app:
+ * si la cena entraba como comida —el tipo se adivina por la hora— la
+ * única salida era pedírselo al coach o borrarla y volver a dictarla.
+ * Cambiar una etiqueta no debería costar una llamada a la IA.
  *
- * Los ingredientes son una ESTIMACIÓN NUEVA — en la fila vieja no hay
- * nada guardado de cada uno — así que entran con la precisión que les
- * corresponde por su fuente (`clampPrecision`, igual que cualquier otra
- * escritura) y nunca heredan la del original.
+ * Sólo toca `meal_type`. La hora (`occurred_at`) se queda como estaba a
+ * propósito: es el dato de cuándo comiste de verdad, y moverla para que
+ * "cuadre" con la etiqueta nueva sería falsear un registro para que
+ * encaje con su corrección.
  *
- * Se borra la línea vieja al final, no al principio: si la inserción
- * falla, la comida se queda como estaba en vez de perderse.
+ * Devuelve el fallo como valor en vez de lanzarlo: en producción React
+ * sustituye el mensaje de una excepción por un identificador opaco, así
+ * que un `throw` aquí llegaría a la pantalla como "algo ha ido mal".
  */
-export async function splitMealItem(input: SplitMealItemInput) {
-  const parsed = splitMealItemSchema.parse(input);
+export async function updateMealType(
+  input: z.input<typeof updateMealTypeSchema>,
+): Promise<ResultadoCambioDeTipo> {
+  const parsed = updateMealTypeSchema.parse(input);
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  if (!user) return { ok: false, motivo: "No has iniciado sesión." };
 
-  // La comida tiene que ser suya. RLS ya lo impediría, pero fallar aquí
-  // con un mensaje claro es mejor que un error de base de datos.
-  const { data: original } = await supabase
-    .from("meal_items")
-    .select("id, meal_id, meals!inner(user_id)")
-    .eq("id", parsed.mealItemId)
+  // RLS ya lo impediría, pero comprobarlo aquí da un mensaje que se
+  // entiende en vez de un error de base de datos.
+  const { data: meal } = await supabase
+    .from("meals")
+    .select("id, user_id")
+    .eq("id", parsed.mealId)
     .maybeSingle();
-  if (!original) throw new Error("Ese alimento no existe");
-  const dueno = (original.meals as unknown as { user_id: string }).user_id;
-  if (dueno !== user.id) throw new Error("Ese alimento no es tuyo");
+  if (!meal) return { ok: false, motivo: "Esa comida ya no existe." };
+  if (meal.user_id !== user.id) return { ok: false, motivo: "Esa comida no es tuya." };
 
-  const rows = parsed.items.map((item) => ({
-    meal_id: original.meal_id as string,
-    food_id: item.foodId ?? null,
-    recipe_id: item.recipeId ?? null,
-    name: item.name,
-    quantity_amount: item.quantityAmount,
-    quantity_unit: item.quantityUnit,
-    grams_equivalent: item.gramsEquivalent ?? null,
-    energy_kcal: item.energyKcal,
-    protein_g: item.proteinG,
-    carbohydrates_g: item.carbohydratesG,
-    sugars_g: item.sugarsG ?? null,
-    fat_g: item.fatG,
-    saturated_fat_g: item.saturatedFatG ?? null,
-    fiber_g: item.fiberG ?? null,
-    sodium_mg: item.sodiumMg ?? null,
-    salt_g: item.saltG ?? null,
-    micronutrients: item.micronutrients,
-    precision_level: clampPrecision(item.source, item.precisionLevel),
-    source: item.source,
-    confidence: item.confidence ?? null,
-    range_kcal_min: item.rangeKcalMin ?? null,
-    range_kcal_max: item.rangeKcalMax ?? null,
-    notes: item.notes ?? null,
-  }));
-
-  const { error: insertError } = await supabase.from("meal_items").insert(rows);
-  if (insertError) throw insertError;
-
-  const { error: deleteError } = await supabase
-    .from("meal_items")
-    .delete()
-    .eq("id", parsed.mealItemId);
-  if (deleteError) throw deleteError;
+  const { error } = await supabase
+    .from("meals")
+    .update({ meal_type: parsed.mealType })
+    .eq("id", parsed.mealId);
+  if (error) return { ok: false, motivo: "No se ha podido cambiar. Inténtalo otra vez." };
 
   revalidatePath("/");
   revalidatePath("/diario");
-  revalidatePath(`/diario/comida/${original.meal_id}`);
+  revalidatePath(`/diario/comida/${parsed.mealId}`);
+  return { ok: true };
 }

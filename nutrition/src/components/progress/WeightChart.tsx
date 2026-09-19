@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createChart, AreaSeries, LineSeries, LineType, type UTCTimestamp } from "lightweight-charts";
+import {
+  createChart,
+  AreaSeries,
+  LineSeries,
+  LineType,
+  CrosshairMode,
+  type MouseEventParams,
+  type UTCTimestamp,
+} from "lightweight-charts";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatKg, formatPesaje, formatSignedKgPerWeek, formatDateShort } from "@/lib/format";
 
@@ -90,6 +98,12 @@ export function WeightChart({
   const [rangeLabel, setRangeLabel] = useState<(typeof RANGES)[number]["label"]>("1M");
   const range = RANGES.find((r) => r.label === rangeLabel)!;
 
+  // El día que el dedo está señalando en la gráfica, o null si no señala
+  // ninguno. Toda la cabecera de la tarjeta lee de aquí: tocar un día
+  // cambia el número grande, la fecha y el pesaje, y al soltar vuelve
+  // todo al último día.
+  const [tocado, setTocado] = useState<WeightChartPoint | null>(null);
+
   // Se recorta por FECHA, no por número de puntos.
   //
   // `computeWeightTrend` devuelve un punto por día CON PESAJE, no uno por
@@ -111,6 +125,10 @@ export function WeightChart({
   const first = filtered[0];
   const deltaKg = last && first ? last.trendKg - first.trendKg : null;
 
+  // El día del que habla la cabecera: el que señala el dedo, o el último
+  // cuando no hay ninguno.
+  const mostrado = tocado ?? last ?? null;
+
   useEffect(() => {
     if (!containerRef.current || sinLinea) return;
     const styles = getComputedStyle(document.documentElement);
@@ -128,17 +146,41 @@ export function WeightChart({
       },
       grid: {
         vertLines: { visible: false },
-        horzLines: { visible: false },
+        // Muy tenues, sólo para poder seguir un kilo con la vista desde
+        // la línea hasta el eje.
+        horzLines: { color: conAlfa(cssVar("--border-strong"), 0.45), style: 2 },
       },
-      rightPriceScale: { visible: false },
+      // El eje de kilos estaba APAGADO, así que la gráfica era una línea
+      // bonita sin una sola cifra: no se podía saber si subía de 64 a 65
+      // o de 64,0 a 64,1, que es justo la diferencia que importa. Con él
+      // puesto, se lee un peso sin tener que tocar nada.
+      rightPriceScale: {
+        visible: true,
+        borderVisible: false,
+        scaleMargins: { top: 0.22, bottom: 0.18 },
+      },
       timeScale: { borderVisible: false, secondsVisible: false },
-      crosshair: { horzLine: { visible: false }, vertLine: { labelVisible: false } },
+      // Magnet: la cruz se engancha al valor de la serie en vez de
+      // quedarse donde cayó el dedo, que en un móvil nunca es donde
+      // apuntabas.
+      crosshair: {
+        mode: CrosshairMode.Magnet,
+        vertLine: { color: cssVar("--border-strong"), width: 1, style: 2, labelVisible: true },
+        horzLine: { color: cssVar("--border-strong"), width: 1, style: 2, labelVisible: true },
+      },
       // Pinned explicitly: the library formats tick labels via
       // Date.toLocaleString(locale) and defaults to the browser's own
       // locale string, which throws (RangeError) on a malformed one —
       // crashing the whole draw call and leaving the canvas blank.
       // Never depend on the host's locale for something this visible.
-      localization: { locale: "es-ES" },
+      localization: {
+        locale: "es-ES",
+        // El eje y la etiqueta de la cruz enseñan "64,2", no "64.20":
+        // un decimal, que es la precisión que tiene la tendencia, y con
+        // coma, que es como se escribe un número aquí.
+        priceFormatter: (precio: number) =>
+          precio.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+      },
       handleScroll: false,
       handleScale: false,
     });
@@ -186,25 +228,77 @@ export function WeightChart({
 
     chart.timeScale().fitContent();
 
-    return () => chart.remove();
+    // ── Tocar la gráfica ──────────────────────────────────────────────
+    //
+    // Antes no pasaba nada al tocar, y por dos motivos a la vez: la cruz
+    // estaba desactivada, y NADIE escuchaba el evento. Encima, en un
+    // móvil la librería sólo entra en modo lectura con una pulsación
+    // LARGA (`_internal_longTapEvent`), así que un toque normal no
+    // llegaba a mover nada aunque la cruz hubiera estado encendida.
+    //
+    // Por eso se escuchan las dos cosas: el movimiento de la cruz (la
+    // pulsación larga arrastrando, y el ratón en un ordenador) y el
+    // toque suelto. Un toque normal ya deja el día fijado.
+    const porFecha = new Map(filtered.map((p) => [Date.parse(p.date) / 1000, p]));
+    const puntoDe = (param: MouseEventParams) => {
+      const instante = param.time as number | undefined;
+      return instante == null ? null : porFecha.get(instante) ?? null;
+    };
+
+    // Arrastrando con el dedo (o con el ratón en un ordenador) la cruz la
+    // dibuja la librería; aquí sólo se lee dónde está.
+    const alMover = (param: MouseEventParams) => setTocado(puntoDe(param));
+
+    // Un toque suelto, en cambio, NO dibuja nada: la librería sólo entra
+    // en modo lectura con una pulsación larga. Así que en el toque se
+    // pinta la cruz a mano, o el número de arriba cambiaría sin que nada
+    // en la gráfica dijera de qué día está hablando.
+    const alTocar = (param: MouseEventParams) => {
+      const punto = puntoDe(param);
+      setTocado(punto);
+      if (punto) chart.setCrosshairPosition(punto.trendKg, param.time!, areaSeries);
+      else chart.clearCrosshairPosition();
+    };
+
+    chart.subscribeCrosshairMove(alMover);
+    chart.subscribeClick(alTocar);
+
+    return () => {
+      chart.unsubscribeCrosshairMove(alMover);
+      chart.unsubscribeClick(alTocar);
+      chart.remove();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rangeLabel, points.length, hoy]);
+
+  // Al cambiar de rango, el día señalado puede no estar ya en el nuevo,
+  // así que se suelta al cambiar y no en un efecto posterior.
+  function cambiarRango(etiqueta: (typeof RANGES)[number]["label"]) {
+    setTocado(null);
+    setRangeLabel(etiqueta);
+  }
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
         <p className="text-section">Tendencia de peso</p>
-        <p className="text-[11px] text-[var(--text-tertiary)]">{range.caption}</p>
+        <p className="text-[11px] text-[var(--text-tertiary)]">
+          {/* La fecha sólo mientras el dedo señala un día. Sin dedo, aquí
+              va el rango: es lo que dice qué estás mirando. */}
+          {tocado ? formatDateShort(`${tocado.date}T12:00:00Z`) : range.caption}
+        </p>
       </div>
 
       <div className="flex items-end justify-between">
         <div className="flex items-baseline gap-2">
           <span className="text-display text-[2.35rem]" style={{ color: "var(--metric-weight)" }}>
-            {last ? formatKg(last.trendKg).replace(" kg", "") : "—"}
+            {mostrado ? formatKg(mostrado.trendKg).replace(" kg", "") : "—"}
           </span>
           <span className="text-sm font-medium text-[var(--text-secondary)]">kg</span>
         </div>
-        {deltaKg != null && Math.round(Math.abs(deltaKg) * 10) > 0 ? (
+        {/* Mientras el dedo señala un día, el delta del rango entero no
+            viene a cuento: lo que se está mirando es ESE día. */}
+        {tocado ? null : deltaKg != null && Math.round(Math.abs(deltaKg) * 10) > 0 ? (
           <p className="pb-1.5 text-xs font-semibold" style={{ color: deltaKg <= 0 ? "var(--success)" : "var(--warning)" }}>
             {deltaKg <= 0 ? "↓" : "↑"} {formatKg(Math.abs(deltaKg))} de tendencia
           </p>
@@ -213,10 +307,25 @@ export function WeightChart({
         ) : null}
       </div>
 
-      {/* La lectura real de la báscula, al lado de la tendencia y con su
-          fecha: es el número que el usuario escribió, y sin él la tarjeta
-          entera habla de una cifra que él no ha visto nunca. */}
-      {ultimoPesaje ? (
+      {/* La lectura real de la báscula, con su fecha: es el número que
+          escribiste tú, y sin él la tarjeta entera habla de una cifra que
+          no has visto nunca. Con el dedo encima pasa a ser el pesaje de
+          ESE día — o dice que ese día no te pesaste, que también es un
+          dato: la línea de la tendencia sigue existiendo ahí. */}
+      {tocado ? (
+        <p className="-mt-1.5 text-[11.5px] text-[var(--text-tertiary)]">
+          {tocado.observedKg != null ? (
+            <>
+              Ese día la báscula marcó{" "}
+              <span className="text-metric font-semibold text-[var(--text-secondary)]">
+                {formatPesaje(tocado.observedKg)}
+              </span>
+            </>
+          ) : (
+            "Ese día no te pesaste: el número de arriba es la tendencia que venía de antes."
+          )}
+        </p>
+      ) : ultimoPesaje ? (
         <p className="-mt-1.5 text-[11.5px] text-[var(--text-tertiary)]">
           Último pesaje{" "}
           <span className="text-metric font-semibold text-[var(--text-secondary)]">
@@ -263,7 +372,11 @@ export function WeightChart({
             </>
           ) : null}{" "}
           Es el número que hay que mirar: un pesaje suelto se mueve medio kilo por haber bebido o
-          cenado, y la tendencia no.
+          cenado, y la tendencia no.{" "}
+          <span className="font-semibold text-[var(--text-secondary)]">
+            Toca cualquier punto de la gráfica
+          </span>{" "}
+          para ver ese día, o mantén el dedo y arrastra para recorrerlos.
         </p>
       )}
 
@@ -271,7 +384,7 @@ export function WeightChart({
         <SegmentedControl
           options={RANGES.map((r) => ({ value: r.label, label: r.label }))}
           value={rangeLabel}
-          onChange={setRangeLabel}
+          onChange={cambiarRango}
         />
       </div>
     </div>

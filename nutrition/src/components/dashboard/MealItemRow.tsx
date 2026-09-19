@@ -5,9 +5,7 @@ import { deleteMealItem } from "@/lib/actions/meals";
 import { formatKcal } from "@/lib/format";
 import { MacroInline } from "@/components/ui/MacroInline";
 import { estimateQuality, estimateQualityColor } from "@/lib/nutrition/estimate-quality";
-import { esEstimacionDeIa } from "@/lib/nutrition/types";
 import { TrashIcon } from "@/components/ui/icons";
-import { SplitItemButton } from "./SplitItemButton";
 import type { MealItemRow as MealItemRowType } from "@/lib/supabase/types";
 
 export function MealItemRow({ item }: { item: MealItemRowType }) {
@@ -45,16 +43,6 @@ export function MealItemRow({ item }: { item: MealItemRowType }) {
           {label}
         </span>
       </div>
-
-      {/* Sólo tiene sentido en una línea que la IA estimó de un texto o
-          una foto: ahí es donde un plato entero puede haber entrado junto.
-          Un alimento del catálogo o de una etiqueta ya es un ingrediente,
-          no hay nada que abrir. */}
-      {esEstimacionDeIa(item.source) ? (
-        <div className="mt-2 flex justify-end">
-          <SplitItemButton item={item} />
-        </div>
-      ) : null}
     </li>
   );
 }

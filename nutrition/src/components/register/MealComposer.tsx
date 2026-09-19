@@ -1,6 +1,14 @@
 "use client";
 
-import { useImperativeHandle, useMemo, useState, useTransition, forwardRef } from "react";
+import {
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  forwardRef,
+} from "react";
 import { useRouter } from "next/navigation";
 import { createMeal, type CreateMealInput } from "@/lib/actions/meals";
 import type { MealItemSource, PrecisionLevel } from "@/lib/nutrition/types";
@@ -9,6 +17,8 @@ import {
   formatGrams,
   formatDateHeader,
   mealInstantForDate,
+  numeroATexto,
+  parseNumeroEs,
   todayLocalDateString,
   MEAL_TYPE_LABELS,
 } from "@/lib/format";
@@ -109,22 +119,44 @@ export const MealComposer = forwardRef<MealComposerHandle, {
     setItems((prev) => prev.filter((it) => it.key !== key));
   }
 
+  /**
+   * Los valores con los que cada alimento ENTRÓ, para reescalar siempre
+   * desde ahí y no desde la edición anterior.
+   *
+   * Encadenar factores (×0,3 para ir de 100 a 30, y luego ×10/3 para
+   * volver) arrastra error de coma flotante en cada paso, así que
+   * 100 → 30 → 100 no devolvía exactamente las calorías de partida. Con
+   * una base fija sí, y además la cuenta no depende de que el valor
+   * anterior fuera utilizable.
+   */
+  const basesRef = useRef(new Map<string, DraftItem>());
+
   function rescaleItem(key: string, newAmount: number) {
     setItems((prev) =>
       prev.map((it) => {
-        if (it.key !== key || it.quantityAmount <= 0) return it;
-        const factor = newAmount / it.quantityAmount;
+        if (it.key !== key) return it;
+
+        const base = basesRef.current.get(key) ?? it;
+        if (!basesRef.current.has(key)) basesRef.current.set(key, it);
+
+        // Un alimento que llegó sin cantidad no tiene proporción con la
+        // que escalar nada: se le pone la cantidad y se dejan los macros
+        // como están, que es más honesto que inventarse un factor.
+        if (base.quantityAmount <= 0) return { ...it, quantityAmount: newAmount };
+
+        const factor = newAmount / base.quantityAmount;
+        const escala = (v: number | null | undefined) => (v != null ? v * factor : v);
         return {
           ...it,
           quantityAmount: newAmount,
-          gramsEquivalent: it.gramsEquivalent != null ? it.gramsEquivalent * factor : it.gramsEquivalent,
-          energyKcal: it.energyKcal * factor,
-          proteinG: it.proteinG * factor,
-          carbohydratesG: it.carbohydratesG * factor,
-          fatG: it.fatG * factor,
-          fiberG: it.fiberG != null ? it.fiberG * factor : it.fiberG,
-          rangeKcalMin: it.rangeKcalMin != null ? it.rangeKcalMin * factor : it.rangeKcalMin,
-          rangeKcalMax: it.rangeKcalMax != null ? it.rangeKcalMax * factor : it.rangeKcalMax,
+          gramsEquivalent: escala(base.gramsEquivalent),
+          energyKcal: base.energyKcal * factor,
+          proteinG: base.proteinG * factor,
+          carbohydratesG: base.carbohydratesG * factor,
+          fatG: base.fatG * factor,
+          fiberG: escala(base.fiberG),
+          rangeKcalMin: escala(base.rangeKcalMin),
+          rangeKcalMax: escala(base.rangeKcalMax),
         };
       }),
     );
@@ -140,18 +172,22 @@ export const MealComposer = forwardRef<MealComposerHandle, {
 
   function addManualItem() {
     if (!draftName.trim() || !draftKcal) return;
+    // `Number("64,5")` es NaN, y con `|| 0` detrás eso se convertía en un
+    // 0 silencioso: escribías 64,5 g de algo y entraba con cero.
+    const gramos = parseNumeroEs(draftGrams) ?? 100;
+    const numero = (texto: string) => parseNumeroEs(texto) ?? 0;
     setItems((prev) => [
       ...prev,
       {
         key: crypto.randomUUID(),
         name: draftName.trim(),
-        quantityAmount: Number(draftGrams) || 100,
+        quantityAmount: gramos,
         quantityUnit: "g",
-        gramsEquivalent: Number(draftGrams) || 100,
-        energyKcal: Number(draftKcal) || 0,
-        proteinG: Number(draftProtein) || 0,
-        carbohydratesG: Number(draftCarbs) || 0,
-        fatG: Number(draftFat) || 0,
+        gramsEquivalent: gramos,
+        energyKcal: numero(draftKcal),
+        proteinG: numero(draftProtein),
+        carbohydratesG: numero(draftCarbs),
+        fatG: numero(draftFat),
         source: "manual",
         precisionLevel: "exact",
       },
@@ -260,11 +296,10 @@ export const MealComposer = forwardRef<MealComposerHandle, {
               </div>
 
               <div className="mt-2.5 flex items-center gap-2">
-                <input
-                  type="number"
+                <QuantityInput
                   value={item.quantityAmount}
-                  onChange={(e) => rescaleItem(item.key, Number(e.target.value) || 0)}
-                  className="text-metric w-16 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1 text-sm text-[var(--text-primary)]"
+                  unidad={item.quantityUnit}
+                  onCommit={(n) => rescaleItem(item.key, n)}
                 />
                 <span className="text-xs text-[var(--text-secondary)]">{item.quantityUnit}</span>
                 <span className="text-metric ml-auto text-lg text-[var(--text-primary)]">
@@ -292,11 +327,11 @@ export const MealComposer = forwardRef<MealComposerHandle, {
           <p className="text-section mb-3">Añadir ingrediente</p>
           <div className="grid grid-cols-2 gap-2">
             <input placeholder="Nombre" value={draftName} onChange={(e) => setDraftName(e.target.value)} className="col-span-2 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
-            <input placeholder="Gramos" type="number" value={draftGrams} onChange={(e) => setDraftGrams(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
-            <input placeholder="Kcal" type="number" value={draftKcal} onChange={(e) => setDraftKcal(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
-            <input placeholder="Proteína g" type="number" value={draftProtein} onChange={(e) => setDraftProtein(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
-            <input placeholder="Carbohidratos g" type="number" value={draftCarbs} onChange={(e) => setDraftCarbs(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
-            <input placeholder="Grasas g" type="number" value={draftFat} onChange={(e) => setDraftFat(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Gramos" type="text" inputMode="decimal" value={draftGrams} onChange={(e) => setDraftGrams(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Kcal" type="text" inputMode="decimal" value={draftKcal} onChange={(e) => setDraftKcal(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Proteína g" type="text" inputMode="decimal" value={draftProtein} onChange={(e) => setDraftProtein(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Carbohidratos g" type="text" inputMode="decimal" value={draftCarbs} onChange={(e) => setDraftCarbs(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
+            <input placeholder="Grasas g" type="text" inputMode="decimal" value={draftFat} onChange={(e) => setDraftFat(e.target.value)} className="rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-2 text-sm text-[var(--text-primary)]" />
           </div>
           <button type="button" onClick={addManualItem} className="btn-primary mt-3 w-full rounded-lg py-2.5 text-xs font-semibold text-[var(--accent-fg)]">
             Añadir
@@ -337,6 +372,80 @@ export const MealComposer = forwardRef<MealComposerHandle, {
     </div>
   );
 });
+
+/**
+ * La cantidad de un ingrediente.
+ *
+ * ── Por qué tiene estado propio ────────────────────────────────────────
+ *
+ * El campo era `value={item.quantityAmount}` con
+ * `Number(e.target.value) || 0`, y eso hacía imposible el primer gesto
+ * de cualquiera que quiera cambiar una cantidad: borrarla. Al quedarse
+ * vacío llegaba un 0, y el 0 rompía dos cosas a la vez — multiplicaba
+ * todos los macros por cero, y dejaba la cantidad en 0, con lo que el
+ * reescalado (que dividía por ella) ya no volvía a entrar nunca. El
+ * campo se quedaba clavado en 0 sin aceptar una sola tecla más.
+ *
+ * Así que el texto lo lleva este componente, no el alimento: mientras
+ * escribes el campo puede estar vacío o a medias sin que se toque nada,
+ * y el alimento sólo se reescala cuando hay un número válido. Al salir
+ * del campo, si lo que hay no vale, vuelve el último bueno.
+ *
+ * `type="text"` + `inputMode="decimal"` y no `type="number"`: el teclado
+ * es el mismo, pero `number` tira el valor entero cuando lleva una coma
+ * — que es lo que da un teclado español.
+ */
+function QuantityInput({
+  value,
+  unidad,
+  onCommit,
+}: {
+  value: number;
+  unidad: string;
+  onCommit: (n: number) => void;
+}) {
+  const [texto, setTexto] = useState(() => numeroATexto(value));
+  // Lo último que este campo mandó hacia arriba. Sirve para distinguir
+  // un cambio que viene de aquí (no hay que resincronizar, o pisaríamos
+  // lo que se está tecleando) de uno que viene de fuera.
+  const ultimoRef = useRef(value);
+
+  useEffect(() => {
+    if (value === ultimoRef.current) return;
+    ultimoRef.current = value;
+    setTexto(numeroATexto(value));
+  }, [value]);
+
+  function alEscribir(entrada: string) {
+    setTexto(entrada);
+    const numero = parseNumeroEs(entrada);
+    // Vacío, "0", "-" o a medio escribir: se deja el campo como está y
+    // no se toca el alimento. Una cantidad de 0 tampoco se guarda nunca
+    // — `createMeal` exige que sea positiva —, así que dejarla entrar
+    // sólo serviría para romper el guardado más tarde.
+    if (numero == null || numero <= 0) return;
+    ultimoRef.current = numero;
+    onCommit(numero);
+  }
+
+  function alSalir() {
+    const numero = parseNumeroEs(texto);
+    if (numero == null || numero <= 0) setTexto(numeroATexto(ultimoRef.current));
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={texto}
+      onChange={(e) => alEscribir(e.target.value)}
+      onBlur={alSalir}
+      onFocus={(e) => e.currentTarget.select()}
+      aria-label={`Cantidad en ${unidad}`}
+      className="text-metric w-16 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-2 py-1 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+    />
+  );
+}
 
 function TotalChip({ label, value, color }: { label: string; value: number; color: string }) {
   return (
