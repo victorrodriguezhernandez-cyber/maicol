@@ -25,6 +25,7 @@ import {
 import { MacroInline } from "@/components/ui/MacroInline";
 import { estimateQuality, estimateQualityColor } from "@/lib/nutrition/estimate-quality";
 import { TrashIcon, PlusIcon } from "@/components/ui/icons";
+import { NutrientPanel } from "@/components/ui/NutrientPanel";
 
 export interface DraftItem {
   key: string;
@@ -39,6 +40,17 @@ export interface DraftItem {
   carbohydratesG: number;
   fatG: number;
   fiberG?: number | null;
+  /**
+   * El resto del panel de nutrientes. Las columnas existen desde el
+   * principio en `meal_items`, pero el compositor las tiraba: llegabas
+   * con un alimento que traía azúcares, saturadas y sodio y se guardaba
+   * sin ellos. Ahora viajan enteros hasta el diario.
+   */
+  sugarsG?: number | null;
+  saturatedFatG?: number | null;
+  sodiumMg?: number | null;
+  saltG?: number | null;
+  micronutrients?: Record<string, number>;
   source: MealItemSource;
   precisionLevel: PrecisionLevel;
   confidence?: "high" | "medium" | "low" | null;
@@ -155,6 +167,17 @@ export const MealComposer = forwardRef<MealComposerHandle, {
           carbohydratesG: base.carbohydratesG * factor,
           fatG: base.fatG * factor,
           fiberG: escala(base.fiberG),
+          sugarsG: escala(base.sugarsG),
+          saturatedFatG: escala(base.saturatedFatG),
+          sodiumMg: escala(base.sodiumMg),
+          saltG: escala(base.saltG),
+          // El resto del panel escala igual que los macros: si cambias
+          // 100 g por 150, el colesterol también es una vez y media.
+          micronutrients: base.micronutrients
+            ? Object.fromEntries(
+                Object.entries(base.micronutrients).map(([k, v]) => [k, v * factor]),
+              )
+            : base.micronutrients,
           rangeKcalMin: escala(base.rangeKcalMin),
           rangeKcalMax: escala(base.rangeKcalMax),
         };
@@ -219,7 +242,11 @@ export const MealComposer = forwardRef<MealComposerHandle, {
         carbohydratesG: it.carbohydratesG,
         fatG: it.fatG,
         fiberG: it.fiberG ?? null,
-        micronutrients: {},
+        sugarsG: it.sugarsG ?? null,
+        saturatedFatG: it.saturatedFatG ?? null,
+        sodiumMg: it.sodiumMg ?? null,
+        saltG: it.saltG ?? null,
+        micronutrients: it.micronutrients ?? {},
         precisionLevel: it.precisionLevel,
         source: it.source,
         confidence: it.confidence ?? null,
@@ -317,6 +344,11 @@ export const MealComposer = forwardRef<MealComposerHandle, {
                   Rango probable: {Math.round(item.rangeKcalMin)}–{Math.round(item.rangeKcalMax)} kcal
                 </p>
               ) : null}
+
+              {/* Se puede revisar ANTES de guardar, que es cuando sirve
+                  de algo: si la sal de ese producto te parece rara,
+                  cambias el alimento en vez de descubrirlo después. */}
+              <NutrientPanel className="mt-2" nutrientes={item} />
             </li>
           ))}
         </ul>

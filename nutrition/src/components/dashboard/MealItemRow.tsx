@@ -6,6 +6,7 @@ import { formatKcal } from "@/lib/format";
 import { MacroInline } from "@/components/ui/MacroInline";
 import { estimateQuality, estimateQualityColor } from "@/lib/nutrition/estimate-quality";
 import { TrashIcon } from "@/components/ui/icons";
+import { NutrientPanel } from "@/components/ui/NutrientPanel";
 import type { MealItemRow as MealItemRowType } from "@/lib/supabase/types";
 
 export function MealItemRow({ item }: { item: MealItemRowType }) {
@@ -43,6 +44,20 @@ export function MealItemRow({ item }: { item: MealItemRowType }) {
           {label}
         </span>
       </div>
+
+      {/* Lo que no cabe en los cuatro macros: azúcares, saturadas, sal,
+          colesterol… Plegado, y sólo si el alimento los trae. */}
+      <NutrientPanel
+        className="mt-2"
+        nutrientes={{
+          sugarsG: item.sugars_g,
+          saturatedFatG: item.saturated_fat_g,
+          fiberG: item.fiber_g,
+          sodiumMg: item.sodium_mg,
+          saltG: item.salt_g,
+          micronutrients: item.micronutrients as Record<string, number>,
+        }}
+      />
     </li>
   );
 }

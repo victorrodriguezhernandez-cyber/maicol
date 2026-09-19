@@ -166,11 +166,14 @@ and persisted as a correction. The natural place to add this is
 
 ## Not yet implemented (honest gaps, not silent placeholders)
 
-- **USDA FoodData Central search**: `foods.source = 'usda'` and
-  `external_id` exist in the schema and `USDA_API_KEY` is documented in
-  `.env.example`, but no search UI or Edge Function calls that API yet.
-  `search_personal_foods`/the `/registrar/buscar` flow currently only
-  searches the user's own catalog.
+- **USDA FoodData Central search needs a key to switch on.** The adapter
+  is implemented (`buscarEnUsda` in `src/lib/data/external-foods.ts`) and
+  wired into `/api/foods/search`, but it returns an empty list until
+  `USDA_API_KEY` is set — deliberately, so the search keeps working on
+  Open Food Facts alone instead of erroring. Without it, generic foods
+  ("pollo crudo", "arroz cocido") search poorly: Open Food Facts is a
+  catalogue of *packaged* products, so "pollo" returns chicken sausages
+  rather than raw chicken breast. Get a free key at api.data.gov/signup.
 - **Correction learning loop** and **`ai_memory` writes** — see above.
 - **Few-shot correction examples in prompts** (spec section 39's "en
   futuras estimaciones... proporcionar a Gemini ejemplos relevantes de mis

@@ -3,21 +3,15 @@
 import { Suspense, useRef, useState } from "react";
 import { MealComposer, type MealComposerHandle } from "@/components/register/MealComposer";
 import { foodToDraftItem } from "@/lib/nutrition/food-to-item";
+import { guardarAlimentoExterno } from "@/lib/actions/foods";
+import {
+  ETIQUETA_DE_MOTIVO,
+  type ResultadoBusqueda,
+} from "@/lib/nutrition/busqueda-alimentos";
 import type { FoodRow } from "@/lib/supabase/types";
 import { formatKcal } from "@/lib/format";
 import { SearchIcon, PlusIcon } from "@/components/ui/icons";
 import { useRegisterContext } from "@/lib/register-context";
-
-interface SearchResult extends FoodRow {
-  rankReason: "recent" | "favorite" | "custom" | "catalog";
-}
-
-const RANK_LABEL: Record<SearchResult["rankReason"], string> = {
-  recent: "Reciente",
-  favorite: "Favorito",
-  custom: "Tuyo",
-  catalog: "Catálogo",
-};
 
 export default function BuscarAlimentoPage() {
   // `useRegisterContext` lee la URL, y eso obliga a un límite de Suspense.
@@ -31,30 +25,62 @@ export default function BuscarAlimentoPage() {
 function BuscarAlimentoInner() {
   const { mealType, date } = useRegisterContext();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<ResultadoBusqueda[]>([]);
   const [loading, setLoading] = useState(false);
+  const [añadiendo, setAñadiendo] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const composerRef = useRef<MealComposerHandle>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Teclear rápido lanzaba una búsqueda por letra y las respuestas
+  // podían llegar desordenadas: la de "pol" después de la de "pollo",
+  // pisando los resultados buenos con los de una consulta más vieja.
+  const peticionRef = useRef(0);
 
   function handleQueryChange(value: string) {
     setQuery(value);
+    setError(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
+      const miTurno = ++peticionRef.current;
       setLoading(true);
       try {
         const res = await fetch(`/api/foods/search?q=${encodeURIComponent(value)}`);
         const data = await res.json();
+        if (miTurno !== peticionRef.current) return; // llegó tarde: se descarta
         setResults(data.results ?? []);
+      } catch {
+        if (miTurno === peticionRef.current) setError("No se ha podido buscar. Prueba otra vez.");
       } finally {
-        setLoading(false);
+        if (miTurno === peticionRef.current) setLoading(false);
       }
-    }, 250);
+    }, 350);
   }
 
-  function addFood(food: SearchResult) {
-    const defaultQty = food.serving_size_g ?? food.serving_size_ml ?? 100;
-    composerRef.current?.addItem(foodToDraftItem(food, defaultQty));
+  function añadirAlimento(food: FoodRow) {
+    const cantidad = food.serving_size_g ?? food.serving_size_ml ?? 100;
+    composerRef.current?.addItem(foodToDraftItem(food, cantidad));
   }
+
+  async function elegir(resultado: ResultadoBusqueda) {
+    if (resultado.origen === "local") {
+      añadirAlimento(resultado.food);
+      return;
+    }
+    // Uno de fuera se guarda primero en tu catálogo: a partir de ahora es
+    // tuyo, sale instantáneo y funciona sin cobertura.
+    setAñadiendo(resultado.clave);
+    setError(null);
+    try {
+      const guardado = await guardarAlimentoExterno(resultado.externo);
+      añadirAlimento(guardado as FoodRow);
+    } catch {
+      setError("No se ha podido guardar ese alimento. Inténtalo otra vez.");
+    } finally {
+      setAñadiendo(null);
+    }
+  }
+
+  const buscandoFuera = query.trim().length >= 3;
 
   return (
     <div className="flex flex-col gap-4">
@@ -69,29 +95,42 @@ function BuscarAlimentoInner() {
         />
       </div>
 
-      {loading ? <p className="text-xs text-[var(--text-secondary)]">Buscando…</p> : null}
+      {loading ? (
+        <p className="text-xs text-[var(--text-secondary)]">
+          {buscandoFuera ? "Buscando en tu catálogo y en Open Food Facts…" : "Buscando…"}
+        </p>
+      ) : null}
+      {error ? <p className="text-xs text-[var(--danger)]">{error}</p> : null}
+
+      {!loading && query.trim().length >= 2 && results.length === 0 ? (
+        <p className="text-xs text-[var(--text-secondary)]">
+          Nada con ese nombre. Prueba con menos palabras — o añádelo a mano abajo con los datos de
+          la etiqueta.
+        </p>
+      ) : null}
 
       {results.length > 0 ? (
         <ul className="surface-raised flex flex-col divide-y divide-[var(--border-soft)] overflow-hidden">
-          {results.map((food) => (
-            <li key={food.id}>
+          {results.map((resultado) => (
+            <li key={resultado.clave}>
               <button
                 type="button"
-                onClick={() => addFood(food)}
-                className="tap-row flex w-full items-center justify-between px-4 py-3 text-left"
+                onClick={() => elegir(resultado)}
+                disabled={añadiendo !== null}
+                className="tap-row flex w-full items-center justify-between gap-3 px-4 py-3 text-left disabled:opacity-60"
               >
-                <div>
-                  <p className="text-sm font-medium text-[var(--text-primary)]">
-                    {food.name}
-                    {food.brand ? ` · ${food.brand}` : ""}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+                    {resultado.nombre}
+                    {resultado.marca ? ` · ${resultado.marca}` : ""}
                   </p>
                   <p className="text-xs text-[var(--text-tertiary)]">
-                    {RANK_LABEL[food.rankReason]} · {formatKcal(food.energy_kcal)}/100
-                    {food.basis === "per_100ml" ? "ml" : "g"}
+                    {ETIQUETA_DE_MOTIVO[resultado.motivo]} · {formatKcal(resultado.energyKcal)}/100
+                    {resultado.basis === "per_100ml" ? "ml" : "g"}
                   </p>
                 </div>
                 <span className="btn-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--accent-fg)]">
-                  <PlusIcon size={14} />
+                  {añadiendo === resultado.clave ? "…" : <PlusIcon size={14} />}
                 </span>
               </button>
             </li>

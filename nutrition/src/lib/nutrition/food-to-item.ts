@@ -20,7 +20,11 @@ export function foodToDraftItem(food: FoodRow, quantityAmount: number): DraftIte
         fiber_g: food.fiber_g != null ? (food.fiber_g / food.serving_size_g) * 100 : null,
         sodium_mg: food.sodium_mg != null ? (food.sodium_mg / food.serving_size_g) * 100 : null,
         salt_g: food.salt_g != null ? (food.salt_g / food.serving_size_g) * 100 : null,
-        micronutrients: {},
+        micronutrients: Object.fromEntries(
+          Object.entries(food.micronutrients ?? {})
+            .filter(([, v]) => typeof v === "number")
+            .map(([k, v]) => [k, ((v as number) / food.serving_size_g!) * 100]),
+        ),
       }
     : {
         energy_kcal: food.energy_kcal,
@@ -32,7 +36,9 @@ export function foodToDraftItem(food: FoodRow, quantityAmount: number): DraftIte
         fiber_g: food.fiber_g,
         sodium_mg: food.sodium_mg,
         salt_g: food.salt_g,
-        micronutrients: {},
+        micronutrients: Object.fromEntries(
+          Object.entries(food.micronutrients ?? {}).filter(([, v]) => typeof v === "number"),
+        ) as Record<string, number>,
       };
 
   const scaled = scaleFromPer100(per100Equivalent, quantityAmount);
@@ -49,6 +55,14 @@ export function foodToDraftItem(food: FoodRow, quantityAmount: number): DraftIte
     carbohydratesG: scaled.carbohydrates_g,
     fatG: scaled.fat_g,
     fiberG: scaled.fiber_g,
+    // El resto del panel viaja con el alimento hasta el diario. Antes se
+    // quedaba aquí: el alimento traía azúcares, saturadas, sodio y sal y
+    // la comida se guardaba sin ellos, aunque las columnas existían.
+    sugarsG: scaled.sugars_g,
+    saturatedFatG: scaled.saturated_fat_g,
+    sodiumMg: scaled.sodium_mg,
+    saltG: scaled.salt_g,
+    micronutrients: scaled.micronutrients,
     source: food.source,
     precisionLevel: "exact",
   };

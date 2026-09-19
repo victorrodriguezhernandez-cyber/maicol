@@ -172,8 +172,19 @@ existe en Safari de iOS y el audio automático está bloqueado, así que un
 aviso que falla la mitad de las veces sería peor que ninguno (ver el
 comentario en `RestTimer.tsx`).
 
-Ver la lista completa en `README.md` y `AI.md`. Resumen: búsqueda USDA,
-bucle de aprendizaje de correcciones (`ai_corrections`), memoria
-estructurada del coach (`ai_memory`), adjuntar fotos de comida guardadas a
-`meal_images`, notificaciones push reales, sincronización con Apple
-Health (imposible desde una PWA).
+La búsqueda de alimentos SÍ sale ya a fuentes externas: Open Food Facts
+(productos envasados, sin clave) y USDA FoodData Central (alimentos
+genéricos, apagada hasta que exista `USDA_API_KEY`). Las dos pasan por
+`src/lib/data/external-foods.ts`, y **toda conversión de unidades vive en
+`src/lib/nutrition/nutrientes-externos.ts`, que descarta lo que no sabe
+interpretar en vez de suponer** — Open Food Facts da el sodio en gramos y
+la columna es `sodium_mg`, así que una suposición ahí es un error de mil
+veces que nadie ve. Si añades una tercera fuente, su mapeo va en
+`external-mapping.ts` y se prueba contra una respuesta REAL capturada en
+`__fixtures__`, no contra un objeto escrito a mano (regla 11).
+
+Ver la lista completa en `README.md` y `AI.md`. Resumen: bucle de
+aprendizaje de correcciones (`ai_corrections`), memoria estructurada del
+coach (`ai_memory`), adjuntar fotos de comida guardadas a `meal_images`,
+notificaciones push reales, sincronización con Apple Health (imposible
+desde una PWA).
